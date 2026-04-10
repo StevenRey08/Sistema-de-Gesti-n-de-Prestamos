@@ -1,44 +1,23 @@
-import Caja from '../src/components/caja';
+import MetricCards from '../src/components/dashboard/MetricCards';
+import LoansTable from '../src/components/dashboard/LoansTable';
+import ActivityFeed from '../src/components/dashboard/ActivityFeed';
 
-export default function Page() {
-  const catalogosMaestros = [
-    { id: 1, nombre: "Proveedores", detalle: "Registra empresas, teléfonos y correos de tus suministradores." },
-    { id: 2, nombre: "Categorías", detalle: "Organiza las herramientas por tipo (Eléctricas, Manuales, etc.)." },
-    { id: 3, nombre: "Personas", detalle: "Base de datos de empleados y beneficiarios de préstamos." }
-  ];
-
+export default function DashboardPage() {
   return (
-    <main style={{
-      minHeight: '100vh',
-      backgroundColor: '#f3f4f6',
-      padding: '50px 20px',
-      fontFamily: 'ui-sans-serif, system-ui, sans-serif'
-    }}>
-      <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-        <header style={{ marginBottom: '40px', textAlign: 'center' }}>
-          <h1 style={{ fontSize: '2.5rem', color: '#111827', fontWeight: '800' }}>
-            Catálogos Maestros
-          </h1>
-          <p style={{ color: '#4b5563', fontSize: '1.1rem' }}>
-            Configuración inicial del Sistema de Inventario
-          </p>
-        </header>
-
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-          gap: '25px',
-          justifyItems: 'center'
-        }}>
-          {catalogosMaestros.map((cat) => (
-            <Caja
-              key={cat.id}
-              titulo={cat.nombre}
-              descripcion={cat.detalle}
-            />
-          ))}
+    <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="text-xl font-semibold text-gray-800">Dashboard</h1>
+        <p className="text-sm text-gray-400 mt-1">Resumen general del sistema</p>
+      </div>
+      <MetricCards />
+      <div className="grid grid-cols-3 gap-6">
+        <div className="col-span-2">
+          <LoansTable />
+        </div>
+        <div>
+          <ActivityFeed />
         </div>
       </div>
-    </main>
+    </div>
   );
 }
