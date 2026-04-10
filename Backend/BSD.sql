@@ -1,10 +1,7 @@
-
-
 -- =========================================
 -- EXTENSION PARA UUID
 -- =========================================
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-
 
 -- =========================================
 -- ROLES
@@ -15,7 +12,6 @@ CREATE TABLE roles (
     descripcion TEXT
 );
 
-
 -- =========================================
 -- MODULOS
 -- =========================================
@@ -24,7 +20,6 @@ CREATE TABLE modulos (
     nombre VARCHAR(100) NOT NULL UNIQUE,
     descripcion TEXT
 );
-
 
 -- =========================================
 -- PERMISOS
@@ -37,10 +32,8 @@ CREATE TABLE permisos (
     ingresar BOOLEAN DEFAULT false,
     actualizar BOOLEAN DEFAULT false,
     eliminar BOOLEAN DEFAULT false,
-
     UNIQUE(rol_id, modulo_id)
 );
-
 
 -- =========================================
 -- USUARIOS
@@ -92,21 +85,6 @@ CREATE TABLE categorias_herramientas (
     descripcion TEXT
 );
 
-
--- =========================================
--- HERRAMIENTAS
--- (TIPO DE PRODUCTO)
--- =========================================
-CREATE TABLE herramientas (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    proveedor_id UUID REFERENCES proveedores(id),
-    codigo VARCHAR(50) UNIQUE NOT NULL,
-    nombre VARCHAR(150) NOT NULL,
-    categoria_id UUID REFERENCES categorias_herramientas(id),
-    valor_estimado NUMERIC
-);
-
-
 -- =========================================
 -- ESTANTES
 -- =========================================
@@ -118,7 +96,7 @@ CREATE TABLE estantes (
 );
 
 -- =========================================
--- CAJAS (Nueva Tabla)
+-- CAJAS
 -- =========================================
 CREATE TABLE cajas (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -128,36 +106,31 @@ CREATE TABLE cajas (
 );
 
 -- =========================================
--- INVENTARIO (Modificada)
+-- INVENTARIO (UNIFICADA)
+-- Se eliminó el CHECK para dar flexibilidad al Backend
 -- =========================================
 CREATE TABLE inventario (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    herramienta_id UUID REFERENCES herramientas(id) ON DELETE CASCADE,
-   
-    -- La herramienta puede estar en una CAJA...
+    -- Atributos de la herramienta
+    codigo VARCHAR(50) UNIQUE NOT NULL,
+    nombre VARCHAR(150) NOT NULL,
+    proveedor_id UUID REFERENCES proveedores(id),
+    categoria_id UUID REFERENCES categorias_herramientas(id),
+    valor_estimado NUMERIC,
+    
+    -- Atributos de stock y ubicación
     caja_id UUID REFERENCES cajas(id) ON DELETE SET NULL,
-   
-    -- ...O puede estar suelta directamente en el ESTANTE.
     estante_id UUID REFERENCES estantes(id) ON DELETE SET NULL,
-   
     estado VARCHAR(50),
-    cantidad INTEGER NOT NULL DEFAULT 0,
-
-    -- RESTRICCIÓN LÓGICA:
-    -- Evita que una herramienta apunte a ambos al mismo tiempo o a ninguno.
-    CONSTRAINT check_ubicacion_consistente CHECK (
-        (caja_id IS NOT NULL AND estante_id IS NULL) OR
-        (caja_id IS NULL AND estante_id IS NOT NULL)
-    )
+    cantidad INTEGER NOT NULL DEFAULT 0
 );
-
 
 -- =========================================
 -- PRESTAMOS
 -- =========================================
 CREATE TABLE prestamos (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    inventario_id UUID REFERENCES inventario(id),
+    inventario_id UUID REFERENCES inventario(id) ON DELETE CASCADE,
     persona_id UUID REFERENCES personas(id),
     usuario_id UUID REFERENCES usuarios(id),
     cantidad INTEGER NOT NULL,
@@ -168,11 +141,11 @@ CREATE TABLE prestamos (
 );
 
 -- =========================================
--- MOVIMIENTOS (Modificada para incluir cajas)
+-- MOVIMIENTOS
 -- =========================================
 CREATE TABLE movimientos (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    inventario_id UUID REFERENCES inventario(id),
+    inventario_id UUID REFERENCES inventario(id) ON DELETE CASCADE,
     caja_origen_id UUID REFERENCES cajas(id),
     caja_destino_id UUID REFERENCES cajas(id),
     estante_origen UUID REFERENCES estantes(id),
