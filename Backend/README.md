@@ -32,7 +32,7 @@ DB_USER=postgres
 DB_PASSWORD=tu_contrasena
 DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=prestamos_db
+DB_NAME=almacen_web
 ```
 
 *Nota: Tienes un archivo `BSD.sql` que puedes utilizar para crear la estructura de tu base de datos en PostgreSQL.*
