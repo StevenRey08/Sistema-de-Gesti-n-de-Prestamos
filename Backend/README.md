@@ -1,50 +1,71 @@
 # Backend - Sistema de Gestión de Préstamos
+Este es el backend del Sistema de Gestión de Préstamos construido con Node.js, Express y Prisma ORM.
 
-Este es el backend del Sistema de Gestión de Préstamos construido con Node.js y Express.
+# Requisitos Previos
+Antes de ejecutar el proyecto, asegúrate de tener instalado:
 
-## Requisitos Previos
+Node.js (v18 o superior recomendado).
 
-Antes de ejecutar el proyecto, asegúrate de tener instalado en tu sistema:
-- **Node.js** (v14 o superior recomendado)
-- **PostgreSQL** para la base de datos.
+PostgreSQL (Asegúrate de tener activa la extensión pgcrypto).
 
-## Instalación de Dependencias
+# Instalación y Configuración Inicial
+Si acabas de clonar el repositorio, sigue estos pasos en orden dentro de la carpeta Backend:
 
-Cada vez que clones el repositorio desde cero en un nuevo equipo, debes instalar las dependencias necesarias. Abre tu terminal, navega hacia la carpeta `Backend` y ejecuta el siguiente comando:
+# 1. Instalación de dependencias
 
-```bash
 npm install
-```
 
-Este comando leerá el archivo `package.json` y descargará las siguientes dependencias en la carpeta `node_modules`:
+# 2. Configuración del Entorno (.env)
 
-- `express` (^5.2.1): Framework para crear el servidor web y manejar rutas.
-- `pg` (^8.20.0): Cliente de PostgreSQL para conectar Node.js con la base de datos.
-- `cors` (^2.8.6): Middleware para permitir peticiones desde el frontend (CORS).
-- `dotenv` (^17.4.1): Herramienta para cargar la configuración desde un archivo `.env`.
+Crea un archivo .env en la raíz de la carpeta Backend. Debes configurar la URL de conexión que Prisma utilizará:
 
-## Configuración del Entorno (.env)
+Configuración de conexión para Prisma
+DATABASE_URL="postgresql://USUARIO:CONTRASEÑA@localhost:5432/almacen_web?schema=public"
 
-El proyecto requiere variables de entorno para conectarse a la base de datos. Crea un archivo llamado `.env` en la raíz de la carpeta `Backend` con el siguiente contenido (reemplaza con tus propios datos):
+Configuración adicional para el servidor
+PORT=4000
 
-```env
-DB_USER=postgres
-DB_PASSWORD=tu_contrasena
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=almacen_web
-```
+# 3. Sincronización de la Base de Datos (Prisma)
+Para crear las tablas automáticamente en tu PostgreSQL basadas en el esquema del proyecto, ejecuta:
 
-*Nota: Tienes un archivo `BSD.sql` que puedes utilizar para crear la estructura de tu base de datos en PostgreSQL.*
+Bash
+npx prisma migrate dev --name init
+Esto creará la base de datos, las tablas, las relaciones y la carpeta de migraciones.
 
-## Ejecución del Proyecto
+# 4. Generar el Cliente de Prisma
 
-- Para **iniciar el servidor** principal:
-  ```bash
-  node index.js
-  ```
+--Para que tu editor de código (VS Code) reconozca los modelos y te dé autocompletado:
 
-- Para **comprobar la conexión** con la base de datos (script de pruebas):
-  ```bash
-  node test-db.js
-  ```
+npx prisma generate
+
+--Comandos Útiles de Prisma
+
+-npx prisma studio: Abre una interfaz visual en el navegador para gestionar los datos de las tablas sin necesidad de SQL.
+
+-npx prisma migrate reset: Borra todos los datos y vuelve a crear las tablas desde cero (útil si el esquema se corrompe).
+
+-npx prisma db push: Sincroniza el esquema rápidamente sin crear archivos de migración (solo para desarrollo).
+
+# Dependencias Principales
+
+@prisma/client: Motor de consultas para interactuar con la base de datos de forma tipada.
+
+express: Framework para el manejo de rutas y lógica de servidor.
+
+cors: Permite la comunicación segura con el frontend.
+
+dotenv: Manejo de variables de entorno sensibles.
+
+# Ejecución del Proyecto
+Para iniciar el servidor en modo desarrollo:
+
+node index.js
+
+El servidor estará disponible en http://localhost:4000.
+
+# Notas de Seguridad (Git)
+NO subir la carpeta node_modules/.
+
+NO subir el archivo .env.
+
+NO subir la carpeta generated/ (se crea localmente con prisma generate).
