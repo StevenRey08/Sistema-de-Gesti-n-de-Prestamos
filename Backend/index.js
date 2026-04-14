@@ -5,9 +5,19 @@ require('dotenv').config();
 
 const app = express();
 
+// Importar rutas
+const proveedorRoutes = require('./routes/proveedorRoutes');
+const personaRoutes = require('./routes/personaRoutes');
+
+
 // Middlewares
 app.use(cors());
 app.use(express.json());
+
+// Rutas
+app.use('/api/proveedores', proveedorRoutes);
+app.use('/api/personas', personaRoutes);
+
 
 // Ruta de prueba para ver si funciona
 app.get('/test', async (req, res) => {

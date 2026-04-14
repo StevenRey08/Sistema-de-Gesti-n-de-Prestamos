@@ -1,7 +1,6 @@
 // Configuración básica del generador y la conexión
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
