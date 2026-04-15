@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const { prisma } = require('../db');
 
 const personaController = {
     // Listar y buscar por nombre, apellido o documento

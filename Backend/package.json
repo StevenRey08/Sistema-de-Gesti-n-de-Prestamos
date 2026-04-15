@@ -4,8 +4,8 @@
   "description": "Este es el backend del Sistema de Gestión de Préstamos construido con Node.js y Express.",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon src/index.js",
-    "start": "node src/index.js"
+    "dev": "nodemon index.js",
+    "start": "node index.js"
   },
   "keywords": [],
   "author": "",
