@@ -1,6 +1,6 @@
 'use client';
 
-export default function Topbar({ titulo = 'Dashboard' }) {
+export default function Topbar({ titulo = 'Inicio' }) {
   return (
     <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shrink-0">
       {/* Título de la página actual */}
