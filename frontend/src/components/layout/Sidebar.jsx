@@ -5,14 +5,14 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const menuItems = [
-  { label: 'Dashboard',      icon: '🏠', href: '/' },
-  { label: 'Proveedores',    icon: '🏭', href: '/catalogos/proveedores' },
-  { label: 'Categorías',     icon: '🏷️',  href: '/catalogos/categorias' },
-  { label: 'Personas',       icon: '👥', href: '/catalogos/personas' },
-  { label: 'Herramientas',   icon: '🔧', href: '/herramientas' },
-  { label: 'Inventario',     icon: '📦', href: '/inventario' },
-  { label: 'Préstamos',      icon: '🔄', href: '/prestamos' },
-  { label: 'Movimientos',    icon: '📊', href: '/movimientos' },
+  { label: 'Inicio', icon: '', href: '/' },
+  { label: 'Proveedores', icon: '', href: '/catalogos/proveedores' },
+  { label: 'Categorías', icon: '', href: '/catalogos/categorias' },
+  { label: 'Personas', icon: '', href: '/catalogos/personas' },
+  { label: 'Herramientas', icon: '', href: '/herramientas' },
+  { label: 'Inventario', icon: '', href: '/inventario' },
+  { label: 'Préstamos', icon: '', href: '/prestamos' },
+  { label: 'Movimientos', icon: '', href: '/movimientos' },
 ];
 
 export default function Sidebar() {

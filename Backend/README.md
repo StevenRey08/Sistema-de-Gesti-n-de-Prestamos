@@ -28,7 +28,7 @@ PORT=4000
 # 3. Sincronización de la Base de Datos (Prisma)
 Para crear las tablas automáticamente en tu PostgreSQL basadas en el esquema del proyecto, ejecuta:
 
-Bash
+
 npx prisma migrate dev --name init
 Esto creará la base de datos, las tablas, las relaciones y la carpeta de migraciones.
 
