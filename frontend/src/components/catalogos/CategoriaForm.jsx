@@ -17,8 +17,7 @@ export default function CategoriaForm({ initialData = null, onSuccess, onCancel 
     const handleSubmit = (e) => {
         e.preventDefault();
         // Aquí es donde tus compañeros conectarán la API después
-        console.log("Datos listos para enviar:", formData);
-        onSuccess();
+        onSuccess(formData);
     };
 
     return (
