@@ -64,8 +64,8 @@ export default function PersonasPage() {
       {/* Modal Formulario */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6">
-            <h2 className="text-lg font-bold text-gray-800 mb-4">
+          <div className="bg-[#111827] rounded-2xl shadow-2xl w-full max-w-2xl p-6">
+            <h2 className="text-lg font-bold text-gray-500 mb-4">
               {editando ? 'Editar Persona' : 'Registrar Nueva Persona'}
             </h2>
             <PersonaForm

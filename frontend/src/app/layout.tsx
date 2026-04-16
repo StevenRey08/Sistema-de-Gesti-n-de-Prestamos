@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
 import "./globals.css";
 import Sidebar from "../components/layout/Sidebar";
 import Topbar from "../components/layout/Topbar";
-
-const geist = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Sistema de Inventario",
@@ -13,8 +10,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className={`${geist.variable} h-full`}>
-      <body className="h-full flex bg-gray-100">
+    <html lang="es" className="h-full">
+      <body className="h-full flex bg-gray-900">
         <Sidebar />
         <div className="flex-1 flex flex-col overflow-hidden">
           <Topbar />

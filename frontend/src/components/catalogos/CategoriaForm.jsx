@@ -1,67 +1,87 @@
 "use client";
-import React, { useState } from 'react';
+import { useState } from "react";
 
-export default function CategoriaForm({ initialData = null, onSuccess, onCancel }) {
-    // 1. Estado para los campos del formulario
-    const [formData, setFormData] = useState({
-        nombre: initialData?.nombre || '',
-        descripcion: initialData?.descripcion || ''
-    });
+export default function CategoriaForm({ onSubmit, onCancel }) {
+  const [form, setForm] = useState({
+    nombre: "",
+    descripcion: "",
+  });
 
-    // 2. Función para actualizar el estado cuando el usuario escribe
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData({ ...formData, [name]: value });
-    };
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        // Aquí es donde tus compañeros conectarán la API después
-        onSuccess(formData);
-    };
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!form.nombre.trim()) {
+      alert("El nombre es obligatorio");
+      return;
+    }
+    onSubmit(form);
+  };
 
-    return (
-        <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-                <label className="block text-sm font-medium text-gray-700">Nombre de la Categoría</label>
-                <input
-                    type="text"
-                    name="nombre"
-                    value={formData.nombre}
-                    onChange={handleChange}
-                    required
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Ej. Herramientas Eléctricas"
-                />
-            </div>
+  return (
+    <div className="w-full max-w-lg mx-auto">
+      {/* Contenedor integrado al Dark Mode de tu app */}
+      <form
+        onSubmit={handleSubmit}
+        className="bg-[#111827] border border-slate-800 p-8 rounded-xl shadow-2xl"
+      >
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-white">Nueva Categoría</h2>
+          <p className="text-slate-500 text-sm mt-1">Completa los detalles para organizar el inventario.</p>
+        </div>
 
-            <div>
-                <label className="block text-sm font-medium text-gray-700">Descripción</label>
-                <textarea
-                    name="descripcion"
-                    value={formData.descripcion}
-                    onChange={handleChange}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Para qué sirve esta categoría..."
-                    rows="3"
-                />
-            </div>
+        <div className="space-y-5">
+          {/* Campo Nombre */}
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Nombre</label>
+            <input
+              type="text"
+              name="nombre"
+              placeholder="Ej. Dispositivos Móviles"
+              value={form.nombre}
+              onChange={handleChange}
+              className="bg-[#0f172a] border border-slate-700 rounded-lg px-4 py-2.5 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-slate-600"
+            />
+          </div>
 
-            <div className="flex justify-end gap-3 pt-4">
-                <button
-                    type="button"
-                    onClick={onCancel}
-                    className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition"
-                >
-                    Cancelar
-                </button>
-                <button
-                    type="submit"
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-bold"
-                >
-                    {initialData ? 'Actualizar' : 'Guardar Categoría'}
-                </button>
-            </div>
-        </form>
-    );
+          {/* Campo Descripción */}
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Descripción</label>
+            <textarea
+              name="descripcion"
+              placeholder="Agrega una breve descripción..."
+              value={form.descripcion}
+              onChange={handleChange}
+              rows="3"
+              className="bg-[#0f172a] border border-slate-700 rounded-lg px-4 py-2.5 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-slate-600 resize-none"
+            />
+          </div>
+        </div>
+
+        {/* Acciones */}
+        <div className="flex justify-end gap-3 mt-10">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-5 py-2 text-sm font-medium text-slate-400 hover:text-white transition-colors"
+          >
+            Cancelar
+          </button>
+
+          <button
+            type="submit"
+            className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-2 rounded-lg text-sm font-bold transition-all active:scale-95 shadow-lg shadow-blue-900/20"
+          >
+            Guardar Categoría
+          </button>
+        </div>
+      </form>
+    </div>
+  );
 }

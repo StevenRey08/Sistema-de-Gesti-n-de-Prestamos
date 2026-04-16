@@ -5,11 +5,11 @@ import CategoriaForm from '../../../components/catalogos/CategoriaForm';
 
 export default function CategoriasPage() {
   const [categorias, setCategorias] = useState<any[]>([]);
-  const [cargando, setCargando]     = useState(true);
-  const [error, setError]           = useState('');
-  const [showForm, setShowForm]     = useState(false);
-  const [editando, setEditando]     = useState(null);
-  const [eliminando, setElim]       = useState(null);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [editando, setEditando] = useState(null);
+  const [eliminando, setElim] = useState(null);
 
   const cargar = useCallback(async () => {
     setCargando(true); setError('');
@@ -22,7 +22,7 @@ export default function CategoriasPage() {
 
   async function handleGuardar(form: any) {
     if (editando) await categoriasApi.update((editando as any).id, form);
-    else          await categoriasApi.create(form);
+    else await categoriasApi.create(form);
     setShowForm(false); setEditando(null);
     cargar();
   }
@@ -43,7 +43,7 @@ export default function CategoriasPage() {
           onClick={() => { setEditando(null); setShowForm(true); }}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
         >
-          + Nueva Categoría
+          Nueva Categoría
         </button>
       </div>
 
@@ -52,8 +52,8 @@ export default function CategoriasPage() {
       {/* Modal Formulario */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
-            <h2 className="text-lg font-bold text-gray-800 mb-4">
+          <div className="bg-blue-800 rounded-2xl shadow-2xl w-full max-w-lg p-6">
+            <h2 className="text-lg font-bold text-gray-400 mb-4">
               {editando ? 'Editar Categoría' : 'Nueva Categoría'}
             </h2>
             <CategoriaForm
