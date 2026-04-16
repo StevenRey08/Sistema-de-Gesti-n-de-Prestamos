@@ -53,9 +53,11 @@ export default function CategoriasPage() {
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="bg-blue-800 rounded-2xl shadow-2xl w-full max-w-lg p-6">
+
             <h2 className="text-lg font-bold text-gray-400 mb-4">
               {editando ? 'Editar Categoría' : 'Nueva Categoría'}
             </h2>
+
             <CategoriaForm
               initialData={editando}
               onSuccess={handleGuardar}
