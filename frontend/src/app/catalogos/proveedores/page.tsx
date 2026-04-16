@@ -5,7 +5,7 @@ import { proveedoresApi } from '../../../lib/api';
 const EMPTY = { nombre: '', contacto: '', telefono: '', email: '', direccion: '' };
 
 export default function ProveedoresPage() {
-  const [proveedores, setProveedores] = useState([]);
+  const [proveedores, setProveedores] = useState<any[]>([]);
   const [cargando, setCargando]       = useState(true);
   const [error, setError]             = useState('');
   const [showForm, setShowForm]       = useState(false);
@@ -16,7 +16,7 @@ export default function ProveedoresPage() {
 
   const cargar = useCallback(async () => {
     setCargando(true); setError('');
-    try { setProveedores(await proveedoresApi.getAll()); }
+    try { setProveedores(await proveedoresApi.getAll() as any[]); }
     catch (e: any) { setError(e.message); }
     finally { setCargando(false); }
   }, []);

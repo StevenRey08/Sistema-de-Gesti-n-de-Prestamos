@@ -19,16 +19,19 @@ export default function DashboardPage() {
   const cargarEstadisticas = async () => {
     try {
       // Hacemos peticiones reales a las rutas que hicieron tus compas
-      const resPrestamos = await api.get('/prestamos');
-      const resHerramientas = await api.get('/inventario');
-      const resPersonas = await api.get('/personas');
+      const resPrestamos   = await api.get('/prestamos')   as any;
+      const resHerramientas = await api.get('/inventario')  as any;
+      const resPersonas     = await api.get('/personas')    as any;
 
       // Guardamos los resultados contando cuántos registros llegaron
+      const prestamosData     = Array.isArray(resPrestamos)     ? resPrestamos     : resPrestamos?.data     ?? [];
+      const herramientasData  = Array.isArray(resHerramientas)  ? resHerramientas  : resHerramientas?.data  ?? [];
+      const personasData      = Array.isArray(resPersonas)      ? resPersonas      : resPersonas?.data      ?? [];
       setCounts({
-        prestamos: resPrestamos.data.length,
-        herramientas: resHerramientas.data.length,
-        personas: resPersonas.data.length,
-        pendientes: resPrestamos.data.filter((p: any) => p.estado === 'Pendiente').length
+        prestamos:    prestamosData.length,
+        herramientas: herramientasData.length,
+        personas:     personasData.length,
+        pendientes:   prestamosData.filter((p: any) => p.estado === 'Pendiente').length
       });
     } catch (error) {
       console.error("Error al conectar con el servidor:", error);

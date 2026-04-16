@@ -4,18 +4,18 @@ import { personasApi } from '../../../lib/api';
 import PersonaForm from '../../../components/catalogos/PersonaForm';
 
 export default function PersonasPage() {
-  const [personas, setPersonas]   = useState([]);
-  const [search, setSearch]       = useState('');
-  const [cargando, setCargando]   = useState(true);
-  const [error, setError]         = useState('');
-  const [showForm, setShowForm]   = useState(false);
-  const [editando, setEditando]   = useState(null);   // persona a editar
-  const [eliminando, setElim]     = useState(null);   // id a eliminar
+  const [personas, setPersonas] = useState<any[]>([]);
+  const [search, setSearch] = useState('');
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [editando, setEditando] = useState<any>(null);   // persona a editar
+  const [eliminando, setElim] = useState<any>(null);   // id a eliminar
 
   const cargar = useCallback(async () => {
     setCargando(true); setError('');
-    try { setPersonas(await personasApi.getAll(search)); }
-    catch (e) { setError(e.message); }
+    try { setPersonas(await personasApi.getAll(search) as any[]); }
+    catch (e: any) { setError(e.message); }
     finally { setCargando(false); }
   }, [search]);
 
@@ -23,7 +23,7 @@ export default function PersonasPage() {
 
   async function handleGuardar(form: any) {
     if (editando) await personasApi.update(editando.id, form);
-    else          await personasApi.create(form);
+    else await personasApi.create(form);
     setShowForm(false); setEditando(null);
     cargar();
   }

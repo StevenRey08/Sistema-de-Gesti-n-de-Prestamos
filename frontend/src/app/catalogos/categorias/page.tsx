@@ -4,7 +4,7 @@ import { categoriasApi } from '../../../lib/api';
 import CategoriaForm from '../../../components/catalogos/CategoriaForm';
 
 export default function CategoriasPage() {
-  const [categorias, setCategorias] = useState([]);
+  const [categorias, setCategorias] = useState<any[]>([]);
   const [cargando, setCargando]     = useState(true);
   const [error, setError]           = useState('');
   const [showForm, setShowForm]     = useState(false);
@@ -13,7 +13,7 @@ export default function CategoriasPage() {
 
   const cargar = useCallback(async () => {
     setCargando(true); setError('');
-    try { setCategorias(await categoriasApi.getAll()); }
+    try { setCategorias(await categoriasApi.getAll() as any[]); }
     catch (e: any) { setError(e.message); }
     finally { setCargando(false); }
   }, []);
@@ -28,7 +28,7 @@ export default function CategoriasPage() {
   }
 
   async function handleEliminar() {
-    await categoriasApi.delete(eliminando);
+    await categoriasApi.delete(eliminando as unknown as string | number);
     setElim(null); cargar();
   }
 
