@@ -1,4 +1,11 @@
-export default function MetricCard({ title, value, trend, type }) {
+interface MetricCardProps {
+    title: string;
+    value: string;
+    trend: string;
+    type: 'primary' | 'success' | 'info' | 'warning';
+}
+
+export default function MetricCard({ title, value, trend, type }: MetricCardProps) {
     const colors = {
         primary: "bg-blue-500",
         success: "bg-green-500",
@@ -6,10 +13,11 @@ export default function MetricCard({ title, value, trend, type }) {
         warning: "bg-orange-500"
     };
 
+    const colorClass = colors[type] || colors.primary;
+
     return (
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
-            <div className={`${colors[type]} w-12 h-12 rounded-lg flex items-center justify-center text-white`}>
-                {/* Aquí puedes poner un icono genérico */}
+            <div className={`${colorClass} w-12 h-12 rounded-lg flex items-center justify-center text-white`}>
                 <span className="text-xl font-bold">#</span>
             </div>
             <div>
