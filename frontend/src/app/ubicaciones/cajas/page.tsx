@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { cajasApi, estantesApi } from '../../../../lib/api';
+import { cajasApi, estantesApi } from '../../../lib/api';
 
 const EMPTY = { codigo: '', estante_id: '', descripcion: '' };
 
