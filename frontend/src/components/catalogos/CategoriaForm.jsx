@@ -1,10 +1,10 @@
 "use client";
 import { useState } from "react";
 
-export default function CategoriaForm({ onSubmit, onCancel }) {
+export default function CategoriaForm({ initialData = null, onSuccess, onCancel }) {
   const [form, setForm] = useState({
-    nombre: "",
-    descripcion: "",
+    nombre: initialData?.nombre || "",
+    descripcion: initialData?.descripcion || "",
   });
 
   const handleChange = (e) => {
@@ -21,7 +21,7 @@ export default function CategoriaForm({ onSubmit, onCancel }) {
       alert("El nombre es obligatorio");
       return;
     }
-    onSubmit(form);
+    onSuccess(form);
   };
 
   return (
