@@ -1,56 +1,92 @@
 'use client';
 import { useState } from 'react';
+import type { Persona, PersonaPayload, FormErrors } from '../../lib/types';
 
-const TIPOS_DOC = ['Cédula', 'Pasaporte', 'RNC', 'Otro'];
-const TIPOS_PERS = ['Estudiante', 'Profesor', 'Técnico', 'Administrativo'];
+type TipoDocumento = 'Cédula' | 'Pasaporte' | 'RNC' | 'Otro';
+type TipoPersona   = 'Estudiante' | 'Profesor' | 'Técnico' | 'Administrativo';
 
-export default function PersonaForm({ persona = null, onGuardar, onCancelar }) {
-  const [form, setForm] = useState({
-    tipo_documento: persona?.tipo_documento || 'Cédula',
-    numero_documento: persona?.numero_documento || '',
-    nombres: persona?.nombres || '',
-    apellidos: persona?.apellidos || '',
-    tipo: persona?.tipo || 'Estudiante',
-    telefono: persona?.telefono || '',
-    email: persona?.email || '',
+const TIPOS_DOC:  TipoDocumento[] = ['Cédula', 'Pasaporte', 'RNC', 'Otro'];
+const TIPOS_PERS: TipoPersona[]   = ['Estudiante', 'Profesor', 'Técnico', 'Administrativo'];
+
+interface PersonaFormProps {
+  persona?: Persona | null;
+  onGuardar: (form: PersonaPayload) => Promise<void>;
+  onCancelar: () => void;
+}
+
+interface PersonaFormState {
+  tipo_documento:   TipoDocumento;
+  numero_documento: string;
+  nombres:          string;
+  apellidos:        string;
+  tipo:             TipoPersona;
+  telefono:         string;
+  email:            string;
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export default function PersonaForm({ persona = null, onGuardar, onCancelar }: PersonaFormProps) {
+  const [form, setForm] = useState<PersonaFormState>({
+    tipo_documento:   (persona?.tipo_documento   as TipoDocumento) ?? 'Cédula',
+    numero_documento: persona?.numero_documento ?? '',
+    nombres:          persona?.nombres          ?? '',
+    apellidos:        persona?.apellidos        ?? '',
+    tipo:             (persona?.tipo            as TipoPersona)   ?? 'Estudiante',
+    telefono:         persona?.telefono         ?? '',
+    email:            persona?.email            ?? '',
   });
-  const [errores, setErrores] = useState({});
+  const [errores, setErrores]   = useState<FormErrors<PersonaFormState>>({});
   const [cargando, setCargando] = useState(false);
   const [apiError, setApiError] = useState('');
 
-  function handleChange(e) {
+  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
-    if (errores[name]) setErrores(prev => ({ ...prev, [name]: '' }));
+    if (errores[name as keyof PersonaFormState]) {
+      setErrores(prev => ({ ...prev, [name]: '' }));
+    }
   }
 
-  function validar() {
-    const e = {};
+  function validar(): boolean {
+    const e: FormErrors<PersonaFormState> = {};
     if (!form.numero_documento.trim()) e.numero_documento = 'Obligatorio';
-    if (!form.nombres.trim()) e.nombres = 'Obligatorio';
-    if (!form.apellidos.trim()) e.apellidos = 'Obligatorio';
-    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
-      e.email = 'Email no válido';
+    if (!form.nombres.trim())          e.nombres          = 'Obligatorio';
+    if (!form.apellidos.trim())        e.apellidos        = 'Obligatorio';
+    if (form.email && !EMAIL_RE.test(form.email)) e.email = 'Email no válido';
     setErrores(e);
     return Object.keys(e).length === 0;
   }
 
-  async function handleSubmit(e) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!validar()) return;
     setCargando(true);
     setApiError('');
     try {
-      await onGuardar(form);
-    } catch (err) {
-      setApiError(err.message);
+      await onGuardar({
+        tipo_documento:   form.tipo_documento,
+        numero_documento: form.numero_documento.trim(),
+        nombres:          form.nombres.trim(),
+        apellidos:        form.apellidos.trim(),
+        tipo:             form.tipo,
+        telefono:         form.telefono.trim() || undefined,
+        email:            form.email.trim()    || undefined,
+      });
+    } catch (err: unknown) {
+      setApiError(err instanceof Error ? err.message : 'Error al guardar');
     } finally {
       setCargando(false);
     }
   }
 
-  // CAMPO EDITADO PARA DARK MODE
-  const campo = (name, label, placeholder, tipo = 'text', requerido = false) => (
+  const campo = (
+    name: keyof PersonaFormState,
+    label: string,
+    placeholder: string,
+    tipo: React.HTMLInputTypeAttribute = 'text',
+    requerido = false,
+  ) => (
     <div className="flex flex-col gap-1.5">
       <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">
         {label}{requerido && ' *'}
@@ -69,9 +105,7 @@ export default function PersonaForm({ persona = null, onGuardar, onCancelar }) {
   );
 
   return (
-    // CONTENEDOR PRINCIPAL OSCURO
     <div className="bg-[#111827] border border-slate-800 rounded-2xl shadow-2xl overflow-hidden max-w-2xl w-full">
-      {/* Encabezado */}
       <div className="p-6 border-b border-slate-800/50">
         <h2 className="text-xl font-bold text-white">
           {persona ? 'Editar Persona' : 'Registrar Nueva Persona'}
@@ -102,8 +136,8 @@ export default function PersonaForm({ persona = null, onGuardar, onCancelar }) {
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          {campo('nombres', 'Nombres', 'Ej: Juan Carlos', 'text', true)}
-          {campo('apellidos', 'Apellidos', 'Ej: Pérez García', 'text', true)}
+          {campo('nombres',   'Nombres',   'Ej: Juan Carlos',   'text', true)}
+          {campo('apellidos', 'Apellidos', 'Ej: Pérez García',  'text', true)}
         </div>
 
         <div className="grid grid-cols-3 gap-4">
@@ -119,10 +153,9 @@ export default function PersonaForm({ persona = null, onGuardar, onCancelar }) {
             </select>
           </div>
           {campo('telefono', 'Teléfono', '809-000-0000')}
-          {campo('email', 'Email', 'correo@ejemplo.com', 'email')}
+          {campo('email',    'Email',    'correo@ejemplo.com', 'email')}
         </div>
 
-        {/* BOTONES DE ACCIÓN */}
         <div className="flex justify-end gap-3 pt-4 border-t border-slate-800/50 mt-2">
           <button
             type="button"

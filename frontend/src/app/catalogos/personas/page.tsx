@@ -2,26 +2,27 @@
 import { useState, useEffect, useCallback } from 'react';
 import { personasApi } from '../../../lib/api';
 import PersonaForm from '../../../components/catalogos/PersonaForm';
+import type { Persona, PersonaPayload } from '../../../lib/types';
 
 export default function PersonasPage() {
-  const [personas, setPersonas] = useState<any[]>([]);
+  const [personas, setPersonas] = useState<Persona[]>([]);
   const [search, setSearch] = useState('');
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const [editando, setEditando] = useState<any>(null);   // persona a editar
-  const [eliminando, setElim] = useState<any>(null);   // id a eliminar
+  const [editando, setEditando] = useState<Persona | null>(null);   // persona a editar
+  const [eliminando, setElim] = useState<number | null>(null);   // id a eliminar
 
   const cargar = useCallback(async () => {
     setCargando(true); setError('');
-    try { setPersonas(await personasApi.getAll(search) as any[]); }
-    catch (e: any) { setError(e.message); }
+    try { setPersonas(await personasApi.getAll(search) as Persona[]); }
+    catch (e: unknown) { setError(e instanceof Error ? e.message : 'Error'); }
     finally { setCargando(false); }
   }, [search]);
 
   useEffect(() => { cargar(); }, [cargar]);
 
-  async function handleGuardar(form: any) {
+  async function handleGuardar(form: PersonaPayload) {
     if (editando) await personasApi.update(editando.id, form);
     else await personasApi.create(form);
     setShowForm(false); setEditando(null);
@@ -29,11 +30,11 @@ export default function PersonasPage() {
   }
 
   async function handleEliminar() {
-    await personasApi.delete(eliminando);
+    if (eliminando) await personasApi.delete(eliminando);
     setElim(null); cargar();
   }
 
-  function abrirEditar(p: any) { setEditando(p); setShowForm(true); }
+  function abrirEditar(p: Persona) { setEditando(p); setShowForm(true); }
 
   return (
     <div className="p-6 space-y-6">
@@ -116,7 +117,7 @@ export default function PersonasPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700">
-              {personas.map((p: any) => (
+              {personas.map((p: Persona) => (
                 <tr key={p.id} className="text-gray-300 hover:bg-gray-700/50 transition-colors">
                   <td className="px-4 py-3 font-mono text-xs">{p.tipo_documento} {p.numero_documento}</td>
                   <td className="px-4 py-3 font-medium text-white">{p.nombres} {p.apellidos}</td>

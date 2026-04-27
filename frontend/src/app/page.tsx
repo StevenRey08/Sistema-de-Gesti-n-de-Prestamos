@@ -5,6 +5,11 @@ import api from '../lib/api'; // El mensajero
 import MetricCard from '../components/ui/MetricCard';
 import LoansTable from '../components/ui/LoansTable';
 import ActivityFeed from '../components/ui/ActivityFeed';
+import type { Prestamo, ItemInventario, Persona } from '../lib/types';
+
+interface ApiResponse<T> {
+  data?: T[];
+}
 
 export default function DashboardPage() {
   // 2. Definimos los "almacenes" para los datos del backend
@@ -19,9 +24,9 @@ export default function DashboardPage() {
   const cargarEstadisticas = async () => {
     try {
       // Hacemos peticiones reales a las rutas que hicieron tus compas
-      const resPrestamos   = await api.get('/prestamos')   as any;
-      const resHerramientas = await api.get('/inventario')  as any;
-      const resPersonas     = await api.get('/personas')    as any;
+      const resPrestamos   = await api.get('/prestamos')   as Prestamo[] | ApiResponse<Prestamo>;
+      const resHerramientas = await api.get('/inventario')  as ItemInventario[] | ApiResponse<ItemInventario>;
+      const resPersonas     = await api.get('/personas')    as Persona[] | ApiResponse<Persona>;
 
       // Guardamos los resultados contando cuántos registros llegaron
       const prestamosData     = Array.isArray(resPrestamos)     ? resPrestamos     : resPrestamos?.data     ?? [];
@@ -31,7 +36,7 @@ export default function DashboardPage() {
         prestamos:    prestamosData.length,
         herramientas: herramientasData.length,
         personas:     personasData.length,
-        pendientes:   prestamosData.filter((p: any) => p.estado === 'Pendiente').length
+        pendientes:   prestamosData.filter((p: Prestamo) => p.estado === 'Pendiente').length
       });
     } catch (error) {
       console.error("Error al conectar con el servidor:", error);

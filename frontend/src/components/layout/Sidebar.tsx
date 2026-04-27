@@ -1,10 +1,15 @@
 'use client';
-
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-const menuItems = [
+interface MenuItem {
+  label: string;
+  icon: string;
+  href: string;
+}
+
+const menuItems: MenuItem[] = [
   { label: 'Inicio', icon: '', href: '/' },
   { label: 'Proveedores', icon: '', href: '/catalogos/proveedores' },
   { label: 'Categorías', icon: '', href: '/catalogos/categorias' },
@@ -25,7 +30,6 @@ export default function Sidebar() {
       ${collapsed ? 'w-16' : 'w-64'}
       min-h-screen shrink-0
     `}>
-      {/* Header del sidebar */}
       <div className="flex items-center justify-between px-4 py-5 border-b border-gray-700">
         {!collapsed && (
           <span className="text-lg font-bold text-white truncate">⚙️ Inventario</span>
@@ -39,7 +43,6 @@ export default function Sidebar() {
         </button>
       </div>
 
-      {/* Navegación */}
       <nav className="flex-1 py-4 overflow-y-auto">
         {menuItems.map((item) => {
           const isActive = pathname === item.href;
@@ -63,7 +66,6 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* Footer del sidebar */}
       <div className="border-t border-gray-700 px-4 py-4">
         {!collapsed && (
           <p className="text-xs text-gray-500 text-center">v1.0 — Sistema Inventario</p>

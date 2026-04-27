@@ -2,33 +2,34 @@
 import { useState, useEffect, useCallback } from 'react';
 import { categoriasApi } from '../../../lib/api';
 import CategoriaForm from '../../../components/catalogos/CategoriaForm';
+import type { Categoria, CategoriaPayload } from '../../../lib/types';
 
 export default function CategoriasPage() {
-  const [categorias, setCategorias] = useState<any[]>([]);
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const [editando, setEditando] = useState(null);
-  const [eliminando, setElim] = useState(null);
+  const [editando, setEditando] = useState<Categoria | null>(null);
+  const [eliminando, setElim] = useState<number | null>(null);
 
   const cargar = useCallback(async () => {
     setCargando(true); setError('');
-    try { setCategorias(await categoriasApi.getAll() as any[]); }
-    catch (e: any) { setError(e.message); }
+    try { setCategorias(await categoriasApi.getAll() as Categoria[]); }
+    catch (e: unknown) { setError(e instanceof Error ? e.message : 'Error'); }
     finally { setCargando(false); }
   }, []);
 
   useEffect(() => { cargar(); }, [cargar]);
 
-  async function handleGuardar(form: any) {
-    if (editando) await categoriasApi.update((editando as any).id, form);
+  async function handleGuardar(form: CategoriaPayload) {
+    if (editando) await categoriasApi.update(editando.id, form);
     else await categoriasApi.create(form);
     setShowForm(false); setEditando(null);
     cargar();
   }
 
   async function handleEliminar() {
-    await categoriasApi.delete(eliminando as unknown as string | number);
+    if (eliminando) await categoriasApi.delete(eliminando);
     setElim(null); cargar();
   }
 
@@ -41,7 +42,7 @@ export default function CategoriasPage() {
         </div>
         <button
           onClick={() => { setEditando(null); setShowForm(true); }}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+          className="bg-blue-600 hover:bg-blue-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
         >
           Nueva Categoría
         </button>
@@ -52,9 +53,9 @@ export default function CategoriasPage() {
       {/* Modal Formulario */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-blue-800 rounded-2xl shadow-2xl w-full max-w-lg p-6">
+          <div className="bg-[#111827] rounded-2xl shadow-2xl w-full max-w-lg p-6">
 
-            <h2 className="text-lg font-bold text-gray-400 mb-4">
+            <h2 className="text-lg font-bold text-gray-300 mb-4">
               {editando ? 'Editar Categoría' : 'Nueva Categoría'}
             </h2>
 
@@ -98,7 +99,7 @@ export default function CategoriasPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700">
-              {categorias.map((c: any) => (
+              {categorias.map((c: Categoria) => (
                 <tr key={c.id} className="text-gray-300 hover:bg-gray-700/50 transition-colors">
                   <td className="px-4 py-3 text-gray-500 text-xs">{c.id}</td>
                   <td className="px-4 py-3 font-medium text-white">{c.nombre}</td>
