@@ -86,9 +86,7 @@ export default function PersonasPage() {
             <p className="text-sm text-gray-500">Esta acción no se puede deshacer.</p>
             <div className="flex gap-3 justify-center">
               <button onClick={() => setElim(null)}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
-                Cancelar
-              </button>
+                className="px-4 py-2 border border-gray-600 rounded-lg text-sm text-gray-300 hover:bg-gray-700">Cancelar</button>
               <button onClick={handleEliminar}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700">
                 Sí, eliminar

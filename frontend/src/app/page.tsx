@@ -1,75 +1,67 @@
 "use client";
-// 1. Importamos los Hooks necesarios
-import React, { useState, useEffect } from 'react';
-import api from '../lib/api'; // El mensajero
-import MetricCard from '../components/ui/MetricCard';
+import { useState, useEffect } from 'react';
+import api from '../lib/api';
 import LoansTable from '../components/ui/LoansTable';
 import ActivityFeed from '../components/ui/ActivityFeed';
-import type { Prestamo, ItemInventario, Persona } from '../lib/types';
-
-interface ApiResponse<T> {
-  data?: T[];
-}
 
 export default function DashboardPage() {
-  // 2. Definimos los "almacenes" para los datos del backend
-  const [counts, setCounts] = useState({
-    prestamos: 0,
-    herramientas: 0,
-    personas: 0,
-    pendientes: 0
-  });
+  const [counts, setCounts] = useState({ prestamos: 0, herramientas: 0, personas: 0, pendientes: 0 });
 
-  // 3. Esta función va al backend por los datos
-  const cargarEstadisticas = async () => {
-    try {
-      // Hacemos peticiones reales a las rutas que hicieron tus compas
-      const resPrestamos   = await api.get('/prestamos')   as Prestamo[] | ApiResponse<Prestamo>;
-      const resHerramientas = await api.get('/inventario')  as ItemInventario[] | ApiResponse<ItemInventario>;
-      const resPersonas     = await api.get('/personas')    as Persona[] | ApiResponse<Persona>;
-
-      // Guardamos los resultados contando cuántos registros llegaron
-      const prestamosData     = Array.isArray(resPrestamos)     ? resPrestamos     : resPrestamos?.data     ?? [];
-      const herramientasData  = Array.isArray(resHerramientas)  ? resHerramientas  : resHerramientas?.data  ?? [];
-      const personasData      = Array.isArray(resPersonas)      ? resPersonas      : resPersonas?.data      ?? [];
-      setCounts({
-        prestamos:    prestamosData.length,
-        herramientas: herramientasData.length,
-        personas:     personasData.length,
-        pendientes:   prestamosData.filter((p: Prestamo) => p.estado === 'Pendiente').length
-      });
-    } catch (error) {
-      console.error("Error al conectar con el servidor:", error);
-    }
-  };
-
-  // 4. El disparador: se ejecuta una sola vez al cargar la página
   useEffect(() => {
-    cargarEstadisticas();
+    const cargar = async () => {
+      try {
+        const [p, h, per] = await Promise.all([
+          api.get('/prestamos') as Promise<any[]>,
+          api.get('/inventario') as Promise<any[]>,
+          api.get('/personas') as Promise<any[]>,
+        ]);
+        const pArr = Array.isArray(p) ? p : [];
+        const hArr = Array.isArray(h) ? h : [];
+        const perArr = Array.isArray(per) ? per : [];
+        setCounts({
+          prestamos: pArr.length,
+          herramientas: hArr.length,
+          personas: perArr.length,
+          pendientes: pArr.filter((x: any) => x.estado === 'Pendiente').length,
+        });
+      } catch (e) { console.error(e); }
+    };
+    cargar();
   }, []);
 
+  const cards = [
+    { label: 'Préstamos activos', value: counts.prestamos, color: 'from-blue-600 to-blue-800', icon: '' },
+    { label: 'En inventario', value: counts.herramientas, color: 'from-emerald-600 to-emerald-800', icon: '' },
+    { label: 'Personas', value: counts.personas, color: 'from-violet-600 to-violet-800', icon: '' },
+    { label: 'Pendientes', value: counts.pendientes, color: 'from-amber-600 to-amber-800', icon: '' },
+  ];
+
   return (
-    <div className="flex flex-col gap-8 p-8 bg-gray-50 min-h-screen">
-      <header>
-        <h1 className="text-3xl font-bold text-gray-900">Panel de Control Real</h1>
-        <p className="text-gray-500">Datos conectados a la base de datos SQL.</p>
-      </header>
+    <div className="p-6 space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold text-white">Panel de Control</h1>
+        <p className="text-sm text-slate-400 mt-1">Datos en tiempo real desde la base de datos</p>
+      </div>
 
-      <section className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {/* 5. Ahora pasamos los valores que guardamos en el useState */}
-        <MetricCard title="Préstamos Activos" value={counts.prestamos.toString()} trend="En tiempo real" type="primary" />
-        <MetricCard title="Herramientas" value={counts.herramientas.toString()} trend="En inventario" type="success" />
-        <MetricCard title="Personas" value={counts.personas.toString()} trend="Registradas" type="info" />
-        <MetricCard title="Pendientes" value={counts.pendientes.toString()} trend="Urgentes" type="warning" />
-      </section>
+      {/* Tarjetas métricas */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        {cards.map((c) => (
+          <div key={c.label} className={`bg-gradient-to-br ${c.color} rounded-2xl p-5 shadow-xl`}>
+            <div className="text-3xl mb-3">{c.icon}</div>
+            <p className="text-4xl font-black text-white">{c.value}</p>
+            <p className="text-sm text-white/70 mt-1">{c.label}</p>
+          </div>
+        ))}
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
-          <h2 className="text-xl font-bold mb-6">Últimos Movimientos</h2>
+      {/* Tabla + Actividad */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 bg-[#111827] rounded-2xl border border-slate-800 shadow-xl p-6">
+          <h2 className="text-lg font-bold text-white mb-5">Últimos Préstamos</h2>
           <LoansTable />
         </div>
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
-          <h2 className="text-xl font-bold mb-6">Actividad Reciente</h2>
+        <div className="bg-[#111827] rounded-2xl border border-slate-800 shadow-xl p-6">
+          <h2 className="text-lg font-bold text-white mb-5">Actividad Reciente</h2>
           <ActivityFeed />
         </div>
       </div>

@@ -6,12 +6,12 @@ import type { Proveedor, ProveedorPayload } from '../../../lib/types';
 
 export default function ProveedoresPage() {
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
-  const [search, setSearch]           = useState('');
-  const [cargando, setCargando]       = useState(true);
-  const [error, setError]             = useState('');
-  const [showForm, setShowForm]       = useState(false);
-  const [editando, setEditando]       = useState<Proveedor | null>(null);
-  const [eliminando, setElim]         = useState<number | null>(null);
+  const [search, setSearch] = useState('');
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [editando, setEditando] = useState<Proveedor | null>(null);
+  const [eliminando, setElim] = useState<number | null>(null);
 
   const cargar = useCallback(async () => {
     setCargando(true); setError('');
@@ -24,7 +24,7 @@ export default function ProveedoresPage() {
 
   async function handleGuardar(form: ProveedorPayload) {
     if (editando) await proveedoresApi.update(editando.id, form);
-    else          await proveedoresApi.create(form);
+    else await proveedoresApi.create(form);
     setShowForm(false); setEditando(null); cargar();
   }
 
