@@ -38,8 +38,8 @@ export default function HerramientaForm({ herramienta = null, onGuardar, onCance
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
-    if (errores[name as keyof HerramientaFormState]) setErrores(prev => ({ ...prev, [name]: '' }));
+    setForm((prev) => ({ ...prev, [name]: value }));
+    if (errores[name as keyof HerramientaFormState]) setErrores((prev) => ({ ...prev, [name]: '' }));
   }
 
   function validar() {
@@ -53,59 +53,66 @@ export default function HerramientaForm({ herramienta = null, onGuardar, onCance
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!validar()) return;
-    setCargando(true); setApiError('');
+    setCargando(true);
+    setApiError('');
+
     const body: HerramientaPayload = {
       ...form,
       categoria_id: form.categoria_id ? Number(form.categoria_id) : null,
       proveedor_id: form.proveedor_id ? Number(form.proveedor_id) : null,
       valor_estimado: form.valor_estimado ? parseFloat(form.valor_estimado) : null,
     };
-    try { await onGuardar(body); }
-    catch (err: unknown) { setApiError(err instanceof Error ? err.message : 'Error'); }
-    finally { setCargando(false); }
+
+    try {
+      await onGuardar(body);
+    } catch (err: unknown) {
+      setApiError(err instanceof Error ? err.message : 'Error');
+    } finally {
+      setCargando(false);
+    }
   }
 
   const campo = (name: keyof HerramientaFormState, label: string, placeholder: string, requerido = false) => (
     <div>
-      <label className="block text-sm font-medium text-gray-300 mb-1">{label}{requerido && ' *'}</label>
-      <input name={name} value={form[name]} onChange={handleChange} placeholder={placeholder}
-        className={`w-full rounded-lg px-3 py-2 text-sm bg-gray-700 text-white border focus:outline-none
-          focus:ring-2 focus:ring-blue-500 ${errores[name] ? 'border-red-500' : 'border-gray-600'}`} />
-      {errores[name] && <p className="text-xs text-red-400 mt-1">{errores[name]}</p>}
+      <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">{label}{requerido && ' *'}</label>
+      <input
+        name={name}
+        value={form[name]}
+        onChange={handleChange}
+        placeholder={placeholder}
+        className={`soft-input ${errores[name] ? 'border-red-400' : ''}`}
+      />
+      {errores[name] && <p className="mt-1 text-xs text-red-500">{errores[name]}</p>}
     </div>
   );
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {apiError && <div className="bg-red-900/50 border border-red-700 text-red-300 text-sm px-4 py-3 rounded-lg">{apiError}</div>}
-      <div className="grid grid-cols-2 gap-4">
+      {apiError && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{apiError}</div>}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {campo('codigo', 'Código', 'Ej: TOOL-001', true)}
         {campo('nombre', 'Nombre de la herramienta', 'Ej: Taladro percutor', true)}
       </div>
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1">Categoría</label>
-          <select name="categoria_id" value={form.categoria_id} onChange={handleChange}
-            className="w-full rounded-lg px-3 py-2 text-sm bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Categoría</label>
+          <select name="categoria_id" value={form.categoria_id} onChange={handleChange} className="soft-select">
             <option value="">— Sin categoría —</option>
             {categorias.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1">Proveedor</label>
-          <select name="proveedor_id" value={form.proveedor_id} onChange={handleChange}
-            className="w-full rounded-lg px-3 py-2 text-sm bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Proveedor</label>
+          <select name="proveedor_id" value={form.proveedor_id} onChange={handleChange} className="soft-select">
             <option value="">— Sin proveedor —</option>
             {proveedores.map((p) => <option key={p.id} value={p.id}>{p.nombre_empresa}</option>)}
           </select>
         </div>
         {campo('valor_estimado', 'Valor estimado (RD$)', '0.00')}
       </div>
-      <div className="flex justify-end gap-3 pt-2 border-t border-gray-700">
-        <button type="button" onClick={onCancelar}
-          className="px-4 py-2 text-sm border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-700 transition-colors">Cancelar</button>
-        <button type="submit" disabled={cargando}
-          className="px-5 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60 transition-colors font-medium">
+      <div className="flex justify-end gap-3 border-t border-[var(--border)] pt-3">
+        <button type="button" onClick={onCancelar} className="soft-btn-secondary px-4 py-2 text-sm">Cancelar</button>
+        <button type="submit" disabled={cargando} className="soft-btn-primary px-5 py-2 text-sm disabled:opacity-60">
           {cargando ? 'Guardando...' : herramienta ? 'Actualizar' : 'Registrar herramienta'}
         </button>
       </div>

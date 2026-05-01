@@ -167,6 +167,29 @@ export interface DashboardCounts {
   pendientes: number;
 }
 
+// ── Seguridad ─────────────────────────────────────────────
+
+export interface SecurityRole {
+  id: string;
+  nombre: string;
+  descripcion: string;
+}
+
+export interface SecurityPermission {
+  id: string;
+  clave: string;
+  descripcion: string;
+}
+
+export interface ManagedUser {
+  id: string;
+  nombre: string;
+  email: string;
+  rol: string;
+  password: string;
+  estado: 'Activo' | 'Inactivo';
+}
+
 // ── Errores de validación de formulario ───────────────────
 
 export type FormErrors<T> = Partial<Record<keyof T, string>>;

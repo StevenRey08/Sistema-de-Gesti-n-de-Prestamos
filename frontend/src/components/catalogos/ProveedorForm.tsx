@@ -20,27 +20,25 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function ProveedorForm({ proveedor = null, onGuardar, onCancelar }: ProveedorFormProps) {
   const [form, setForm] = useState<ProveedorFormState>({
-    codigo:          proveedor?.codigo          ?? '',
-    nombre_empresa:  proveedor?.nombre_empresa  ?? '',
+    codigo: proveedor?.codigo ?? '',
+    nombre_empresa: proveedor?.nombre_empresa ?? '',
     nombre_contacto: proveedor?.nombre_contacto ?? '',
-    telefono:        proveedor?.telefono        ?? '',
-    email:           proveedor?.email           ?? '',
+    telefono: proveedor?.telefono ?? '',
+    email: proveedor?.email ?? '',
   });
-  const [errores, setErrores]   = useState<FormErrors<ProveedorFormState>>({});
+  const [errores, setErrores] = useState<FormErrors<ProveedorFormState>>({});
   const [cargando, setCargando] = useState(false);
   const [apiError, setApiError] = useState('');
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
-    if (errores[name as keyof ProveedorFormState]) {
-      setErrores(prev => ({ ...prev, [name]: '' }));
-    }
+    setForm((prev) => ({ ...prev, [name]: value }));
+    if (errores[name as keyof ProveedorFormState]) setErrores((prev) => ({ ...prev, [name]: '' }));
   }
 
-  function validar(): boolean {
+  function validar() {
     const e: FormErrors<ProveedorFormState> = {};
-    if (!form.codigo.trim())         e.codigo         = 'Obligatorio';
+    if (!form.codigo.trim()) e.codigo = 'Obligatorio';
     if (!form.nombre_empresa.trim()) e.nombre_empresa = 'Obligatorio';
     if (form.email && !EMAIL_RE.test(form.email)) e.email = 'Email no válido';
     setErrores(e);
@@ -54,11 +52,11 @@ export default function ProveedorForm({ proveedor = null, onGuardar, onCancelar 
     setApiError('');
     try {
       await onGuardar({
-        codigo:          form.codigo.trim(),
-        nombre_empresa:  form.nombre_empresa.trim(),
+        codigo: form.codigo.trim(),
+        nombre_empresa: form.nombre_empresa.trim(),
         nombre_contacto: form.nombre_contacto.trim() || undefined,
-        telefono:        form.telefono.trim()        || undefined,
-        email:           form.email.trim()           || undefined,
+        telefono: form.telefono.trim() || undefined,
+        email: form.email.trim() || undefined,
       });
     } catch (err: unknown) {
       setApiError(err instanceof Error ? err.message : 'Error al guardar');
@@ -75,46 +73,27 @@ export default function ProveedorForm({ proveedor = null, onGuardar, onCancelar 
     requerido = false,
   ) => (
     <div>
-      <label className="block text-sm font-medium text-gray-300 mb-1">
-        {label}{requerido && ' *'}
-      </label>
-      <input
-        name={name}
-        value={form[name]}
-        onChange={handleChange}
-        placeholder={placeholder}
-        type={tipo}
-        className={`w-full rounded-lg px-3 py-2 text-sm bg-gray-700 text-white border
-          focus:outline-none focus:ring-2 focus:ring-blue-500
-          ${errores[name] ? 'border-red-500' : 'border-gray-600'}`}
-      />
-      {errores[name] && <p className="text-xs text-red-400 mt-1">{errores[name]}</p>}
+      <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">{label}{requerido && ' *'}</label>
+      <input name={name} value={form[name]} onChange={handleChange} placeholder={placeholder} type={tipo} className={`soft-input ${errores[name] ? 'border-red-400' : ''}`} />
+      {errores[name] && <p className="mt-1 text-xs text-red-500">{errores[name]}</p>}
     </div>
   );
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {apiError && (
-        <div className="bg-red-900/50 border border-red-700 text-red-300 text-sm px-4 py-3 rounded-lg">
-          {apiError}
-        </div>
-      )}
-      <div className="grid grid-cols-2 gap-4">
-        {campo('codigo',         'Código',  'Ej: PROV-001',        'text', true)}
+      {apiError && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{apiError}</div>}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {campo('codigo', 'Código', 'Ej: PROV-001', 'text', true)}
         {campo('nombre_empresa', 'Empresa', 'Nombre de la empresa', 'text', true)}
       </div>
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {campo('nombre_contacto', 'Persona de contacto', 'Ej: Juan Pérez')}
-        {campo('telefono',        'Teléfono',            '809-000-0000')}
-        {campo('email',           'Email',               'correo@empresa.com', 'email')}
+        {campo('telefono', 'Teléfono', '809-000-0000')}
+        {campo('email', 'Email', 'correo@empresa.com', 'email')}
       </div>
-      <div className="flex justify-end gap-3 pt-2 border-t border-gray-700">
-        <button type="button" onClick={onCancelar}
-          className="px-4 py-2 text-sm border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-700 transition-colors">
-          Cancelar
-        </button>
-        <button type="submit" disabled={cargando}
-          className="px-5 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60 transition-colors font-medium">
+      <div className="flex justify-end gap-3 border-t border-[var(--border)] pt-3">
+        <button type="button" onClick={onCancelar} className="soft-btn-secondary px-4 py-2 text-sm">Cancelar</button>
+        <button type="submit" disabled={cargando} className="soft-btn-primary px-5 py-2 text-sm disabled:opacity-60">
           {cargando ? 'Guardando...' : proveedor ? 'Actualizar' : 'Registrar proveedor'}
         </button>
       </div>

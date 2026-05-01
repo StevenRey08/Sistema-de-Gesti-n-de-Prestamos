@@ -8,9 +8,9 @@ import type { Herramienta, HerramientaPayload, InventarioPayload, ItemInventario
 type TabKey = 'herramientas' | 'existencias';
 
 const BADGE: Record<string, string> = {
-  Nuevo: 'bg-green-900 text-green-300',
-  Usado: 'bg-yellow-900 text-yellow-300',
-  Dañado: 'bg-red-900 text-red-300',
+  Nuevo: 'status-badge status-success',
+  Usado: 'status-badge status-warning',
+  Dañado: 'status-badge status-danger',
 };
 
 function TabButton({
@@ -153,11 +153,11 @@ export default function InventarioPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="page-shell">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Inventario</h1>
-          <p className="mt-1 text-sm text-gray-400">
+          <h1 className="page-title">Inventario</h1>
+          <p className="page-subtitle">
             Administra el catálogo de herramientas y sus existencias desde un mismo módulo.
           </p>
         </div>
@@ -176,14 +176,14 @@ export default function InventarioPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-xl border border-gray-700 bg-gray-900 p-4">
-          <p className="text-sm text-gray-400">Herramientas registradas</p>
-          <p className="mt-2 text-3xl font-bold text-white">{herramientas.length}</p>
+      <div className="stats-grid">
+        <div className="stats-card">
+          <p>Herramientas registradas</p>
+          <p>{herramientas.length}</p>
         </div>
-        <div className="rounded-xl border border-gray-700 bg-gray-900 p-4">
-          <p className="text-sm text-gray-400">Registros en inventario</p>
-          <p className="mt-2 text-3xl font-bold text-white">{items.length}</p>
+        <div className="stats-card">
+          <p>Registros en inventario</p>
+          <p>{items.length}</p>
         </div>
       </div>
 
@@ -191,8 +191,8 @@ export default function InventarioPage() {
         <section className="space-y-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h2 className="text-xl font-bold text-white">Catálogo de herramientas</h2>
-              <p className="mt-1 text-sm text-gray-400">
+              <h2 className="text-xl font-semibold text-[var(--text-main)]">Catálogo de herramientas</h2>
+              <p className="mt-1 text-sm text-[var(--text-muted)]">
                 Define las herramientas base que luego se convierten en existencias.
               </p>
             </div>
@@ -202,7 +202,7 @@ export default function InventarioPage() {
                 setEditandoHerramienta(null);
                 setShowHerramientaForm(true);
               }}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+              className="soft-btn-primary"
             >
               + Nueva herramienta
             </button>
@@ -213,23 +213,23 @@ export default function InventarioPage() {
             placeholder="Buscar herramienta..."
             value={herramientasSearch}
             onChange={(e) => setHerramientasSearch(e.target.value)}
-            className="w-full max-w-sm rounded-lg border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="soft-input max-w-sm"
           />
 
           {herramientasError && (
-            <div className="rounded-lg border border-red-700 bg-red-900 px-4 py-3 text-sm text-red-300">
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
               {herramientasError}
             </div>
           )}
 
-          <div className="overflow-hidden rounded-xl border border-gray-700 bg-gray-800">
+          <div className="table-shell">
             {herramientasLoading ? (
-              <p className="py-12 text-center text-gray-400">Cargando...</p>
+              <p className="py-12 text-center text-[var(--text-muted)]">Cargando...</p>
             ) : herramientas.length === 0 ? (
-              <p className="py-12 text-center text-gray-500">No hay herramientas registradas.</p>
+              <p className="py-12 text-center text-[var(--text-muted)]">No hay herramientas registradas.</p>
             ) : (
               <table className="w-full text-sm">
-                <thead className="bg-gray-900 text-xs uppercase text-gray-400">
+                <thead>
                   <tr>
                     <th className="px-4 py-3 text-left">Código</th>
                     <th className="px-4 py-3 text-left">Nombre</th>
@@ -239,13 +239,13 @@ export default function InventarioPage() {
                     <th className="px-4 py-3 text-right">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-700">
+                <tbody>
                   {herramientas.map((herramienta) => (
-                    <tr key={herramienta.id} className="text-gray-300 transition-colors hover:bg-gray-700/50">
-                      <td className="px-4 py-3 font-mono text-xs text-yellow-400">{herramienta.codigo}</td>
-                      <td className="px-4 py-3 font-medium text-white">{herramienta.nombre}</td>
-                      <td className="px-4 py-3 text-gray-400">{herramienta.categoria?.nombre || '—'}</td>
-                      <td className="px-4 py-3 text-gray-400">{herramienta.proveedor?.nombre_empresa || '—'}</td>
+                    <tr key={herramienta.id}>
+                      <td className="px-4 py-3 font-mono text-xs text-[var(--accent-strong)]">{herramienta.codigo}</td>
+                      <td className="px-4 py-3 font-medium text-[var(--text-main)]">{herramienta.nombre}</td>
+                      <td className="px-4 py-3 text-[var(--text-muted)]">{herramienta.categoria?.nombre || '—'}</td>
+                      <td className="px-4 py-3 text-[var(--text-muted)]">{herramienta.proveedor?.nombre_empresa || '—'}</td>
                       <td className="px-4 py-3">
                         {herramienta.valor_estimado
                           ? `RD$ ${Number(herramienta.valor_estimado).toLocaleString()}`
@@ -257,13 +257,13 @@ export default function InventarioPage() {
                             setEditandoHerramienta(herramienta);
                             setShowHerramientaForm(true);
                           }}
-                          className="text-xs font-medium text-blue-400 hover:text-blue-300"
+                          className="text-xs font-medium text-[var(--accent)] hover:text-[var(--accent-strong)]"
                         >
                           Editar
                         </button>
                         <button
                           onClick={() => setEliminandoHerramienta(herramienta.id)}
-                          className="text-xs font-medium text-red-400 hover:text-red-300"
+                          className="text-xs font-medium text-[var(--danger)] hover:opacity-80"
                         >
                           Eliminar
                         </button>
@@ -279,8 +279,8 @@ export default function InventarioPage() {
         <section className="space-y-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h2 className="text-xl font-bold text-white">Existencias en inventario</h2>
-              <p className="mt-1 text-sm text-gray-400">
+              <h2 className="text-xl font-semibold text-[var(--text-main)]">Existencias en inventario</h2>
+              <p className="mt-1 text-sm text-[var(--text-muted)]">
                 Controla cantidades, estado y ubicación física de cada herramienta.
               </p>
             </div>
@@ -290,7 +290,7 @@ export default function InventarioPage() {
                 setEditandoInventario(null);
                 setShowInventarioForm(true);
               }}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+              className="soft-btn-primary"
             >
               + Agregar existencia
             </button>
@@ -301,25 +301,25 @@ export default function InventarioPage() {
             placeholder="Buscar por herramienta, estado o ubicación..."
             value={inventarioSearch}
             onChange={(e) => setInventarioSearch(e.target.value)}
-            className="w-full max-w-md rounded-lg border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="soft-input max-w-md"
           />
 
           {inventarioError && (
-            <div className="rounded-lg border border-red-700 bg-red-900 px-4 py-3 text-sm text-red-300">
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
               {inventarioError}
             </div>
           )}
 
-          <div className="overflow-hidden rounded-xl border border-gray-700 bg-gray-800">
+          <div className="table-shell">
             {inventarioLoading ? (
-              <p className="py-12 text-center text-gray-400">Cargando...</p>
+              <p className="py-12 text-center text-[var(--text-muted)]">Cargando...</p>
             ) : inventarioFiltrado.length === 0 ? (
-              <p className="py-12 text-center text-gray-500">
+              <p className="py-12 text-center text-[var(--text-muted)]">
                 {inventarioSearch ? 'No hay resultados para esa búsqueda.' : 'No hay registros en el inventario.'}
               </p>
             ) : (
               <table className="w-full text-sm">
-                <thead className="bg-gray-900 text-xs uppercase text-gray-400">
+                <thead>
                   <tr>
                     <th className="px-4 py-3 text-left">Herramienta</th>
                     <th className="px-4 py-3 text-left">Estado</th>
@@ -328,20 +328,20 @@ export default function InventarioPage() {
                     <th className="px-4 py-3 text-right">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-700">
+                <tbody>
                   {inventarioFiltrado.map((item) => (
-                    <tr key={item.id} className="text-gray-300 transition-colors hover:bg-gray-700/50">
+                    <tr key={item.id}>
                       <td className="px-4 py-3">
-                        <p className="font-medium text-white">{item.herramienta?.nombre || '—'}</p>
-                        <p className="text-xs text-gray-500">{item.herramienta?.codigo}</p>
+                        <p className="font-medium text-[var(--text-main)]">{item.herramienta?.nombre || '—'}</p>
+                        <p className="text-xs text-[var(--text-muted)]">{item.herramienta?.codigo}</p>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`rounded-full px-2 py-1 text-xs ${BADGE[item.estado] || 'bg-gray-700 text-gray-300'}`}>
+                        <span className={BADGE[item.estado] || 'status-badge status-info'}>
                           {item.estado}
                         </span>
                       </td>
-                      <td className="px-4 py-3 font-bold text-white">{item.cantidad}</td>
-                      <td className="px-4 py-3 text-gray-400">
+                      <td className="px-4 py-3 font-bold text-[var(--accent-strong)]">{item.cantidad}</td>
+                      <td className="px-4 py-3 text-[var(--text-muted)]">
                         {item.caja ? `Caja: ${item.caja.codigo}` : item.estante ? `Estante: ${item.estante.codigo}` : '—'}
                       </td>
                       <td className="px-4 py-3 text-right space-x-2">
@@ -350,13 +350,13 @@ export default function InventarioPage() {
                             setEditandoInventario(item);
                             setShowInventarioForm(true);
                           }}
-                          className="text-xs font-medium text-blue-400 hover:text-blue-300"
+                          className="text-xs font-medium text-[var(--accent)] hover:text-[var(--accent-strong)]"
                         >
                           Editar
                         </button>
                         <button
                           onClick={() => setEliminandoInventario(item.id)}
-                          className="text-xs font-medium text-red-400 hover:text-red-300"
+                          className="text-xs font-medium text-[var(--danger)] hover:opacity-80"
                         >
                           Eliminar
                         </button>
@@ -371,9 +371,9 @@ export default function InventarioPage() {
       )}
 
       {showHerramientaForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-2xl rounded-2xl border border-gray-700 bg-gray-900 p-6 shadow-2xl">
-            <h2 className="mb-4 text-lg font-bold text-white">
+        <div className="modal-backdrop">
+          <div className="modal-panel max-w-2xl p-6">
+            <h2 className="mb-4 text-lg font-semibold text-[var(--text-main)]">
               {editandoHerramienta ? 'Editar herramienta' : 'Nueva herramienta'}
             </h2>
             <HerramientaForm
@@ -389,9 +389,9 @@ export default function InventarioPage() {
       )}
 
       {showInventarioForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-2xl rounded-2xl border border-gray-700 bg-gray-900 p-6 shadow-2xl">
-            <h2 className="mb-4 text-lg font-bold text-white">
+        <div className="modal-backdrop">
+          <div className="modal-panel max-w-2xl p-6">
+            <h2 className="mb-4 text-lg font-semibold text-[var(--text-main)]">
               {editandoInventario ? 'Editar registro de inventario' : 'Agregar existencia'}
             </h2>
             <InventarioForm
@@ -407,21 +407,15 @@ export default function InventarioPage() {
       )}
 
       {eliminandoHerramienta !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-sm space-y-4 rounded-2xl border border-gray-700 bg-gray-900 p-6 text-center shadow-2xl">
-            <p className="font-medium text-white">¿Eliminar esta herramienta?</p>
-            <p className="text-sm text-gray-400">Esta acción no se puede deshacer.</p>
+        <div className="modal-backdrop">
+          <div className="modal-panel max-w-sm space-y-4 p-6 text-center">
+            <p className="font-medium text-[var(--text-main)]">¿Eliminar esta herramienta?</p>
+            <p className="text-sm text-[var(--text-muted)]">Esta acción no se puede deshacer.</p>
             <div className="flex justify-center gap-3">
-              <button
-                onClick={() => setEliminandoHerramienta(null)}
-                className="rounded-lg border border-gray-600 px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
-              >
+              <button onClick={() => setEliminandoHerramienta(null)} className="soft-btn-secondary px-4 py-2 text-sm">
                 Cancelar
               </button>
-              <button
-                onClick={handleEliminarHerramienta}
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
-              >
+              <button onClick={handleEliminarHerramienta} className="rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
                 Sí, eliminar
               </button>
             </div>
@@ -430,21 +424,15 @@ export default function InventarioPage() {
       )}
 
       {eliminandoInventario !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-sm space-y-4 rounded-2xl border border-gray-700 bg-gray-900 p-6 text-center shadow-2xl">
-            <p className="font-medium text-white">¿Eliminar este registro?</p>
-            <p className="text-sm text-gray-400">Esta acción no se puede deshacer.</p>
+        <div className="modal-backdrop">
+          <div className="modal-panel max-w-sm space-y-4 p-6 text-center">
+            <p className="font-medium text-[var(--text-main)]">¿Eliminar este registro?</p>
+            <p className="text-sm text-[var(--text-muted)]">Esta acción no se puede deshacer.</p>
             <div className="flex justify-center gap-3">
-              <button
-                onClick={() => setEliminandoInventario(null)}
-                className="rounded-lg border border-gray-600 px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
-              >
+              <button onClick={() => setEliminandoInventario(null)} className="soft-btn-secondary px-4 py-2 text-sm">
                 Cancelar
               </button>
-              <button
-                onClick={handleEliminarInventario}
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
-              >
+              <button onClick={handleEliminarInventario} className="rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">
                 Sí, eliminar
               </button>
             </div>

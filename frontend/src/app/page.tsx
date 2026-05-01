@@ -38,31 +38,30 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="p-6 space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-white">Panel de Control</h1>
-        <p className="text-sm text-slate-400 mt-1">Datos en tiempo real desde la base de datos</p>
+    <div className="page-shell">
+      <div className="page-heading">
+        <div>
+          <h1 className="page-title">Panel de control</h1>
+          <p className="page-subtitle">Datos en tiempo real para visualizar el estado general del sistema.</p>
+        </div>
       </div>
 
-      {/* Tarjetas métricas */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="stats-grid">
         {cards.map((c) => (
-          <div key={c.label} className={`bg-gradient-to-br ${c.color} rounded-2xl p-5 shadow-xl`}>
-            <div className="text-3xl mb-3">{c.icon}</div>
-            <p className="text-4xl font-black text-white">{c.value}</p>
-            <p className="text-sm text-white/70 mt-1">{c.label}</p>
+          <div key={c.label} className="stats-card">
+            <p>{c.label}</p>
+            <p>{c.value}</p>
           </div>
         ))}
       </div>
 
-      {/* Tabla + Actividad */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-[#111827] rounded-2xl border border-slate-800 shadow-xl p-6">
-          <h2 className="text-lg font-bold text-white mb-5">Últimos Préstamos</h2>
+        <div className="surface-card lg:col-span-2 p-6">
+          <h2 className="mb-5 text-lg font-semibold text-[var(--text-main)]">Últimos préstamos</h2>
           <LoansTable />
         </div>
-        <div className="bg-[#111827] rounded-2xl border border-slate-800 shadow-xl p-6">
-          <h2 className="text-lg font-bold text-white mb-5">Actividad Reciente</h2>
+        <div className="surface-card p-6">
+          <h2 className="mb-5 text-lg font-semibold text-[var(--text-main)]">Actividad reciente</h2>
           <ActivityFeed />
         </div>
       </div>

@@ -274,11 +274,11 @@ export default function UbicacionesPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="page-shell">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Ubicaciones</h1>
-          <p className="mt-1 text-sm text-gray-400">
+          <h1 className="page-title">Ubicaciones</h1>
+          <p className="page-subtitle">
             Organiza la estructura física de almacenamiento entre estantes y cajas.
           </p>
         </div>
@@ -297,14 +297,14 @@ export default function UbicacionesPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-xl border border-gray-700 bg-gray-900 p-4">
-          <p className="text-sm text-gray-400">Estantes registrados</p>
-          <p className="mt-2 text-3xl font-bold text-white">{estantes.length}</p>
+      <div className="stats-grid">
+        <div className="stats-card">
+          <p>Estantes registrados</p>
+          <p>{estantes.length}</p>
         </div>
-        <div className="rounded-xl border border-gray-700 bg-gray-900 p-4">
-          <p className="text-sm text-gray-400">Cajas registradas</p>
-          <p className="mt-2 text-3xl font-bold text-white">{cajas.length}</p>
+        <div className="stats-card">
+          <p>Cajas registradas</p>
+          <p>{cajas.length}</p>
         </div>
       </div>
 
@@ -312,15 +312,15 @@ export default function UbicacionesPage() {
         <section className="space-y-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h2 className="text-xl font-bold text-white">Estantes</h2>
-              <p className="mt-1 text-sm text-gray-400">
+              <h2 className="text-xl font-semibold text-[var(--text-main)]">Estantes</h2>
+              <p className="mt-1 text-sm text-[var(--text-muted)]">
                 Define las ubicaciones principales donde se agrupan las cajas y herramientas.
               </p>
             </div>
 
             <button
               onClick={abrirNuevoEstante}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+              className="soft-btn-primary"
             >
               + Nuevo estante
             </button>
@@ -332,29 +332,29 @@ export default function UbicacionesPage() {
               placeholder="Buscar por código o ubicación..."
               value={busquedaEstante}
               onChange={(e) => setBusquedaEstante(e.target.value)}
-              className="flex-1 rounded-lg border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="soft-input flex-1"
             />
-            <span className="text-sm text-gray-400 whitespace-nowrap">
+            <span className="text-sm text-[var(--text-muted)] whitespace-nowrap">
               {estantesFiltrados.length} / {estantes.length}
             </span>
           </div>
 
           {estantesError && (
-            <div className="rounded-lg border border-red-700 bg-red-900 px-4 py-3 text-sm text-red-300">
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
               {estantesError}
             </div>
           )}
 
-          <div className="overflow-hidden rounded-xl border border-gray-700 bg-gray-800">
+          <div className="table-shell">
             {estantesLoading ? (
-              <p className="py-12 text-center text-gray-400">Cargando estantes...</p>
+              <p className="py-12 text-center text-[var(--text-muted)]">Cargando estantes...</p>
             ) : estantesFiltrados.length === 0 ? (
-              <p className="py-12 text-center text-gray-500">
+              <p className="py-12 text-center text-[var(--text-muted)]">
                 {busquedaEstante ? 'Sin resultados para esa búsqueda.' : 'No hay estantes registrados.'}
               </p>
             ) : (
               <table className="w-full text-sm">
-                <thead className="bg-gray-900 text-xs uppercase text-gray-400">
+                <thead>
                   <tr>
                     <th className="px-4 py-3 text-left">Código</th>
                     <th className="px-4 py-3 text-left">Ubicación</th>
@@ -362,26 +362,26 @@ export default function UbicacionesPage() {
                     <th className="px-4 py-3 text-right">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-700">
+                <tbody>
                   {estantesFiltrados.map((estante) => (
-                    <tr key={estante.id} className="transition-colors hover:bg-gray-700/50">
+                    <tr key={estante.id}>
                       <td className="px-4 py-3">
-                        <span className="rounded-lg border border-blue-800/40 bg-blue-900/20 px-2.5 py-1 font-mono text-xs font-bold text-blue-400">
+                        <span className="rounded-full bg-[var(--accent-soft)] px-2.5 py-1 font-mono text-xs font-bold text-[var(--accent-strong)]">
                           {estante.codigo}
                         </span>
                       </td>
-                      <td className="px-4 py-3 font-medium text-white">{estante.ubicacion || '—'}</td>
-                      <td className="px-4 py-3 text-xs text-gray-400">{estante.descripcion || '—'}</td>
+                      <td className="px-4 py-3 font-medium text-[var(--text-main)]">{estante.ubicacion || '—'}</td>
+                      <td className="px-4 py-3 text-xs text-[var(--text-muted)]">{estante.descripcion || '—'}</td>
                       <td className="px-4 py-3 text-right space-x-2">
                         <button
                           onClick={() => abrirEditarEstante(estante)}
-                          className="text-xs font-medium text-blue-400 hover:text-blue-300"
+                          className="text-xs font-medium text-[var(--accent)] hover:text-[var(--accent-strong)]"
                         >
                           Editar
                         </button>
                         <button
                           onClick={() => setElimEstanteId(estante.id)}
-                          className="text-xs font-medium text-red-400 hover:text-red-300"
+                          className="text-xs font-medium text-[var(--danger)] hover:opacity-80"
                         >
                           Eliminar
                         </button>
@@ -397,15 +397,15 @@ export default function UbicacionesPage() {
         <section className="space-y-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h2 className="text-xl font-bold text-white">Cajas</h2>
-              <p className="mt-1 text-sm text-gray-400">
+              <h2 className="text-xl font-semibold text-[var(--text-main)]">Cajas</h2>
+              <p className="mt-1 text-sm text-[var(--text-muted)]">
                 Administra los contenedores que se alojan dentro de cada estante.
               </p>
             </div>
 
             <button
               onClick={abrirNuevaCaja}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+              className="soft-btn-primary"
             >
               + Nueva caja
             </button>
@@ -417,29 +417,29 @@ export default function UbicacionesPage() {
               placeholder="Buscar por código, descripción o estante..."
               value={busquedaCaja}
               onChange={(e) => setBusquedaCaja(e.target.value)}
-              className="flex-1 rounded-lg border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="soft-input flex-1"
             />
-            <span className="text-sm text-gray-400 whitespace-nowrap">
+            <span className="text-sm text-[var(--text-muted)] whitespace-nowrap">
               {cajasFiltradas.length} / {cajas.length}
             </span>
           </div>
 
           {cajasError && (
-            <div className="rounded-lg border border-red-700 bg-red-900 px-4 py-3 text-sm text-red-300">
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
               {cajasError}
             </div>
           )}
 
-          <div className="overflow-hidden rounded-xl border border-gray-700 bg-gray-800">
+          <div className="table-shell">
             {cajasLoading ? (
-              <p className="py-12 text-center text-gray-400">Cargando cajas...</p>
+              <p className="py-12 text-center text-[var(--text-muted)]">Cargando cajas...</p>
             ) : cajasFiltradas.length === 0 ? (
-              <p className="py-12 text-center text-gray-500">
+              <p className="py-12 text-center text-[var(--text-muted)]">
                 {busquedaCaja ? 'Sin resultados para esa búsqueda.' : 'No hay cajas registradas.'}
               </p>
             ) : (
               <table className="w-full text-sm">
-                <thead className="bg-gray-900 text-xs uppercase text-gray-400">
+                <thead>
                   <tr>
                     <th className="px-4 py-3 text-left">Código</th>
                     <th className="px-4 py-3 text-left">Estante asignado</th>
@@ -447,28 +447,28 @@ export default function UbicacionesPage() {
                     <th className="px-4 py-3 text-right">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-700">
+                <tbody>
                   {cajasFiltradas.map((caja) => (
-                    <tr key={caja.id} className="transition-colors hover:bg-gray-700/50">
+                    <tr key={caja.id}>
                       <td className="px-4 py-3">
-                        <span className="rounded-lg border border-cyan-800/40 bg-cyan-900/20 px-2.5 py-1 font-mono text-xs font-bold text-cyan-400">
+                        <span className="rounded-full bg-[var(--accent-soft)] px-2.5 py-1 font-mono text-xs font-bold text-[var(--accent-strong)]">
                           {caja.codigo}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-white">
+                      <td className="px-4 py-3 text-[var(--text-main)]">
                         {caja.estante_id ? `🗄️ ${caja.estante?.codigo ?? nombreEstante(caja.estante_id)}` : 'Sin estante'}
                       </td>
-                      <td className="px-4 py-3 text-xs text-gray-400">{caja.descripcion || '—'}</td>
+                      <td className="px-4 py-3 text-xs text-[var(--text-muted)]">{caja.descripcion || '—'}</td>
                       <td className="px-4 py-3 text-right space-x-2">
                         <button
                           onClick={() => abrirEditarCaja(caja)}
-                          className="text-xs font-medium text-blue-400 hover:text-blue-300"
+                          className="text-xs font-medium text-[var(--accent)] hover:text-[var(--accent-strong)]"
                         >
                           Editar
                         </button>
                         <button
                           onClick={() => setElimCajaId(caja.id)}
-                          className="text-xs font-medium text-red-400 hover:text-red-300"
+                          className="text-xs font-medium text-[var(--danger)] hover:opacity-80"
                         >
                           Eliminar
                         </button>

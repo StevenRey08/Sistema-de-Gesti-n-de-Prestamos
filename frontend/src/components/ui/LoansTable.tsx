@@ -23,32 +23,32 @@ export default function LoansTable() {
       .finally(() => setCargando(false));
   }, []);
 
-  if (cargando) return <p className="text-slate-500 text-sm text-center py-6">Cargando...</p>;
-  if (prestamos.length === 0) return <p className="text-slate-600 text-sm text-center py-6 italic">No hay préstamos registrados.</p>;
+  if (cargando) return <p className="py-6 text-center text-sm text-[var(--text-muted)]">Cargando...</p>;
+  if (prestamos.length === 0) return <p className="py-6 text-center text-sm italic text-[var(--text-muted)]">No hay préstamos registrados.</p>;
 
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-slate-500 text-xs uppercase border-b border-slate-800">
+          <tr className="border-b border-[var(--border)] text-xs uppercase text-[var(--text-muted)]">
             <th className="pb-3 text-left font-medium">Persona</th>
             <th className="pb-3 text-left font-medium">Herramienta</th>
             <th className="pb-3 text-left font-medium">Cant.</th>
             <th className="pb-3 text-left font-medium">Estado</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-800/50">
+        <tbody className="divide-y divide-[var(--border)]">
           {prestamos.map((p) => (
-            <tr key={p.id} className="hover:bg-white/5 transition-colors">
-              <td className="py-3 text-slate-300 font-medium">
+            <tr key={p.id} className="transition-colors hover:bg-[var(--surface-2)]">
+              <td className="py-3 font-medium text-[var(--text-main)]">
                 {p.persona ? `${p.persona.nombres} ${p.persona.apellidos}` : '—'}
               </td>
-              <td className="py-3 text-slate-400 text-xs">
+              <td className="py-3 text-xs text-[var(--text-muted)]">
                 {p.inventario?.herramienta?.nombre || '—'}
               </td>
-              <td className="py-3 text-white font-bold">{p.cantidad}</td>
+              <td className="py-3 font-bold text-[var(--accent-strong)]">{p.cantidad}</td>
               <td className="py-3">
-                <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase ${BADGE[p.estado] || 'bg-slate-800 text-slate-400'}`}>
+                <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase ${BADGE[p.estado] || 'bg-[var(--surface-3)] text-[var(--text-muted)]'}`}>
                   {p.estado}
                 </span>
               </td>
