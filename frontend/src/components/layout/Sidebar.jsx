@@ -10,9 +10,7 @@ const menuItems = [
   { label: 'Proveedores', icon: '🏭', href: '/catalogos/proveedores' },
   { label: 'Categorías',  icon: '🏷️', href: '/catalogos/categorias' },
   { divider: 'Almacén' },
-  { label: 'Estantes',    icon: '🗄️', href: '/ubicaciones/estantes' },
-  { label: 'Cajas',       icon: '📦', href: '/ubicaciones/cajas' },
-  { label: 'Herramientas',icon: '🔧', href: '/herramientas' },
+  { label: 'Ubicaciones', icon: '🗄️', href: '/ubicaciones' },
   { label: 'Inventario',  icon: '🗃️', href: '/inventario' },
   { divider: 'Operaciones' },
   { label: 'Préstamos',   icon: '📋', href: '/prestamos' },
@@ -46,7 +44,9 @@ export default function Sidebar() {
               </p>
             ) : <div key={idx} className="my-2 mx-3 border-t border-slate-800" />;
           }
-          const isActive = pathname === item.href;
+          const isActive = item.href === '/'
+            ? pathname === item.href
+            : pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <Link key={item.href} href={item.href}
               className={`flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg mb-0.5 transition-colors text-sm font-medium

@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import api from '../../lib/api';
+import type { Prestamo } from '../../lib/types';
 
 const BADGE: Record<string, string> = {
   Pendiente: 'bg-yellow-900/40 text-yellow-400 border border-yellow-700/50',
@@ -8,12 +9,12 @@ const BADGE: Record<string, string> = {
 };
 
 export default function LoansTable() {
-  const [prestamos, setPrestamos] = useState<any[]>([]);
+  const [prestamos, setPrestamos] = useState<Prestamo[]>([]);
   const [cargando, setCargando]   = useState(true);
 
   useEffect(() => {
     api.get('/prestamos')
-      .then((data: any) => {
+      .then((data: Prestamo[] | unknown) => {
         const arr = Array.isArray(data) ? data : [];
         // Mostramos solo los últimos 8
         setPrestamos(arr.slice(0, 8));
@@ -37,7 +38,7 @@ export default function LoansTable() {
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-800/50">
-          {prestamos.map((p: any) => (
+          {prestamos.map((p) => (
             <tr key={p.id} className="hover:bg-white/5 transition-colors">
               <td className="py-3 text-slate-300 font-medium">
                 {p.persona ? `${p.persona.nombres} ${p.persona.apellidos}` : '—'}

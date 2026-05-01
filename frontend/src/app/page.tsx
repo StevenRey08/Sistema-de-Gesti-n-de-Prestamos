@@ -3,17 +3,18 @@ import { useState, useEffect } from 'react';
 import api from '../lib/api';
 import LoansTable from '../components/ui/LoansTable';
 import ActivityFeed from '../components/ui/ActivityFeed';
+import type { DashboardCounts, ItemInventario, Persona, Prestamo } from '../lib/types';
 
 export default function DashboardPage() {
-  const [counts, setCounts] = useState({ prestamos: 0, herramientas: 0, personas: 0, pendientes: 0 });
+  const [counts, setCounts] = useState<DashboardCounts>({ prestamos: 0, herramientas: 0, personas: 0, pendientes: 0 });
 
   useEffect(() => {
     const cargar = async () => {
       try {
         const [p, h, per] = await Promise.all([
-          api.get('/prestamos') as Promise<any[]>,
-          api.get('/inventario') as Promise<any[]>,
-          api.get('/personas') as Promise<any[]>,
+          api.get('/prestamos') as Promise<Prestamo[]>,
+          api.get('/inventario') as Promise<ItemInventario[]>,
+          api.get('/personas') as Promise<Persona[]>,
         ]);
         const pArr = Array.isArray(p) ? p : [];
         const hArr = Array.isArray(h) ? h : [];
@@ -22,7 +23,7 @@ export default function DashboardPage() {
           prestamos: pArr.length,
           herramientas: hArr.length,
           personas: perArr.length,
-          pendientes: pArr.filter((x: any) => x.estado === 'Pendiente').length,
+          pendientes: pArr.filter((prestamo) => prestamo.estado === 'Pendiente').length,
         });
       } catch (e) { console.error(e); }
     };

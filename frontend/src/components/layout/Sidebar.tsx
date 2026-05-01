@@ -14,9 +14,7 @@ const menuItems: MenuItem[] = [
   { label: 'Proveedores',  icon: '🏭', href: '/catalogos/proveedores' },
   { label: 'Categorías',   icon: '🏷️',  href: '/catalogos/categorias' },
   { label: 'Personas',     icon: '👥', href: '/catalogos/personas' },
-  { label: 'Estantes',     icon: '🗄️',  href: '/ubicaciones/estantes' },
-  { label: 'Cajas',        icon: '📦', href: '/ubicaciones/cajas' },
-  { label: 'Herramientas', icon: '🔧', href: '/herramientas' },
+  { label: 'Ubicaciones',  icon: '🗄️', href: '/ubicaciones' },
   { label: 'Inventario',   icon: '📋', href: '/inventario' },
   { label: 'Préstamos',    icon: '🔄', href: '/prestamos' },
   { label: 'Movimientos',  icon: '📊', href: '/movimientos' },
@@ -47,7 +45,10 @@ export default function Sidebar() {
 
       <nav className="flex-1 py-4 overflow-y-auto">
         {menuItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive =
+            item.href === '/'
+              ? pathname === item.href
+              : pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <Link
               key={item.href}

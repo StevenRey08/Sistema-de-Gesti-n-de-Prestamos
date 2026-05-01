@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import api from '../../lib/api';
+import type { Movimiento } from '../../lib/types';
 
 function tiempoRelativo(fecha: string) {
   const diff = Date.now() - new Date(fecha).getTime();
@@ -27,12 +28,12 @@ const TIPO_LABEL: Record<string, string> = {
 };
 
 export default function ActivityFeed() {
-  const [movimientos, setMovimientos] = useState<any[]>([]);
+  const [movimientos, setMovimientos] = useState<Movimiento[]>([]);
   const [cargando, setCargando]       = useState(true);
 
   useEffect(() => {
     api.get('/movimientos')
-      .then((data: any) => {
+      .then((data: Movimiento[] | unknown) => {
         const arr = Array.isArray(data) ? data : [];
         // Últimos 6, más recientes primero
         setMovimientos(arr.slice(0, 6));
@@ -46,7 +47,7 @@ export default function ActivityFeed() {
 
   return (
     <div className="space-y-4">
-      {movimientos.map((m: any) => (
+      {movimientos.map((m) => (
         <div key={m.id} className="flex gap-3 items-start">
           <div className={`w-2.5 h-2.5 mt-1.5 rounded-full shrink-0 ${TIPO_COLOR[m.tipo] || 'bg-slate-500'}`} />
           <div className="flex-1 min-w-0">
