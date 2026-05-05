@@ -1,0 +1,202 @@
+// Configuración básica del generador y la conexión
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+}
+
+// =========================================
+// ROLES
+// =========================================
+model Role {
+    id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    nombre_rol  String    @unique @db.VarChar(50)
+    descripcion String?   @db.Text
+    permisos    Permiso[]
+    usuarios    Usuario[]
+
+    @@map("roles")
+}
+
+// =========================================
+// MODULOS
+// =========================================
+model Modulo {
+    id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    nombre      String    @unique @db.VarChar(100)
+    descripcion String?   @db.Text
+    permisos    Permiso[]
+
+    @@map("modulos")
+}
+
+// =========================================
+// PERMISOS
+// =========================================
+model Permiso {
+    id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    rol_id     String? @db.Uuid
+    modulo_id  String? @db.Uuid
+    leer       Boolean @default(false)
+    ingresar   Boolean @default(false)
+    actualizar Boolean @default(false)
+    eliminar   Boolean @default(false)
+
+    // Relaciones
+    rol    Role?   @relation(fields: [rol_id], references: [id], onDelete: Cascade)
+    modulo Modulo? @relation(fields: [modulo_id], references: [id], onDelete: Cascade)
+
+    @@unique([rol_id, modulo_id])
+    @@map("permisos")
+}
+
+// =========================================
+// USUARIOS
+// =========================================
+model Usuario {
+    id               String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    tipo_documento   String? @db.VarChar(20)
+    numero_documento String? @unique @db.VarChar(50)
+    nombre           String  @db.VarChar(50)
+    apellido         String  @db.VarChar(50)
+    usuario          String  @unique @db.VarChar(50)
+    contrasena       String  @db.VarChar(255)
+    rol_id           String? @db.Uuid
+    activo           Boolean @default(true)
+
+    // Relaciones
+    rol         Role?        @relation(fields: [rol_id], references: [id])
+    prestamos   Prestamo[]
+    movimientos Movimiento[]
+
+    @@map("usuarios")
+}
+
+// =========================================
+// PERSONAS
+// =========================================
+model Persona {
+    id               String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    tipo_documento   String? @db.VarChar(20)
+    numero_documento String? @unique @db.VarChar(50)
+    nombres          String? @db.VarChar(100)
+    apellidos        String? @db.VarChar(100)
+    tipo             String? @db.VarChar(50)
+    telefono         String? @db.VarChar(20)
+    email            String? @db.VarChar(100)
+
+    prestamos   Prestamo[]
+    movimientos Movimiento[]
+
+    @@map("personas")
+}
+
+// =========================================
+// CATEGORIAS DE HERRAMIENTAS
+// =========================================
+model CategoriaHerramienta {
+    id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    nombre      String       @unique @db.VarChar(100)
+    descripcion String?      @db.Text
+    inventarios Inventario[]
+
+    @@map("categorias_herramientas")
+}
+
+// =========================================
+// UBICACIONES (Sustituye a Estantes y Cajas)
+// =========================================
+model Ubicacion {
+    id                 String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    codigo             String  @unique @db.VarChar(50)
+    nombre             String  @db.VarChar(100)
+    tipo               String  @db.VarChar(50) // 'ESTANTE', 'CAJA', 'ESTUCHE'
+    descripcion        String? @db.Text
+    ubicacion_padre_id String? @db.Uuid
+
+    // Relación recursiva (Una caja dentro de un estante)
+    padre           Ubicacion?  @relation("JerarquiaUbicacion", fields: [ubicacion_padre_id], references: [id])
+    sub_ubicaciones Ubicacion[] @relation("JerarquiaUbicacion")
+
+    // Relaciones con otros modelos
+    inventarios         Inventario[]
+    movimientos_origen  Movimiento[] @relation("UbicacionOrigen")
+    movimientos_destino Movimiento[] @relation("UbicacionDestino")
+
+    @@map("ubicaciones")
+}
+
+// =========================================
+// INVENTARIO
+// =========================================
+model Inventario {
+    id              String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    codigo          String  @unique @db.VarChar(50)
+    nombre          String  @db.VarChar(150)
+    categoria_id    String? @db.Uuid
+    ubicacion_id    String? @db.Uuid
+    estado          String? @db.VarChar(50)
+    cantidad        Int     @default(1)
+    cantidad_minima Int     @default(1)
+    imagen_ruta     String? @db.Text
+
+    // Relaciones
+    categoria   CategoriaHerramienta? @relation(fields: [categoria_id], references: [id])
+    ubicacion   Ubicacion?            @relation(fields: [ubicacion_id], references: [id], onDelete: SetNull)
+    prestamos   Prestamo[]
+    movimientos Movimiento[]
+
+    @@map("inventario")
+}
+
+// =========================================
+// PRESTAMOS
+// =========================================
+model Prestamo {
+    id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    inventario_id    String?   @db.Uuid
+    persona_id       String?   @db.Uuid
+    usuario_id       String?   @db.Uuid
+    cantidad         Int
+    fecha_prestamo   DateTime? @default(now()) @db.Timestamp(6)
+    fecha_devolucion DateTime? @db.Timestamp(6)
+    estado           String?   @db.VarChar(50)
+    observaciones    String?   @db.Text
+
+    // Relaciones
+    inventario  Inventario?  @relation(fields: [inventario_id], references: [id], onDelete: Cascade)
+    persona     Persona?     @relation(fields: [persona_id], references: [id])
+    usuario     Usuario?     @relation(fields: [usuario_id], references: [id])
+    movimientos Movimiento[]
+
+    @@map("prestamos")
+}
+
+// =========================================
+// MOVIMIENTOS
+// =========================================
+model Movimiento {
+    id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    inventario_id        String?   @db.Uuid
+    ubicacion_origen_id  String?   @db.Uuid
+    ubicacion_destino_id String?   @db.Uuid
+    persona_id           String?   @db.Uuid
+    usuario_id           String?   @db.Uuid
+    prestamo_id          String?   @db.Uuid
+    cantidad             Int
+    tipo                 String?   @db.VarChar(50) // 'ENTRADA', 'SALIDA', 'TRASLADO', 'PRESTAMO'
+    fecha                DateTime? @default(now()) @db.Timestamp(6)
+    observaciones        String?   @db.Text
+
+    // Relaciones
+    inventario        Inventario? @relation(fields: [inventario_id], references: [id], onDelete: Cascade)
+    ubicacion_origen  Ubicacion?  @relation("UbicacionOrigen", fields: [ubicacion_origen_id], references: [id])
+    ubicacion_destino Ubicacion?  @relation("UbicacionDestino", fields: [ubicacion_destino_id], references: [id])
+    persona           Persona?    @relation(fields: [persona_id], references: [id])
+    usuario           Usuario?    @relation(fields: [usuario_id], references: [id])
+    prestamo          Prestamo?   @relation(fields: [prestamo_id], references: [id])
+
+    @@map("movimientos")
+}
