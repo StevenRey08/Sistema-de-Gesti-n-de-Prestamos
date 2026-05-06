@@ -1,25 +1,25 @@
 const { PrismaClient } = require('@prisma/client');
 const { Pool } = require('pg');
+const { PrismaPg } = require('@prisma/adapter-pg');
 require('dotenv').config();
 
-// Instancia de Prisma para la mayoría de las operaciones
-const prisma = new PrismaClient();
-
-// Instancia de Pool (pg) por si necesitas hacer consultas SQL directas
+// Pool de pg para consultas SQL directas y para el adaptador de Prisma
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
 });
 
-// Probar conexión de Prisma al iniciar
+// En Prisma v7 se recomienda el uso de adaptadores para conexiones directas
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
+
+// Verificar conexión al iniciar el servidor
 prisma.$connect()
     .then(() => {
-        console.log("✅ Conectado a la base de datos con Prisma");
+        console.log('✅ Conectado a la base de datos con Prisma');
     })
     .catch((err) => {
-        console.error("❌ Error conectando a la base de datos con Prisma:", err.message);
+        console.error('❌ Error conectando a la base de datos con Prisma:', err.message);
+        console.error('   Verifica que DATABASE_URL en .env sea correcta y que PostgreSQL esté corriendo.');
     });
 
-module.exports = {
-    prisma,
-    pool
-};
+module.exports = { prisma, pool };

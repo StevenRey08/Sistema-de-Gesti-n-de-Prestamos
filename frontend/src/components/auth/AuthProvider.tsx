@@ -31,9 +31,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   async function signIn(email: string, password: string) {
-    const sessionUser = authenticate(email, password);
+    const sessionUser = await authenticate(email, password);
     if (!sessionUser) {
-      throw new Error('Credenciales inválidas. Verifica tu correo y contraseña.');
+      throw new Error('Credenciales inválidas. Verifica tu usuario y contraseña.');
     }
 
     window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(sessionUser));

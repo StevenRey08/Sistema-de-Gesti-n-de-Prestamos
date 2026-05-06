@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import type { Categoria, CategoriaPayload } from '../../lib/types';
+import { useNotification } from '../ui/NotificationContext';
 
 interface CategoriaFormProps {
   initialData?: Categoria | null;
@@ -14,6 +15,7 @@ interface FormState {
 }
 
 export default function CategoriaForm({ initialData = null, onSuccess, onCancel }: CategoriaFormProps) {
+  const { notify } = useNotification();
   const [form, setForm] = useState<FormState>({
     nombre: initialData?.nombre ?? '',
     descripcion: initialData?.descripcion ?? '',
@@ -27,7 +29,7 @@ export default function CategoriaForm({ initialData = null, onSuccess, onCancel 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!form.nombre.trim()) {
-      alert('El nombre es obligatorio');
+      notify('warning', 'El nombre es obligatorio');
       return;
     }
     void onSuccess({ nombre: form.nombre.trim(), descripcion: form.descripcion.trim() || undefined });

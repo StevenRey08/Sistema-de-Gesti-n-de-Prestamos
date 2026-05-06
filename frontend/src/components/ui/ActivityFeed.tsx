@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import api from '../../lib/api';
 import type { Movimiento } from '../../lib/types';
 
@@ -54,7 +54,7 @@ export default function ActivityFeed() {
             <p className="truncate text-sm text-[var(--text-muted)]">
               <span className="font-medium text-[var(--text-main)]">{TIPO_LABEL[m.tipo] || m.tipo}</span>
               {' — '}
-              {m.inventario?.herramienta?.nombre || 'Herramienta'}
+              {m.inventario?.nombre || 'Artículo'}
               {m.persona ? ` · ${m.persona.nombres}` : ''}
             </p>
             <p className="mt-0.5 text-xs text-[var(--text-muted)]">{tiempoRelativo(m.fecha)}</p>

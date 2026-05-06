@@ -4,7 +4,10 @@ import { categoriasApi } from '../../../lib/api';
 import CategoriaForm from '../../../components/catalogos/CategoriaForm';
 import type { Categoria, CategoriaPayload } from '../../../lib/types';
 
+import { useNotification } from '../../../components/ui/NotificationContext';
+
 export default function CategoriasPage() {
+  const { notify } = useNotification();
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
@@ -22,15 +25,32 @@ export default function CategoriasPage() {
   useEffect(() => { cargar(); }, [cargar]);
 
   async function handleGuardar(form: CategoriaPayload) {
-    if (editando) await categoriasApi.update(editando.id, form);
-    else await categoriasApi.create(form);
-    setShowForm(false); setEditando(null);
-    cargar();
+    try {
+      if (editando) {
+        await categoriasApi.update(editando.id, form);
+        notify('success', 'Categoría actualizada con éxito');
+      } else {
+        await categoriasApi.create(form);
+        notify('success', 'Categoría creada con éxito');
+      }
+      setShowForm(false); setEditando(null);
+      cargar();
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Error al guardar';
+      const details = (e as any).details || [];
+      notify('error', msg, details);
+    }
   }
 
   async function handleEliminar() {
-    if (eliminando) await categoriasApi.delete(eliminando);
-    setElim(null); cargar();
+    if (!eliminando) return;
+    try {
+      await categoriasApi.delete(eliminando);
+      notify('success', 'Categoría eliminada');
+      setElim(null); cargar();
+    } catch (e: unknown) {
+      notify('error', 'Error al eliminar');
+    }
   }
 
   return (

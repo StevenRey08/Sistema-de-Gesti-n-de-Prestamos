@@ -1,30 +1,31 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../components/auth/AuthProvider';
-import { getDemoCredentials } from '../../lib/auth';
-
-const demo = getDemoCredentials();
 
 export default function LoginPage() {
   const router = useRouter();
   const { signIn } = useAuth();
-  const [email, setEmail] = useState(demo.email);
-  const [password, setPassword] = useState(demo.password);
+  const [usuario, setUsuario] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!usuario.trim() || !password.trim()) {
+      setError('Por favor completa todos los campos.');
+      return;
+    }
     setLoading(true);
     setError('');
 
     try {
-      await signIn(email, password);
+      await signIn(usuario.trim(), password);
       router.replace('/');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'No se pudo iniciar sesión.');
+      setError(err instanceof Error ? err.message : 'Credenciales inválidas.');
     } finally {
       setLoading(false);
     }
@@ -35,6 +36,7 @@ export default function LoginPage() {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(16,54,125,0.18),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(165,206,224,0.35),_transparent_24%)]" />
 
       <div className="relative mx-auto grid min-h-[calc(100vh-4rem)] max-w-7xl items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+        {/* Panel izquierdo */}
         <section className="rounded-[36px] bg-[linear-gradient(145deg,#10367d_0%,#1548a4_72%,#1f61c5_100%)] p-10 text-white shadow-[0_40px_90px_rgba(16,54,125,0.24)] md:p-14">
           <div className="mb-12 flex h-16 w-16 items-center justify-center rounded-[22px] border border-white/20 bg-white/10 text-3xl">
             ⌁
@@ -48,16 +50,16 @@ export default function LoginPage() {
               Controla préstamos, inventario y ubicaciones desde un solo lugar.
             </h1>
             <p className="max-w-lg text-base leading-8 text-white/78 md:text-lg">
-              Una experiencia limpia, rápida y enfocada para el equipo que administra herramientas,
+              Una plataforma administrativa segura, rápida y enfocada para gestionar herramientas,
               existencias y movimientos diarios.
             </p>
           </div>
 
           <div className="mt-12 grid gap-4 text-sm text-white/92">
             {[
-              'Acceso seguro al panel administrativo',
+              'Acceso seguro con autenticación JWT',
               'Inventario, préstamos y movimientos en un flujo simple',
-              'Diseño minimalista con foco en lo importante',
+              'Control de permisos por roles',
             ].map((item) => (
               <div key={item} className="flex items-center gap-3 rounded-2xl border border-white/14 bg-white/8 px-4 py-3">
                 <span className="text-lg">✓</span>
@@ -67,6 +69,7 @@ export default function LoginPage() {
           </div>
         </section>
 
+        {/* Panel derecho — Formulario */}
         <section className="rounded-[32px] border border-[var(--border)] bg-white p-8 shadow-[var(--shadow-soft)] md:p-10">
           <div className="mx-auto max-w-md space-y-8">
             <div className="space-y-3 text-center">
@@ -75,7 +78,7 @@ export default function LoginPage() {
               </span>
               <h2 className="text-4xl font-semibold text-[var(--text-main)]">Inicia sesión</h2>
               <p className="text-base leading-7 text-[var(--text-muted)]">
-                Entra al panel con un estilo claro y profesional, pensado para trabajar sin distracciones.
+                Ingresa con tu nombre de usuario y contraseña asignados por el administrador.
               </p>
             </div>
 
@@ -87,13 +90,17 @@ export default function LoginPage() {
               )}
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-[var(--text-main)]">Correo electrónico</label>
+                <label className="text-sm font-medium text-[var(--text-main)]">
+                  Nombre de usuario
+                </label>
                 <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  type="text"
+                  value={usuario}
+                  onChange={(e) => setUsuario(e.target.value)}
                   className="soft-input"
-                  placeholder="tu@empresa.com"
+                  placeholder="Nombre de usuario"
+                  autoComplete="username"
+                  autoFocus
                 />
               </div>
 
@@ -104,22 +111,19 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="soft-input"
-                  placeholder="••••••••"
+                  placeholder="Tu contraseña"
+                  autoComplete="current-password"
                 />
               </div>
 
-              <button type="submit" disabled={loading} className="soft-btn-primary w-full justify-center py-3.5 text-base">
-                {loading ? 'Entrando...' : 'Entrar al sistema'}
+              <button
+                type="submit"
+                disabled={loading}
+                className="soft-btn-primary w-full justify-center py-3.5 text-base"
+              >
+                {loading ? 'Verificando...' : 'Entrar al sistema'}
               </button>
             </form>
-
-            <div className="rounded-[28px] bg-[var(--bg-soft)] p-5">
-              <p className="text-sm font-semibold text-[var(--accent-strong)]">Acceso de demostración</p>
-              <div className="mt-3 space-y-1 text-sm text-[var(--text-muted)]">
-                <p><span className="font-medium text-[var(--text-main)]">Correo:</span> {demo.email}</p>
-                <p><span className="font-medium text-[var(--text-main)]">Contraseña:</span> {demo.password}</p>
-              </div>
-            </div>
           </div>
         </section>
       </div>

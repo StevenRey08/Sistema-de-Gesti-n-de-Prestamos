@@ -1,9 +1,10 @@
 'use client';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { inventarioApi, personasApi } from '../../lib/api';
+import { useAuth } from '../auth/AuthProvider';
 import type { Prestamo, PrestamoPayload, EstadoPrestamo, ItemInventario, Persona, FormErrors } from '../../lib/types';
 
-const ESTADOS: EstadoPrestamo[] = ['Pendiente', 'Devuelto'];
+const ESTADOS: EstadoPrestamo[] = ['PENDIENTE', 'DEVUELTO'];
 
 interface PrestamoFormProps {
   prestamo?: Prestamo | null;
@@ -21,14 +22,17 @@ interface PrestamoFormState {
 }
 
 export default function PrestamoForm({ prestamo = null, onGuardar, onCancelar }: PrestamoFormProps) {
+  const { user } = useAuth();
+  
   const [form, setForm] = useState<PrestamoFormState>({
     inventario_id: prestamo?.inventario_id ? String(prestamo.inventario_id) : '',
     persona_id: prestamo?.persona_id ? String(prestamo.persona_id) : '',
     cantidad: prestamo?.cantidad || 1,
     fecha_devolucion: prestamo?.fecha_devolucion ? prestamo.fecha_devolucion.split('T')[0] : '',
-    estado: prestamo?.estado || 'Pendiente',
+    estado: prestamo?.estado || 'PENDIENTE',
     observaciones: prestamo?.observaciones || '',
   });
+  
   const [inventario, setInventario] = useState<ItemInventario[]>([]);
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [errores, setErrores] = useState<FormErrors<PrestamoFormState>>({});
@@ -48,8 +52,8 @@ export default function PrestamoForm({ prestamo = null, onGuardar, onCancelar }:
 
   function validar() {
     const e: FormErrors<PrestamoFormState> = {};
-    if (!form.inventario_id) e.inventario_id = 'Selecciona la herramienta';
-    if (!form.persona_id) e.persona_id = 'Selecciona la persona';
+    if (!form.inventario_id) e.inventario_id = 'Selecciona el artículo';
+    if (!form.persona_id) e.persona_id = 'Selecciona el responsable';
     if (!form.cantidad || Number(form.cantidad) < 1) e.cantidad = 'Mínimo 1';
     setErrores(e);
     return Object.keys(e).length === 0;
@@ -60,17 +64,21 @@ export default function PrestamoForm({ prestamo = null, onGuardar, onCancelar }:
     if (!validar()) return;
     setCargando(true);
     setApiError('');
+    
     const body: PrestamoPayload = {
-      ...form,
-      inventario_id: Number(form.inventario_id),
-      persona_id: Number(form.persona_id),
+      inventario_id: form.inventario_id,
+      persona_id: form.persona_id,
+      usuario_id: user?.id || '', // Asignar el usuario actual
       cantidad: Number(form.cantidad),
       fecha_devolucion: form.fecha_devolucion || null,
+      estado: form.estado,
+      observaciones: form.observaciones.trim() || undefined,
     };
+
     try {
       await onGuardar(body);
     } catch (err: unknown) {
-      setApiError(err instanceof Error ? err.message : 'Error');
+      setApiError(err instanceof Error ? err.message : 'Error al guardar');
     } finally {
       setCargando(false);
     }
@@ -82,17 +90,17 @@ export default function PrestamoForm({ prestamo = null, onGuardar, onCancelar }:
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
-          <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Herramienta (inventario) *</label>
+          <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Artículo (inventario) *</label>
           <select name="inventario_id" value={form.inventario_id} onChange={handleChange} className={`soft-select ${errores.inventario_id ? 'border-red-400' : ''}`}>
             <option value="">— Seleccionar —</option>
             {inventario.map((i) => (
-              <option key={i.id} value={i.id}>{i.herramienta?.nombre || i.id} ({i.cantidad} disp.)</option>
+              <option key={i.id} value={i.id}>{i.nombre} ({i.cantidad} disp.)</option>
             ))}
           </select>
           {errores.inventario_id && <p className="mt-1 text-xs text-red-500">{errores.inventario_id}</p>}
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Persona *</label>
+          <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Responsable *</label>
           <select name="persona_id" value={form.persona_id} onChange={handleChange} className={`soft-select ${errores.persona_id ? 'border-red-400' : ''}`}>
             <option value="">— Seleccionar —</option>
             {personas.map((p) => (
@@ -116,7 +124,7 @@ export default function PrestamoForm({ prestamo = null, onGuardar, onCancelar }:
         <div>
           <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Estado</label>
           <select name="estado" value={form.estado} onChange={handleChange} className="soft-select">
-            {ESTADOS.map((estado) => <option key={estado}>{estado}</option>)}
+            {ESTADOS.map((estado) => <option key={estado} value={estado}>{estado}</option>)}
           </select>
         </div>
       </div>

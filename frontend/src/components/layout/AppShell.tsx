@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import { AuthProvider, useAuth } from '../auth/AuthProvider';
+import { NotificationProvider } from '../ui/NotificationContext';
 
 function AppFrame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -57,7 +58,9 @@ function AppFrame({ children }: { children: React.ReactNode }) {
 export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
-      <AppFrame>{children}</AppFrame>
+      <NotificationProvider>
+        <AppFrame>{children}</AppFrame>
+      </NotificationProvider>
     </AuthProvider>
   );
 }

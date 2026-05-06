@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '../auth/AuthProvider';
 
@@ -15,7 +15,7 @@ const TITLES: Record<string, { title: string; subtitle: string }> = {
   },
   '/ubicaciones': {
     title: 'Ubicaciones',
-    subtitle: 'Organización física de estantes y cajas',
+    subtitle: 'Organización física de estantes, cajas y estuches',
   },
   '/prestamos': {
     title: 'Préstamos',
@@ -28,10 +28,6 @@ const TITLES: Record<string, { title: string; subtitle: string }> = {
   '/catalogos/personas': {
     title: 'Personas',
     subtitle: 'Usuarios y responsables relacionados con los préstamos',
-  },
-  '/catalogos/proveedores': {
-    title: 'Proveedores',
-    subtitle: 'Empresas y contactos asociados al abastecimiento',
   },
   '/catalogos/categorias': {
     title: 'Categorías',
@@ -46,6 +42,7 @@ const TITLES: Record<string, { title: string; subtitle: string }> = {
     subtitle: 'Administra tu perfil y credenciales de acceso',
   },
 };
+
 
 export default function Topbar() {
   const pathname = usePathname();

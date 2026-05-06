@@ -1,12 +1,12 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { prestamosApi } from '../../lib/api';
 import PrestamoForm from '../../components/catalogos/PrestamoForm';
 import type { Prestamo, PrestamoPayload } from '../../lib/types';
 
 const BADGE: Record<string, string> = {
-  Pendiente: 'bg-yellow-900 text-yellow-300',
-  Devuelto:  'bg-green-900 text-green-300',
+  PENDIENTE: 'bg-yellow-900 text-yellow-300',
+  DEVUELTO:  'bg-green-900 text-green-300',
 };
 
 function fmt(fecha: string | null) {
@@ -21,11 +21,14 @@ export default function PrestamosPage() {
   const [error, setError]         = useState('');
   const [showForm, setShowForm]   = useState(false);
   const [editando, setEditando]   = useState<Prestamo | null>(null);
-  const [eliminando, setElim]     = useState<number | null>(null);
+  const [eliminando, setElim]     = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
     setCargando(true); setError('');
-    try { setPrestamos(await prestamosApi.getAll() as Prestamo[]); }
+    try { 
+      const data = await prestamosApi.getAll() as Prestamo[];
+      setPrestamos(data);
+    }
     catch (e: unknown) { setError(e instanceof Error ? e.message : 'Error'); }
     finally { setCargando(false); }
   }, []);
@@ -43,15 +46,18 @@ export default function PrestamosPage() {
     setElim(null); cargar();
   }
 
-  async function marcarDevuelto(id: number) {
-    await prestamosApi.update(id, { estado: 'Devuelto', fecha_devolucion: new Date().toISOString() });
+  async function marcarDevuelto(id: string) {
+    await prestamosApi.update(id, { 
+      estado: 'DEVUELTO', 
+      fecha_devolucion: new Date().toISOString() 
+    } as any);
     cargar();
   }
 
   const lista = filtro === 'todos' ? prestamos
     : prestamos.filter((p: Prestamo) => p.estado === filtro);
 
-  const pendientes = prestamos.filter((p: Prestamo) => p.estado === 'Pendiente').length;
+  const pendientes = prestamos.filter((p: Prestamo) => p.estado === 'PENDIENTE').length;
 
   return (
     <div className="p-6 space-y-6">
@@ -71,7 +77,7 @@ export default function PrestamosPage() {
 
       {/* Filtros rápidos */}
       <div className="flex gap-2">
-        {['todos', 'Pendiente', 'Devuelto'].map(f => (
+        {['todos', 'PENDIENTE', 'DEVUELTO'].map(f => (
           <button key={f} onClick={() => setFiltro(f)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors capitalize
               ${filtro === f ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>
@@ -131,7 +137,7 @@ export default function PrestamosPage() {
               {lista.map((p: Prestamo) => (
                 <tr key={p.id} className="text-gray-300 hover:bg-gray-700/50 transition-colors">
                   <td className="px-4 py-3 font-medium text-white">
-                    {p.inventario?.herramienta?.nombre || '—'}
+                    {p.inventario?.nombre || '—'}
                   </td>
                   <td className="px-4 py-3">
                     {p.persona ? `${p.persona.nombres} ${p.persona.apellidos}` : '—'}
@@ -145,7 +151,7 @@ export default function PrestamosPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right space-x-2">
-                    {p.estado === 'Pendiente' && (
+                    {p.estado === 'PENDIENTE' && (
                       <button onClick={() => marcarDevuelto(p.id)}
                         className="text-green-400 hover:text-green-300 text-xs font-medium">✓ Devuelto</button>
                     )}

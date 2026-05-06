@@ -111,8 +111,8 @@ export default function InventarioPage() {
         item.herramienta?.nombre,
         item.herramienta?.codigo,
         item.estado,
-        item.caja?.codigo,
-        item.estante?.codigo,
+        item.ubicacion?.codigo,
+        item.ubicacion?.nombre,
       ]
         .filter(Boolean)
         .join(' ')
@@ -342,7 +342,7 @@ export default function InventarioPage() {
                       </td>
                       <td className="px-4 py-3 font-bold text-[var(--accent-strong)]">{item.cantidad}</td>
                       <td className="px-4 py-3 text-[var(--text-muted)]">
-                        {item.caja ? `Caja: ${item.caja.codigo}` : item.estante ? `Estante: ${item.estante.codigo}` : '—'}
+                        {item.ubicacion ? `${item.ubicacion.tipo}: ${item.ubicacion.codigo}` : '—'}
                       </td>
                       <td className="px-4 py-3 text-right space-x-2">
                         <button

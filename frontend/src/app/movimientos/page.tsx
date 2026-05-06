@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { movimientosApi } from '../../lib/api';
 import type { Movimiento } from '../../lib/types';
 
@@ -91,16 +91,16 @@ export default function MovimientosPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3 font-medium text-white">
-                    {m.inventario?.herramienta?.nombre || '—'}
+                    {m.inventario?.nombre || '—'}
                   </td>
                   <td className="px-4 py-3">
                     {m.persona ? `${m.persona.nombres} ${m.persona.apellidos}` : '—'}
                   </td>
                   <td className="px-4 py-3 font-bold">{m.cantidad}</td>
                   <td className="px-4 py-3 text-xs text-gray-400">
-                    {m.caja_origen?.codigo || m.estante_origen?.codigo || '—'}
+                    {m.ubicacion_origen?.codigo || '—'}
                     {' → '}
-                    {m.caja_destino?.codigo || m.estante_destino?.codigo || '—'}
+                    {m.ubicacion_destino?.codigo || '—'}
                   </td>
                   <td className="px-4 py-3 text-gray-400 text-xs">{fmt(m.fecha)}</td>
                   <td className="px-4 py-3 text-gray-500 text-xs">{m.observaciones || '—'}</td>

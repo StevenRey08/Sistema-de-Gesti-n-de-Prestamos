@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import api from '../../lib/api';
 import type { Prestamo } from '../../lib/types';
 
@@ -44,7 +44,7 @@ export default function LoansTable() {
                 {p.persona ? `${p.persona.nombres} ${p.persona.apellidos}` : '—'}
               </td>
               <td className="py-3 text-xs text-[var(--text-muted)]">
-                {p.inventario?.herramienta?.nombre || '—'}
+                {p.inventario?.nombre || '—'}
               </td>
               <td className="py-3 font-bold text-[var(--accent-strong)]">{p.cantidad}</td>
               <td className="py-3">

@@ -10,12 +10,47 @@ const BASE_URL: string =
   'http://localhost:4000/api';
 
 async function request<T = unknown>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  // Intentar obtener el token del localStorage (solo en el cliente)
+  let token = null;
+  if (typeof window !== 'undefined') {
+    // Primero buscamos si está guardado directamente como 'token'
+    token = window.localStorage.getItem('token');
+    
+    // Si no, buscamos dentro del objeto de sesión 'sgp-session'
+    if (!token) {
+      const session = window.localStorage.getItem('sgp-session');
+      if (session) {
+        try {
+          const parsed = JSON.parse(session);
+          token = parsed.token || null;
+        } catch (e) {
+          console.error('Error al parsear la sesión para obtener el token', e);
+        }
+      }
+    }
+  }
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string>),
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const res = await fetch(`${BASE_URL}${endpoint}`, {
-    headers: { 'Content-Type': 'application/json' },
     ...options,
+    headers,
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data?.error || data?.detail || data?.message || 'Error en la solicitud');
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const error = new Error(data?.error || data?.mensaje || data?.message || 'Error en la solicitud');
+    // Guardamos los detalles (ej. errores de validación) para mostrarlos en la UI
+    (error as any).details = data?.detalles || [];
+    throw error;
+  }
   return data as T;
 }
 
@@ -33,19 +68,20 @@ function buildCrud(resource: string) {
 // ── Catálogos ─────────────────────────────────────────────
 export const categoriasApi  = buildCrud('categorias');
 export const personasApi    = buildCrud('personas');
-export const proveedoresApi = buildCrud('proveedores');
 
 // ── Almacenamiento ────────────────────────────────────────
-export const estantesApi = buildCrud('estantes');
-export const cajasApi    = buildCrud('cajas');
+export const ubicacionesApi = buildCrud('ubicaciones');
 
 // ── Módulos principales ───────────────────────────────────
-export const herramientasApi = buildCrud('herramientas');
+export const herramientasApi = buildCrud('inventario');
 export const inventarioApi   = buildCrud('inventario');
 export const prestamosApi    = buildCrud('prestamos');
-export const movimientosApi  = {
-  ...buildCrud('movimientos'),
-};
+export const movimientosApi  = { ...buildCrud('movimientos') };
+
+// ── Seguridad ─────────────────────────────────────────────
+export const rolesApi    = buildCrud('roles');
+export const usuariosApi = buildCrud('usuarios');
+export const permisosApi = buildCrud('permisos');
 
 // ── Cliente genérico (para casos especiales) ──────────────
 const api = {
@@ -56,3 +92,4 @@ const api = {
 };
 
 export default api;
+

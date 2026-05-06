@@ -1,9 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { herramientasApi, estantesApi, cajasApi } from '../../lib/api';
-import type { ItemInventario, InventarioPayload, EstadoInventario, Herramienta, Estante, Caja, FormErrors } from '../../lib/types';
-
-const ESTADOS: EstadoInventario[] = ['Nuevo', 'Usado', 'Dañado'];
+import { herramientasApi, ubicacionesApi, categoriasApi } from '../../lib/api';
+import type { ItemInventario, InventarioPayload, Herramienta, Ubicacion, Categoria, FormErrors } from '../../lib/types';
 
 interface InventarioFormProps {
   item?: ItemInventario | null;
@@ -12,34 +10,37 @@ interface InventarioFormProps {
 }
 
 interface InventarioFormState {
-  herramienta_id: string;
-  estado: EstadoInventario;
+  codigo: string;
+  nombre: string;
+  categoria_id: string;
+  ubicacion_id: string;
+  estado: string;
   cantidad: number | string;
-  ubicacion_tipo: 'caja' | 'estante';
-  caja_id: string;
-  estante_id: string;
+  cantidad_minima: number | string;
 }
 
 export default function InventarioForm({ item = null, onGuardar, onCancelar }: InventarioFormProps) {
   const [form, setForm] = useState<InventarioFormState>({
-    herramienta_id: item?.herramienta_id ? String(item.herramienta_id) : '',
+    codigo: item?.codigo || '',
+    nombre: item?.nombre || '',
+    categoria_id: item?.categoria_id || '',
+    ubicacion_id: item?.ubicacion_id || '',
     estado: item?.estado || 'Nuevo',
     cantidad: item?.cantidad || 1,
-    ubicacion_tipo: item?.caja_id ? 'caja' : 'estante',
-    caja_id: item?.caja_id ? String(item.caja_id) : '',
-    estante_id: item?.estante_id ? String(item.estante_id) : '',
+    cantidad_minima: item?.cantidad_minima || 1,
   });
+  
   const [herramientas, setHerramientas] = useState<Herramienta[]>([]);
-  const [estantes, setEstantes] = useState<Estante[]>([]);
-  const [cajas, setCajas] = useState<Caja[]>([]);
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [ubicaciones, setUbicaciones] = useState<Ubicacion[]>([]);
   const [errores, setErrores] = useState<FormErrors<InventarioFormState>>({});
   const [cargando, setCargando] = useState(false);
   const [apiError, setApiError] = useState('');
 
   useEffect(() => {
     herramientasApi.getAll().then((d) => setHerramientas(d as Herramienta[]));
-    estantesApi.getAll().then((d) => setEstantes(d as Estante[]));
-    cajasApi.getAll().then((d) => setCajas(d as Caja[]));
+    categoriasApi.getAll().then((d) => setCategorias(d as Categoria[]));
+    ubicacionesApi.getAll().then((d) => setUbicaciones(d as Ubicacion[]));
   }, []);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
@@ -50,10 +51,9 @@ export default function InventarioForm({ item = null, onGuardar, onCancelar }: I
 
   function validar() {
     const e: FormErrors<InventarioFormState> = {};
-    if (!form.herramienta_id) e.herramienta_id = 'Selecciona una herramienta';
-    if (!form.cantidad || Number(form.cantidad) < 1) e.cantidad = 'Mínimo 1';
-    if (form.ubicacion_tipo === 'caja' && !form.caja_id) e.caja_id = 'Selecciona una caja';
-    if (form.ubicacion_tipo === 'estante' && !form.estante_id) e.estante_id = 'Selecciona un estante';
+    if (!form.codigo.trim()) e.codigo = 'Código obligatorio';
+    if (!form.nombre.trim()) e.nombre = 'Nombre obligatorio';
+    if (!form.cantidad || Number(form.cantidad) < 0) e.cantidad = 'Inválido';
     setErrores(e);
     return Object.keys(e).length === 0;
   }
@@ -63,17 +63,21 @@ export default function InventarioForm({ item = null, onGuardar, onCancelar }: I
     if (!validar()) return;
     setCargando(true);
     setApiError('');
+    
     const body: InventarioPayload = {
-      herramienta_id: Number(form.herramienta_id),
+      codigo: form.codigo.trim().toUpperCase(),
+      nombre: form.nombre.trim(),
+      categoria_id: form.categoria_id || null,
+      ubicacion_id: form.ubicacion_id || null,
       estado: form.estado,
       cantidad: Number(form.cantidad),
-      caja_id: form.ubicacion_tipo === 'caja' ? Number(form.caja_id) : null,
-      estante_id: form.ubicacion_tipo === 'estante' ? Number(form.estante_id) : null,
+      cantidad_minima: Number(form.cantidad_minima),
     };
+
     try {
       await onGuardar(body);
     } catch (err: unknown) {
-      setApiError(err instanceof Error ? err.message : 'Error');
+      setApiError(err instanceof Error ? err.message : 'Error al guardar');
     } finally {
       setCargando(false);
     }
@@ -85,55 +89,51 @@ export default function InventarioForm({ item = null, onGuardar, onCancelar }: I
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
-          <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Herramienta *</label>
-          <select name="herramienta_id" value={form.herramienta_id} onChange={handleChange} className={`soft-select ${errores.herramienta_id ? 'border-red-400' : ''}`}>
-            <option value="">— Seleccionar herramienta —</option>
-            {herramientas.map((h) => <option key={h.id} value={h.id}>{h.codigo} — {h.nombre}</option>)}
-          </select>
-          {errores.herramienta_id && <p className="mt-1 text-xs text-red-500">{errores.herramienta_id}</p>}
+          <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Código *</label>
+          <input name="codigo" value={form.codigo} onChange={handleChange} className={`soft-input ${errores.codigo ? 'border-red-400' : ''}`} placeholder="Ej: HERR-001" />
+          {errores.codigo && <p className="mt-1 text-xs text-red-500">{errores.codigo}</p>}
         </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Nombre *</label>
+          <input name="nombre" value={form.nombre} onChange={handleChange} className={`soft-input ${errores.nombre ? 'border-red-400' : ''}`} placeholder="Ej: Martillo" />
+          {errores.nombre && <p className="mt-1 text-xs text-red-500">{errores.nombre}</p>}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div>
+          <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Categoría</label>
+          <select name="categoria_id" value={form.categoria_id} onChange={handleChange} className="soft-select">
+            <option value="">— Sin categoría —</option>
+            {categorias.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Ubicación</label>
+          <select name="ubicacion_id" value={form.ubicacion_id} onChange={handleChange} className="soft-select">
+            <option value="">— Sin ubicación —</option>
+            {ubicaciones.map((u) => <option key={u.id} value={u.id}>{u.tipo}: {u.codigo} — {u.nombre}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <div>
           <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Estado</label>
           <select name="estado" value={form.estado} onChange={handleChange} className="soft-select">
-            {ESTADOS.map((estado) => <option key={estado}>{estado}</option>)}
+            <option value="Nuevo">Nuevo</option>
+            <option value="Usado">Usado</option>
+            <option value="Dañado">Dañado</option>
           </select>
         </div>
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Cantidad *</label>
-        <input type="number" name="cantidad" value={form.cantidad} onChange={handleChange} min={1} className={`soft-input w-32 ${errores.cantidad ? 'border-red-400' : ''}`} />
-        {errores.cantidad && <p className="mt-1 text-xs text-red-500">{errores.cantidad}</p>}
-      </div>
-
-      <div className="space-y-3">
-        <label className="block text-sm font-medium text-[var(--text-main)]">Ubicación *</label>
-        <div className="flex gap-4">
-          {(['estante', 'caja'] as const).map((tipo) => (
-            <label key={tipo} className="flex cursor-pointer items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2">
-              <input type="radio" name="ubicacion_tipo" value={tipo} checked={form.ubicacion_tipo === tipo} onChange={handleChange} className="accent-[var(--accent-strong)]" />
-              <span className="text-sm capitalize text-[var(--text-muted)]">{tipo}</span>
-            </label>
-          ))}
+        <div>
+          <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Cantidad *</label>
+          <input type="number" name="cantidad" value={form.cantidad} onChange={handleChange} min={0} className="soft-input" />
         </div>
-
-        {form.ubicacion_tipo === 'estante' ? (
-          <div>
-            <select name="estante_id" value={form.estante_id} onChange={handleChange} className={`soft-select ${errores.estante_id ? 'border-red-400' : ''}`}>
-              <option value="">— Seleccionar estante —</option>
-              {estantes.map((e) => <option key={e.id} value={e.id}>{e.codigo} — {e.ubicacion}</option>)}
-            </select>
-            {errores.estante_id && <p className="mt-1 text-xs text-red-500">{errores.estante_id}</p>}
-          </div>
-        ) : (
-          <div>
-            <select name="caja_id" value={form.caja_id} onChange={handleChange} className={`soft-select ${errores.caja_id ? 'border-red-400' : ''}`}>
-              <option value="">— Seleccionar caja —</option>
-              {cajas.map((c) => <option key={c.id} value={c.id}>{c.codigo}</option>)}
-            </select>
-            {errores.caja_id && <p className="mt-1 text-xs text-red-500">{errores.caja_id}</p>}
-          </div>
-        )}
+        <div>
+          <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Stock Mínimo</label>
+          <input type="number" name="cantidad_minima" value={form.cantidad_minima} onChange={handleChange} min={0} className="soft-input" />
+        </div>
       </div>
 
       <div className="flex justify-end gap-3 border-t border-[var(--border)] pt-3">

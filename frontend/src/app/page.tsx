@@ -6,36 +6,34 @@ import ActivityFeed from '../components/ui/ActivityFeed';
 import type { DashboardCounts, ItemInventario, Persona, Prestamo } from '../lib/types';
 
 export default function DashboardPage() {
-  const [counts, setCounts] = useState<DashboardCounts>({ prestamos: 0, herramientas: 0, personas: 0, pendientes: 0 });
+  const [counts, setCounts] = useState<DashboardCounts>({ 
+    articulos: 0, 
+    categorias: 0, 
+    personas: 0, 
+    prestamos_activos: 0, 
+    alertas_stock: 0 
+  });
 
   useEffect(() => {
     const cargar = async () => {
       try {
-        const [p, h, per] = await Promise.all([
-          api.get('/prestamos') as Promise<Prestamo[]>,
-          api.get('/inventario') as Promise<ItemInventario[]>,
-          api.get('/personas') as Promise<Persona[]>,
-        ]);
-        const pArr = Array.isArray(p) ? p : [];
-        const hArr = Array.isArray(h) ? h : [];
-        const perArr = Array.isArray(per) ? per : [];
-        setCounts({
-          prestamos: pArr.length,
-          herramientas: hArr.length,
-          personas: perArr.length,
-          pendientes: pArr.filter((prestamo) => prestamo.estado === 'Pendiente').length,
-        });
+        const data = await api.get('/dashboard') as { counts: DashboardCounts };
+        if (data && data.counts) {
+          setCounts(data.counts);
+        }
       } catch (e) { console.error(e); }
     };
     cargar();
   }, []);
 
+
   const cards = [
-    { label: 'Préstamos activos', value: counts.prestamos, color: 'from-blue-600 to-blue-800', icon: '' },
-    { label: 'En inventario', value: counts.herramientas, color: 'from-emerald-600 to-emerald-800', icon: '' },
+    { label: 'Préstamos activos', value: counts.prestamos_activos, color: 'from-blue-600 to-blue-800', icon: '' },
+    { label: 'En inventario', value: counts.articulos, color: 'from-emerald-600 to-emerald-800', icon: '' },
     { label: 'Personas', value: counts.personas, color: 'from-violet-600 to-violet-800', icon: '' },
-    { label: 'Pendientes', value: counts.pendientes, color: 'from-amber-600 to-amber-800', icon: '' },
+    { label: 'Alertas de stock', value: counts.alertas_stock, color: 'from-amber-600 to-amber-800', icon: '' },
   ];
+
 
   return (
     <div className="page-shell">

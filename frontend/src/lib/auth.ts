@@ -1,135 +1,73 @@
+// ============================================================
+// auth.ts — Autenticación real con el backend
+// Todas las sesiones se verifican contra la base de datos
+// ============================================================
+
 export interface SessionUser {
   id: string;
   nombre: string;
-  email: string;
+  email: string;  // En este sistema es el campo "usuario" del backend
   rol: string;
-}
-
-export interface ManagedUser extends SessionUser {
-  password: string;
-  estado: 'Activo' | 'Inactivo';
-}
-
-export interface SecurityRole {
-  id: string;
-  nombre: string;
-  descripcion: string;
-}
-
-export interface SecurityPermission {
-  id: string;
-  clave: string;
-  descripcion: string;
+  token?: string;
 }
 
 export const AUTH_STORAGE_KEY = 'sgp-session';
-export const USERS_STORAGE_KEY = 'sgp-users';
-export const ROLES_STORAGE_KEY = 'sgp-roles';
-export const PERMISSIONS_STORAGE_KEY = 'sgp-permissions';
 
-const DEFAULT_ROLES: SecurityRole[] = [
-  { id: 'rol-admin', nombre: 'Administrador', descripcion: 'Acceso completo al sistema.' },
-  { id: 'rol-operador', nombre: 'Operador', descripcion: 'Gestiona inventario, préstamos y movimientos.' },
-];
+declare const process: { env: { NEXT_PUBLIC_API_URL?: string } };
 
-const DEFAULT_PERMISSIONS: SecurityPermission[] = [
-  { id: 'perm-inv', clave: 'inventario.gestionar', descripcion: 'Crear y editar herramientas e inventario.' },
-  { id: 'perm-pre', clave: 'prestamos.gestionar', descripcion: 'Registrar préstamos y devoluciones.' },
-  { id: 'perm-sec', clave: 'seguridad.gestionar', descripcion: 'Administrar usuarios, roles y permisos.' },
-];
+/**
+ * Convierte la respuesta del backend al formato de sesión del frontend.
+ * El backend devuelve: { id, nombre, apellido, usuario, rol: { nombre_rol } }
+ */
+export function toSessionUser(user: Record<string, unknown>): SessionUser {
+  const rol = user.rol as { nombre_rol?: string } | string | null;
 
-const DEFAULT_USERS: ManagedUser[] = [
-  {
-    id: 'usr-admin',
-    nombre: 'Administrador General',
-    email: 'admin@sistema.local',
-    password: 'Admin123*',
-    rol: 'Administrador',
-    estado: 'Activo',
-  },
-];
-
-function canUseStorage() {
-  return typeof window !== 'undefined';
+  return {
+    id:     String(user.id ?? ''),
+    nombre: `${user.nombre ?? ''} ${user.apellido ?? ''}`.trim(),
+    email:  String(user.usuario ?? user.email ?? ''),
+    rol:    typeof rol === 'object' && rol !== null
+              ? (rol.nombre_rol ?? 'Sin rol')
+              : String(rol ?? 'Sin rol'),
+    token:  user.token as string | undefined,
+  };
 }
 
-function readCollection<T>(key: string, fallback: T[]): T[] {
-  if (!canUseStorage()) return fallback;
+/**
+ * Autentica al usuario contra el backend real.
+ * Lanza un Error con mensaje legible si falla.
+ */
+export async function authenticate(usuario: string, contrasena: string): Promise<SessionUser | null> {
+  const baseUrl =
+    (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_API_URL) ||
+    'http://localhost:4000/api';
 
+  let response: Response;
   try {
-    const stored = window.localStorage.getItem(key);
-    if (!stored) {
-      window.localStorage.setItem(key, JSON.stringify(fallback));
-      return fallback;
-    }
-
-    const parsed = JSON.parse(stored) as T[];
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : fallback;
+    response = await fetch(`${baseUrl}/auth/login`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ usuario, contrasena }),
+    });
   } catch {
-    window.localStorage.setItem(key, JSON.stringify(fallback));
-    return fallback;
+    throw new Error(
+      'No se pudo conectar al servidor. Verifica que el backend esté corriendo en el puerto 4000.'
+    );
   }
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({})) as Record<string, string>;
+    throw new Error(data?.error || 'Credenciales inválidas.');
+  }
+
+  const data = await response.json() as { token: string; usuario: Record<string, unknown> };
+  return toSessionUser({ ...data.usuario, token: data.token });
 }
 
-function writeCollection<T>(key: string, value: T[]) {
-  if (!canUseStorage()) return;
-  window.localStorage.setItem(key, JSON.stringify(value));
-}
-
-export function getUsers() {
-  return readCollection<ManagedUser>(USERS_STORAGE_KEY, DEFAULT_USERS);
-}
-
-export function saveUsers(users: ManagedUser[]) {
-  writeCollection(USERS_STORAGE_KEY, users);
-}
-
-export function getRoles() {
-  return readCollection<SecurityRole>(ROLES_STORAGE_KEY, DEFAULT_ROLES);
-}
-
-export function saveRoles(roles: SecurityRole[]) {
-  writeCollection(ROLES_STORAGE_KEY, roles);
-}
-
-export function getPermissions() {
-  return readCollection<SecurityPermission>(PERMISSIONS_STORAGE_KEY, DEFAULT_PERMISSIONS);
-}
-
-export function savePermissions(permissions: SecurityPermission[]) {
-  writeCollection(PERMISSIONS_STORAGE_KEY, permissions);
-}
-
-export function toSessionUser(user: ManagedUser): SessionUser {
-  return {
-    id: user.id,
-    nombre: user.nombre,
-    email: user.email,
-    rol: user.rol,
-  };
-}
-
-export function authenticate(email: string, password: string): SessionUser | null {
-  const normalizedEmail = email.trim().toLowerCase();
-  const user = getUsers().find(
-    (item) =>
-      item.email.toLowerCase() === normalizedEmail &&
-      item.password === password &&
-      item.estado === 'Activo'
-  );
-
-  return user ? toSessionUser(user) : null;
-}
-
+/**
+ * Persiste la sesión del usuario en localStorage.
+ */
 export function updateStoredCurrentUser(user: SessionUser) {
-  if (!canUseStorage()) return;
+  if (typeof window === 'undefined') return;
   window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-}
-
-export function getDemoCredentials() {
-  const user = getUsers()[0];
-  return {
-    email: user.email,
-    password: user.password,
-  };
 }

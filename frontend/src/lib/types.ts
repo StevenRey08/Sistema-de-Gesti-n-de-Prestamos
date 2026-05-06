@@ -1,27 +1,18 @@
 // ============================================================
 // types.ts — Interfaces de dominio para todo el frontend
-// Cada entidad del backend tiene su tipo aquí definido.
+// Sincronizado con el esquema del backend (PostgreSQL + Prisma)
 // ============================================================
 
 // ── Catálogos ─────────────────────────────────────────────
 
 export interface Categoria {
-  id: number;
+  id: string;
   nombre: string;
   descripcion?: string | null;
 }
 
-export interface Proveedor {
-  id: number;
-  codigo: string;
-  nombre_empresa: string;
-  nombre_contacto?: string | null;
-  telefono?: string | null;
-  email?: string | null;
-}
-
 export interface Persona {
-  id: number;
+  id: string;
   tipo_documento: string;
   numero_documento: string;
   nombres: string;
@@ -31,54 +22,54 @@ export interface Persona {
   email?: string | null;
 }
 
-// ── Almacenamiento ────────────────────────────────────────
+// ── Almacenamiento (Unificado) ─────────────────────────────
 
-export interface Estante {
-  id: number;
+export interface Ubicacion {
+  id: string;
   codigo: string;
-  ubicacion: string;
-}
-
-export interface Caja {
-  id: number;
-  codigo: string;
+  nombre: string;
+  tipo: string; // 'ESTANTE', 'CAJA', 'ESTUCHE'
+  descripcion?: string | null;
+  ubicacion_padre_id?: string | null;
+  padre?: Ubicacion | null;
 }
 
 // ── Inventario y herramientas ─────────────────────────────
 
 export interface Herramienta {
-  id: number;
+  id: string;
   codigo: string;
   nombre: string;
-  categoria_id?: number | null;
-  proveedor_id?: number | null;
+  categoria_id?: string | null;
   valor_estimado?: number | string | null;
   categoria?: Categoria | null;
-  proveedor?: Proveedor | null;
 }
 
-export type EstadoInventario = 'Nuevo' | 'Usado' | 'Dañado';
+export type EstadoInventario = 'Nuevo' | 'Usado' | 'Dañado' | string;
 
 export interface ItemInventario {
-  id: number;
-  herramienta_id: number;
-  estado: EstadoInventario;
+  id: string;
+  codigo: string;
+  nombre: string;
+  estado?: string | null;
   cantidad: number;
-  caja_id?: number | null;
-  estante_id?: number | null;
-  herramienta?: Herramienta | null;
-  caja?: Caja | null;
-  estante?: Estante | null;
+  cantidad_minima: number;
+  imagen_ruta?: string | null;
+  categoria_id?: string | null;
+  ubicacion_id?: string | null;
+  categoria?: Categoria | null;
+  ubicacion?: Ubicacion | null;
 }
 
 // ── Préstamos ─────────────────────────────────────────────
 
-export type EstadoPrestamo = 'Pendiente' | 'Devuelto';
+export type EstadoPrestamo = 'PENDIENTE' | 'DEVUELTO' | string;
 
 export interface Prestamo {
-  id: number;
-  inventario_id: number;
-  persona_id: number;
+  id: string;
+  inventario_id: string;
+  persona_id: string;
+  usuario_id: string;
   cantidad: number;
   fecha_prestamo: string | null;
   fecha_devolucion: string | null;
@@ -86,6 +77,28 @@ export interface Prestamo {
   observaciones?: string | null;
   inventario?: ItemInventario | null;
   persona?: Persona | null;
+  usuario?: Usuario | null;
+}
+
+// ── Movimientos ───────────────────────────────────────────
+
+export interface Movimiento {
+  id: string;
+  tipo: string; // 'ENTRADA', 'SALIDA', 'TRASLADO', 'PRESTAMO'
+  inventario_id: string;
+  ubicacion_origen_id?: string | null;
+  ubicacion_destino_id?: string | null;
+  persona_id?: string | null;
+  usuario_id?: string | null;
+  prestamo_id?: string | null;
+  cantidad: number;
+  fecha: string | null;
+  observaciones?: string | null;
+  inventario?: ItemInventario | null;
+  ubicacion_origen?: Ubicacion | null;
+  ubicacion_destino?: Ubicacion | null;
+  persona?: Persona | null;
+  usuario?: Usuario | null;
 }
 
 // ── Formularios (payloads enviados al backend) ────────────
@@ -93,14 +106,6 @@ export interface Prestamo {
 export interface CategoriaPayload {
   nombre: string;
   descripcion?: string;
-}
-
-export interface ProveedorPayload {
-  codigo: string;
-  nombre_empresa: string;
-  nombre_contacto?: string;
-  telefono?: string;
-  email?: string;
 }
 
 export interface PersonaPayload {
@@ -116,78 +121,92 @@ export interface PersonaPayload {
 export interface HerramientaPayload {
   codigo: string;
   nombre: string;
-  categoria_id?: number | null;
-  proveedor_id?: number | null;
+  categoria_id?: string | null;
   valor_estimado?: number | null;
 }
 
 export interface InventarioPayload {
-  herramienta_id: number | string;
-  estado: EstadoInventario;
+  codigo: string;
+  nombre: string;
+  categoria_id?: string | null;
+  ubicacion_id?: string | null;
+  estado?: string;
   cantidad: number;
-  caja_id?: number | string | null;
-  estante_id?: number | string | null;
+  cantidad_minima: number;
 }
 
 export interface PrestamoPayload {
-  inventario_id: number | string;
-  persona_id: number | string;
+  inventario_id: string;
+  persona_id: string;
+  usuario_id: string;
   cantidad: number;
   fecha_devolucion?: string | null;
   estado: EstadoPrestamo;
   observaciones?: string;
 }
 
-export interface Movimiento {
-  id: number;
-  tipo: string;
-  inventario_id: number;
-  persona_id?: number | null;
-  cantidad: number;
-  caja_origen_id?: number | null;
-  estante_origen_id?: number | null;
-  caja_destino_id?: number | null;
-  estante_destino_id?: number | null;
-  fecha: string | null;
-  observaciones?: string | null;
-  inventario?: ItemInventario | null;
-  persona?: Persona | null;
-  caja_origen?: Caja | null;
-  estante_origen?: Estante | null;
-  caja_destino?: Caja | null;
-  estante_destino?: Estante | null;
-}
-
 // ── Dashboard ─────────────────────────────────────────────
 
 export interface DashboardCounts {
-  prestamos: number;
-  herramientas: number;
+  articulos: number;
+  categorias: number;
   personas: number;
-  pendientes: number;
+  prestamos_activos: number;
+  alertas_stock: number;
 }
 
 // ── Seguridad ─────────────────────────────────────────────
 
-export interface SecurityRole {
+export interface Role {
   id: string;
-  nombre: string;
-  descripcion: string;
+  nombre_rol: string;
+  descripcion?: string | null;
 }
 
-export interface SecurityPermission {
-  id: string;
-  clave: string;
-  descripcion: string;
+export interface RolePayload {
+  nombre_rol: string;
+  descripcion?: string;
 }
 
-export interface ManagedUser {
+export interface Modulo {
   id: string;
   nombre: string;
-  email: string;
-  rol: string;
-  password: string;
-  estado: 'Activo' | 'Inactivo';
+  descripcion?: string | null;
+}
+
+export interface Permiso {
+  id: string;
+  rol_id: string;
+  modulo_id: string;
+  leer: boolean;
+  ingresar: boolean;
+  actualizar: boolean;
+  eliminar: boolean;
+  rol?: Role | null;
+  modulo?: Modulo | null;
+}
+
+export interface Usuario {
+  id: string;
+  nombre: string;
+  apellido: string;
+  usuario: string;
+  rol_id?: string | null;
+  tipo_documento?: string | null;
+  numero_documento?: string | null;
+  activo: boolean;
+  rol?: Role | null;
+}
+
+export interface UsuarioPayload {
+  nombre: string;
+  apellido: string;
+  usuario: string;
+  contrasena?: string;
+  rol_id?: string | null;
+  tipo_documento?: string | null;
+  numero_documento?: string | null;
+  activo: boolean;
 }
 
 // ── Errores de validación de formulario ───────────────────
