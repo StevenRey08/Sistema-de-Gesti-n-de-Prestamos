@@ -1,6 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import type { Role, Usuario, UsuarioPayload } from '../../lib/types';
+import FilterableSelect from '../ui/FilterableSelect';
 
 interface UsuarioFormProps {
   initialData?: Usuario | null;
@@ -97,13 +98,17 @@ export default function UsuarioForm({ initialData = null, roles, onSuccess, onCa
         </div>
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <label className={lbl} style={lblStyle}>Rol</label>
-        <select name="rol_id" value={form.rol_id ?? ''} onChange={handleChange} className="soft-select">
-          <option value="">Sin rol asignado</option>
-          {roles.map(r => <option key={r.id} value={r.id}>{r.nombre_rol}</option>)}
-        </select>
-      </div>
+      <FilterableSelect
+        label="Rol"
+        value={form.rol_id ?? ''}
+        onChange={(value) => setForm((prev) => ({ ...prev, rol_id: value }))}
+        options={[
+          { value: '', label: 'Sin rol asignado' },
+          ...roles.map((role) => ({ value: role.id, label: role.nombre_rol, searchText: role.descripcion ?? '' })),
+        ]}
+        placeholder="Buscar rol..."
+        emptyLabel="Sin roles coincidentes"
+      />
 
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-1.5">

@@ -60,17 +60,17 @@ export default function PrestamosPage() {
   const pendientes = prestamos.filter((p: Prestamo) => p.estado === 'PENDIENTE').length;
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="page-shell">
+      <div className="page-heading">
         <div>
-          <h1 className="text-2xl font-bold text-white">Préstamos</h1>
-          <p className="text-sm text-gray-400 mt-1">
+          <h1 className="page-title">Préstamos</h1>
+          <p className="page-subtitle">
             {prestamos.length} total —
-            <span className="text-yellow-400 ml-1">{pendientes} pendientes</span>
+            <span className="ml-1 font-semibold text-[var(--warning)]">{pendientes} pendientes</span>
           </p>
         </div>
         <button onClick={() => { setEditando(null); setShowForm(true); }}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+          className="soft-btn-primary">
           + Nuevo Préstamo
         </button>
       </div>
@@ -79,21 +79,17 @@ export default function PrestamosPage() {
       <div className="flex gap-2">
         {['todos', 'PENDIENTE', 'DEVUELTO'].map(f => (
           <button key={f} onClick={() => setFiltro(f)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors capitalize
-              ${filtro === f ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>
+            className={`filter-pill capitalize ${filtro === f ? 'active' : ''}`}>
             {f}
           </button>
         ))}
       </div>
 
-      {error && <div className="bg-red-900 border border-red-700 text-red-300 px-4 py-3 rounded-lg text-sm">{error}</div>}
+      {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-gray-900 rounded-2xl shadow-2xl w-full max-w-2xl p-6 border border-gray-700">
-            <h2 className="text-lg font-bold text-white mb-4">
-              {editando ? 'Editar Préstamo' : 'Registrar Préstamo'}
-            </h2>
+          <div className="modal-panel w-full max-w-2xl p-6">
             <PrestamoForm prestamo={editando} onGuardar={handleGuardar}
               onCancelar={() => { setShowForm(false); setEditando(null); }} />
           </div>
@@ -115,14 +111,14 @@ export default function PrestamosPage() {
         </div>
       )}
 
-      <div className="bg-gray-800 rounded-xl overflow-hidden border border-gray-700">
+      <div className="table-shell">
         {cargando ? (
-          <p className="text-gray-400 text-center py-12">Cargando...</p>
+          <p className="py-12 text-center text-[var(--text-muted)]">Cargando...</p>
         ) : lista.length === 0 ? (
-          <p className="text-gray-500 text-center py-12">No hay préstamos registrados.</p>
+          <p className="py-12 text-center text-[var(--text-muted)]">No hay préstamos registrados.</p>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-gray-900 text-gray-400 text-xs uppercase">
+            <thead>
               <tr>
                 <th className="px-4 py-3 text-left">Herramienta</th>
                 <th className="px-4 py-3 text-left">Persona</th>
@@ -133,18 +129,18 @@ export default function PrestamosPage() {
                 <th className="px-4 py-3 text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-700">
+            <tbody>
               {lista.map((p: Prestamo) => (
-                <tr key={p.id} className="text-gray-300 hover:bg-gray-700/50 transition-colors">
-                  <td className="px-4 py-3 font-medium text-white">
+                <tr key={p.id}>
+                  <td className="px-4 py-3 font-medium text-[var(--text-main)]">
                     {p.inventario?.nombre || '—'}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-[var(--text-main)]">
                     {p.persona ? `${p.persona.nombres} ${p.persona.apellidos}` : '—'}
                   </td>
-                  <td className="px-4 py-3 font-bold">{p.cantidad}</td>
-                  <td className="px-4 py-3 text-gray-400">{fmt(p.fecha_prestamo)}</td>
-                  <td className="px-4 py-3 text-gray-400">{fmt(p.fecha_devolucion)}</td>
+                  <td className="px-4 py-3 font-bold text-[var(--accent-strong)]">{p.cantidad}</td>
+                  <td className="px-4 py-3 text-[var(--text-muted)]">{fmt(p.fecha_prestamo)}</td>
+                  <td className="px-4 py-3 text-[var(--text-muted)]">{fmt(p.fecha_devolucion)}</td>
                   <td className="px-4 py-3">
                     <span className={`text-xs px-2 py-1 rounded-full ${BADGE[p.estado] || 'bg-gray-700 text-gray-300'}`}>
                       {p.estado}

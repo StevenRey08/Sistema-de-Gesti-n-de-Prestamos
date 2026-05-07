@@ -218,32 +218,32 @@ export default function UbicacionesPage() {
 
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-md rounded-2xl border border-gray-700 bg-gray-900 shadow-2xl">
+          <div className="modal-panel w-full max-w-md">
             <div className="flex items-center justify-between px-8 pt-7 pb-2">
-              <h2 className="text-xl font-bold text-white">
+              <h2 className="text-xl font-bold text-[var(--text-main)]">
                 {editando ? 'Editar ubicación' : 'Nueva ubicación'}
               </h2>
-              <button onClick={() => setShowForm(false)} className="text-gray-500 hover:text-white">✕</button>
+              <button onClick={() => setShowForm(false)} className="text-[var(--text-muted)] hover:text-[var(--text-main)]">✕</button>
             </div>
 
             <form onSubmit={guardar} className="space-y-4 px-8 pb-8 pt-5">
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-gray-400">CÓDIGO *</label>
+                  <label className="text-xs font-bold text-[var(--text-muted)]">CÓDIGO *</label>
                   <input
                     type="text"
                     value={form.codigo}
                     onChange={(e) => setForm({ ...form, codigo: e.target.value })}
-                    className="soft-input !bg-gray-950 border-gray-700"
+                    className="soft-input"
                   />
                   {errores.codigo && <p className="text-xs text-red-400">{errores.codigo}</p>}
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-gray-400">TIPO</label>
+                  <label className="text-xs font-bold text-[var(--text-muted)]">TIPO</label>
                   <select
                     value={form.tipo}
                     onChange={(e) => setForm({ ...form, tipo: e.target.value })}
-                    className="soft-input !bg-gray-950 border-gray-700"
+                    className="soft-input"
                   >
                     <option value="ESTANTE">ESTANTE</option>
                     <option value="CAJA">CAJA</option>
@@ -253,22 +253,22 @@ export default function UbicacionesPage() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-gray-400">NOMBRE *</label>
+                <label className="text-xs font-bold text-[var(--text-muted)]">NOMBRE *</label>
                 <input
                   type="text"
                   value={form.nombre}
                   onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-                  className="soft-input !bg-gray-950 border-gray-700"
+                  className="soft-input"
                 />
                 {errores.nombre && <p className="text-xs text-red-400">{errores.nombre}</p>}
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-gray-400">UBICACIÓN PADRE</label>
+                <label className="text-xs font-bold text-[var(--text-muted)]">UBICACIÓN PADRE</label>
                 <select
                   value={form.ubicacion_padre_id}
                   onChange={(e) => setForm({ ...form, ubicacion_padre_id: e.target.value })}
-                  className="soft-input !bg-gray-950 border-gray-700"
+                  className="soft-select"
                 >
                   <option value="">— Sin padre (Ubicación raíz) —</option>
                   {ubicaciones
@@ -281,17 +281,17 @@ export default function UbicacionesPage() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-gray-400">DESCRIPCIÓN</label>
+                <label className="text-xs font-bold text-[var(--text-muted)]">DESCRIPCIÓN</label>
                 <textarea
                   rows={2}
                   value={form.descripcion}
                   onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
-                  className="soft-input !bg-gray-950 border-gray-700 resize-none"
+                  className="soft-textarea resize-none"
                 />
               </div>
 
               <div className="flex justify-end gap-3 pt-4">
-                <button type="button" onClick={() => setShowForm(false)} className="text-gray-400 hover:text-white">Cancelar</button>
+                <button type="button" onClick={() => setShowForm(false)} className="soft-btn-secondary px-4 py-2 text-sm">Cancelar</button>
                 <button
                   type="submit"
                   disabled={guardando}
@@ -307,10 +307,10 @@ export default function UbicacionesPage() {
 
       {elimId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-gray-900 p-8 text-center border border-gray-700">
-            <p className="text-lg font-bold text-white mb-4">¿Eliminar ubicación?</p>
+          <div className="modal-panel w-full max-w-sm p-8 text-center">
+            <p className="mb-4 text-lg font-bold text-[var(--text-main)]">¿Eliminar ubicación?</p>
             <div className="flex gap-3">
-              <button onClick={() => setElimId(null)} className="flex-1 text-gray-400">Cancelar</button>
+              <button onClick={() => setElimId(null)} className="soft-btn-secondary flex-1">Cancelar</button>
               <button onClick={confirmarEliminar} className="flex-1 bg-red-600 text-white rounded-xl py-2 font-bold">Eliminar</button>
             </div>
           </div>

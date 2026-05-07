@@ -6,6 +6,7 @@
 export interface SessionUser {
   id: string;
   nombre: string;
+  usuario: string;
   email: string;  // En este sistema es el campo "usuario" del backend
   rol: string;
   token?: string;
@@ -25,6 +26,7 @@ export function toSessionUser(user: Record<string, unknown>): SessionUser {
   return {
     id:     String(user.id ?? ''),
     nombre: `${user.nombre ?? ''} ${user.apellido ?? ''}`.trim(),
+    usuario: String(user.usuario ?? user.email ?? ''),
     email:  String(user.usuario ?? user.email ?? ''),
     rol:    typeof rol === 'object' && rol !== null
               ? (rol.nombre_rol ?? 'Sin rol')

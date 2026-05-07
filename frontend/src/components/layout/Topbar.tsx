@@ -38,8 +38,8 @@ const TITLES: Record<string, { title: string; subtitle: string }> = {
     subtitle: 'Gestión de roles, permisos y usuarios del sistema',
   },
   '/mi-cuenta': {
-    title: 'Mi cuenta',
-    subtitle: 'Administra tu perfil y credenciales de acceso',
+    title: 'Administrar perfil',
+    subtitle: 'Actualiza tus datos de acceso y tu contraseña',
   },
 };
 
@@ -88,10 +88,10 @@ export default function Topbar() {
             </div>
             <div className="hidden pr-2 sm:block">
               <p className="text-sm font-semibold text-[var(--text-main)]">{user?.nombre}</p>
-              <p className="text-xs text-[var(--text-muted)]">{user?.email}</p>
+              <p className="text-xs text-[var(--text-muted)]">{user?.usuario ?? user?.email}</p>
             </div>
             <button onClick={() => router.push('/mi-cuenta')} className="soft-btn-ghost px-4 py-2 text-sm text-[var(--accent-strong)]">
-              Mi cuenta
+              Administrar perfil
             </button>
             <button onClick={handleLogout} className="soft-btn-secondary px-4 py-2 text-sm">
               Salir

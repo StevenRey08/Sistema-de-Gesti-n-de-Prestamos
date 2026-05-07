@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { inventarioApi, personasApi } from '../../lib/api';
 import { useAuth } from '../auth/AuthProvider';
+import FilterableSelect from '../ui/FilterableSelect';
 import type { Prestamo, PrestamoPayload, EstadoPrestamo, ItemInventario, Persona, FormErrors } from '../../lib/types';
 
 const ESTADOS: EstadoPrestamo[] = ['PENDIENTE', 'DEVUELTO'];
@@ -89,26 +90,32 @@ export default function PrestamoForm({ prestamo = null, onGuardar, onCancelar }:
       {apiError && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{apiError}</div>}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Artículo (inventario) *</label>
-          <select name="inventario_id" value={form.inventario_id} onChange={handleChange} className={`soft-select ${errores.inventario_id ? 'border-red-400' : ''}`}>
-            <option value="">— Seleccionar —</option>
-            {inventario.map((i) => (
-              <option key={i.id} value={i.id}>{i.nombre} ({i.cantidad} disp.)</option>
-            ))}
-          </select>
-          {errores.inventario_id && <p className="mt-1 text-xs text-red-500">{errores.inventario_id}</p>}
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Responsable *</label>
-          <select name="persona_id" value={form.persona_id} onChange={handleChange} className={`soft-select ${errores.persona_id ? 'border-red-400' : ''}`}>
-            <option value="">— Seleccionar —</option>
-            {personas.map((p) => (
-              <option key={p.id} value={p.id}>{p.nombres} {p.apellidos}</option>
-            ))}
-          </select>
-          {errores.persona_id && <p className="mt-1 text-xs text-red-500">{errores.persona_id}</p>}
-        </div>
+        <FilterableSelect
+          label="Artículo (inventario) *"
+          value={form.inventario_id}
+          onChange={(value) => setForm((prev) => ({ ...prev, inventario_id: value }))}
+          options={inventario.map((item) => ({
+            value: item.id,
+            label: `${item.nombre} (${item.cantidad} disp.)`,
+            searchText: `${item.codigo} ${item.estado ?? ''}`,
+          }))}
+          placeholder="Buscar artículo..."
+          emptyLabel="Sin artículos coincidentes"
+          error={errores.inventario_id}
+        />
+        <FilterableSelect
+          label="Responsable *"
+          value={form.persona_id}
+          onChange={(value) => setForm((prev) => ({ ...prev, persona_id: value }))}
+          options={personas.map((persona) => ({
+            value: persona.id,
+            label: `${persona.nombres} ${persona.apellidos}`,
+            searchText: `${persona.numero_documento} ${persona.email ?? ''}`,
+          }))}
+          placeholder="Buscar responsable..."
+          emptyLabel="Sin personas coincidentes"
+          error={errores.persona_id}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">

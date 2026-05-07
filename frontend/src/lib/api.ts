@@ -9,6 +9,10 @@ const BASE_URL: string =
   (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_API_URL) ||
   'http://localhost:4000/api';
 
+function isFormData(body: unknown): body is FormData {
+  return typeof FormData !== 'undefined' && body instanceof FormData;
+}
+
 async function request<T = unknown>(endpoint: string, options: RequestInit = {}): Promise<T> {
   // Intentar obtener el token del localStorage (solo en el cliente)
   let token = null;
@@ -30,10 +34,10 @@ async function request<T = unknown>(endpoint: string, options: RequestInit = {})
     }
   }
 
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(options.headers as Record<string, string>),
-  };
+  const headers: Record<string, string> = { ...(options.headers as Record<string, string>) };
+  if (!isFormData(options.body)) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -58,9 +62,9 @@ function buildCrud(resource: string) {
   return {
     getAll:   (search = '')          => request(`/${resource}${search ? `?search=${search}` : ''}`),
     getById:  (id: number | string)  => request(`/${resource}/${id}`),
-    create:   (body: unknown)        => request(`/${resource}`, { method: 'POST', body: JSON.stringify(body) }),
+    create:   (body: unknown)        => request(`/${resource}`, { method: 'POST', body: isFormData(body) ? body : JSON.stringify(body) }),
     update:   (id: number | string, body: unknown) =>
-                                        request(`/${resource}/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+                                        request(`/${resource}/${id}`, { method: 'PUT', body: isFormData(body) ? body : JSON.stringify(body) }),
     delete:   (id: number | string)  => request(`/${resource}/${id}`, { method: 'DELETE' }),
   };
 }

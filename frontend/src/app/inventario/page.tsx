@@ -138,8 +138,18 @@ export default function InventarioPage() {
   }
 
   async function handleGuardarInventario(form: InventarioPayload) {
-    if (editandoInventario) await inventarioApi.update(editandoInventario.id, form);
-    else await inventarioApi.create(form);
+    const body = new FormData();
+    body.append('codigo', form.codigo);
+    body.append('nombre', form.nombre);
+    body.append('estado', form.estado ?? 'Nuevo');
+    body.append('cantidad', String(form.cantidad));
+    body.append('cantidad_minima', String(form.cantidad_minima));
+    if (form.categoria_id) body.append('categoria_id', form.categoria_id);
+    if (form.ubicacion_id) body.append('ubicacion_id', form.ubicacion_id);
+    if (form.imagen) body.append('imagen', form.imagen);
+
+    if (editandoInventario) await inventarioApi.update(editandoInventario.id, body);
+    else await inventarioApi.create(body);
 
     setShowInventarioForm(false);
     setEditandoInventario(null);
@@ -321,6 +331,7 @@ export default function InventarioPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr>
+                    <th className="px-4 py-3 text-left">Imagen</th>
                     <th className="px-4 py-3 text-left">Herramienta</th>
                     <th className="px-4 py-3 text-left">Estado</th>
                     <th className="px-4 py-3 text-left">Cantidad</th>
@@ -331,6 +342,19 @@ export default function InventarioPage() {
                 <tbody>
                   {inventarioFiltrado.map((item) => (
                     <tr key={item.id}>
+                      <td className="px-4 py-3">
+                        {item.imagen_ruta ? (
+                          <img
+                            src={item.imagen_ruta.startsWith('http') ? item.imagen_ruta : `http://localhost:4000/${item.imagen_ruta.replace(/^\/+/, '')}`}
+                            alt={item.nombre}
+                            className="h-14 w-14 rounded-2xl object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-dashed border-[var(--border)] text-xs text-[var(--text-muted)]">
+                            Sin foto
+                          </div>
+                        )}
+                      </td>
                       <td className="px-4 py-3">
                         <p className="font-medium text-[var(--text-main)]">{item.herramienta?.nombre || '—'}</p>
                         <p className="text-xs text-[var(--text-muted)]">{item.herramienta?.codigo}</p>

@@ -54,30 +54,26 @@ export default function CategoriasPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="page-shell">
+      <div className="page-heading">
         <div>
-          <h1 className="text-2xl font-bold text-white">Categorías</h1>
-          <p className="text-sm text-gray-400 mt-1">{categorias.length} registros</p>
+          <h1 className="page-title">Categorías</h1>
+          <p className="page-subtitle">{categorias.length} registros</p>
         </div>
         <button
           onClick={() => { setEditando(null); setShowForm(true); }}
-          className="bg-blue-600 hover:bg-blue-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+          className="soft-btn-primary"
         >
           Nueva Categoría
         </button>
       </div>
 
-      {error && <div className="bg-red-900 border border-red-700 text-red-300 px-4 py-3 rounded-lg text-sm">{error}</div>}
+      {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
       {/* Modal Formulario */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-[#111827] rounded-2xl shadow-2xl w-full max-w-lg p-6">
-
-            <h2 className="text-lg font-bold text-gray-300 mb-4">
-              {editando ? 'Editar Categoría' : 'Nueva Categoría'}
-            </h2>
+          <div className="modal-panel w-full max-w-lg p-6">
 
             <CategoriaForm
               initialData={editando}
@@ -103,14 +99,14 @@ export default function CategoriasPage() {
         </div>
       )}
 
-      <div className="bg-gray-800 rounded-xl overflow-hidden border border-gray-700">
+      <div className="table-shell">
         {cargando ? (
-          <p className="text-gray-400 text-center py-12">Cargando...</p>
+          <p className="py-12 text-center text-[var(--text-muted)]">Cargando...</p>
         ) : categorias.length === 0 ? (
-          <p className="text-gray-500 text-center py-12">No hay categorías registradas.</p>
+          <p className="py-12 text-center text-[var(--text-muted)]">No hay categorías registradas.</p>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-gray-900 text-gray-400 text-xs uppercase">
+            <thead>
               <tr>
                 <th className="px-4 py-3 text-left">ID</th>
                 <th className="px-4 py-3 text-left">Nombre</th>
@@ -118,12 +114,12 @@ export default function CategoriasPage() {
                 <th className="px-4 py-3 text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-700">
+            <tbody>
               {categorias.map((c: Categoria) => (
-                <tr key={c.id} className="text-gray-300 hover:bg-gray-700/50 transition-colors">
-                  <td className="px-4 py-3 text-gray-500 text-xs">{c.id}</td>
-                  <td className="px-4 py-3 font-medium text-white">{c.nombre}</td>
-                  <td className="px-4 py-3 text-gray-400">{c.descripcion || '—'}</td>
+                <tr key={c.id}>
+                  <td className="px-4 py-3 text-xs text-[var(--text-muted)]">{c.id}</td>
+                  <td className="px-4 py-3 font-medium text-[var(--text-main)]">{c.nombre}</td>
+                  <td className="px-4 py-3 text-[var(--text-muted)]">{c.descripcion || '—'}</td>
                   <td className="px-4 py-3 text-right space-x-2">
                     <button onClick={() => { setEditando(c); setShowForm(true); }}
                       className="text-blue-400 hover:text-blue-300 text-xs font-medium">Editar</button>

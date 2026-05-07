@@ -1,55 +1,72 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { permisosApi, rolesApi, usuariosApi } from '../../lib/api';
+import type { Permiso, PermisoPayload, Role, Usuario, UsuarioPayload } from '../../lib/types';
+import RoleForm from '../../components/seguridad/RoleForm';
+import UsuarioForm from '../../components/seguridad/UsuarioForm';
+import FilterableSelect from '../../components/ui/FilterableSelect';
 import { useAuth } from '../../components/auth/AuthProvider';
-import {
-  getPermissions,
-  getRoles,
-  getUsers,
-  savePermissions,
-  saveRoles,
-  saveUsers,
-  toSessionUser,
-} from '../../lib/auth';
-import type { ManagedUser, SecurityPermission, SecurityRole } from '../../lib/types';
+import { toSessionUser } from '../../lib/auth';
 
 type TabKey = 'roles' | 'permisos' | 'usuarios';
 
-const EMPTY_ROLE = { nombre: '', descripcion: '' };
-const EMPTY_PERMISSION = { clave: '', descripcion: '' };
-type UserFormState = {
-  nombre: string;
-  email: string;
-  rol: string;
-  password: string;
-  estado: ManagedUser['estado'];
+const EMPTY_PERMISSION: PermisoPayload = {
+  rol_id: '',
+  modulo_id: '',
+  leer: false,
+  ingresar: false,
+  actualizar: false,
+  eliminar: false,
 };
-
-const EMPTY_USER: UserFormState = { nombre: '', email: '', rol: 'Administrador', password: '', estado: 'Activo' };
 
 export default function SeguridadPage() {
   const { user, updateCurrentUser } = useAuth();
   const [activeTab, setActiveTab] = useState<TabKey>('roles');
-  const [roles, setRoles] = useState<SecurityRole[]>([]);
-  const [permissions, setPermissions] = useState<SecurityPermission[]>([]);
-  const [users, setUsers] = useState<ManagedUser[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [permissions, setPermissions] = useState<Permiso[]>([]);
+  const [users, setUsers] = useState<Usuario[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const [roleForm, setRoleForm] = useState(EMPTY_ROLE);
-  const [permissionForm, setPermissionForm] = useState(EMPTY_PERMISSION);
-  const [userForm, setUserForm] = useState<UserFormState>(EMPTY_USER);
+  const [showRoleForm, setShowRoleForm] = useState(false);
+  const [editingRole, setEditingRole] = useState<Role | null>(null);
+  const [showUserForm, setShowUserForm] = useState(false);
+  const [editingUser, setEditingUser] = useState<Usuario | null>(null);
+  const [permissionForm, setPermissionForm] = useState<PermisoPayload>(EMPTY_PERMISSION);
+  const [permissionError, setPermissionError] = useState('');
+  const [savingPermissionId, setSavingPermissionId] = useState<string | null>(null);
+  const [roleSearch, setRoleSearch] = useState('');
+  const [userSearch, setUserSearch] = useState('');
+  const [permissionSearch, setPermissionSearch] = useState('');
 
-  useEffect(() => {
-    const loadedRoles = getRoles();
-    const loadedPermissions = getPermissions();
-    const loadedUsers = getUsers();
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [rolesData, permissionsData, usersData] = await Promise.all([
+        rolesApi.getAll() as Promise<Role[]>,
+        permisosApi.getAll() as Promise<Permiso[]>,
+        usuariosApi.getAll() as Promise<Usuario[]>,
+      ]);
 
-    setRoles(loadedRoles);
-    setPermissions(loadedPermissions);
-    setUsers(loadedUsers);
-    if (loadedRoles.length > 0) {
-      setUserForm((prev) => ({ ...prev, rol: loadedRoles[0].nombre }));
+      setRoles(rolesData);
+      setPermissions(permissionsData);
+      setUsers(usersData);
+      setPermissionForm((prev) => ({
+        ...prev,
+        rol_id: prev.rol_id || rolesData[0]?.id || '',
+      }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo cargar el módulo de seguridad.');
+    } finally {
+      setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   const stats = useMemo(
     () => [
@@ -60,81 +77,159 @@ export default function SeguridadPage() {
     [permissions.length, roles.length, users.length]
   );
 
-  function addRole(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!roleForm.nombre.trim()) return;
+  const moduleOptions = useMemo(() => {
+    const uniqueModules = new Map<string, { value: string; label: string }>();
+    permissions.forEach((permission) => {
+      if (permission.modulo?.id && permission.modulo?.nombre) {
+        uniqueModules.set(permission.modulo.id, {
+          value: permission.modulo.id,
+          label: permission.modulo.nombre,
+        });
+      }
+    });
+    return [...uniqueModules.values()].sort((a, b) => a.label.localeCompare(b.label));
+  }, [permissions]);
 
-    const next = [
-      ...roles,
-      {
-        id: `rol-${crypto.randomUUID()}`,
-        nombre: roleForm.nombre.trim(),
-        descripcion: roleForm.descripcion.trim(),
-      },
-    ];
-    setRoles(next);
-    saveRoles(next);
-    setRoleForm(EMPTY_ROLE);
-  }
-
-  function addPermission(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!permissionForm.clave.trim()) return;
-
-    const next = [
-      ...permissions,
-      {
-        id: `perm-${crypto.randomUUID()}`,
-        clave: permissionForm.clave.trim(),
-        descripcion: permissionForm.descripcion.trim(),
-      },
-    ];
-    setPermissions(next);
-    savePermissions(next);
-    setPermissionForm(EMPTY_PERMISSION);
-  }
-
-  function addUser(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!userForm.nombre.trim() || !userForm.email.trim() || !userForm.password.trim()) return;
-
-    const nextUser: ManagedUser = {
-      id: `usr-${crypto.randomUUID()}`,
-      nombre: userForm.nombre.trim(),
-      email: userForm.email.trim(),
-      rol: userForm.rol,
-      password: userForm.password,
-      estado: userForm.estado,
-    };
-    const next = [...users, nextUser];
-    setUsers(next);
-    saveUsers(next);
-    setUserForm({ ...EMPTY_USER, rol: roles[0]?.nombre || 'Administrador' });
-  }
-
-  function removeRole(id: string) {
-    const next = roles.filter((role) => role.id !== id);
-    setRoles(next);
-    saveRoles(next);
-  }
-
-  function removePermission(id: string) {
-    const next = permissions.filter((permission) => permission.id !== id);
-    setPermissions(next);
-    savePermissions(next);
-  }
-
-  function toggleUserStatus(id: string) {
-    const next: ManagedUser[] = users.map((item) =>
-      item.id === id ? { ...item, estado: item.estado === 'Activo' ? 'Inactivo' : 'Activo' } : item
+  const filteredRoles = useMemo(() => {
+    const term = roleSearch.trim().toLowerCase();
+    if (!term) return roles;
+    return roles.filter((role) =>
+      `${role.nombre_rol} ${role.descripcion ?? ''}`.toLowerCase().includes(term)
     );
-    setUsers(next);
-    saveUsers(next);
+  }, [roleSearch, roles]);
 
-    const current = next.find((item) => item.id === user?.id);
-    if (current) {
-      updateCurrentUser(toSessionUser(current));
+  const filteredUsers = useMemo(() => {
+    const term = userSearch.trim().toLowerCase();
+    if (!term) return users;
+    return users.filter((managedUser) =>
+      `${managedUser.nombre} ${managedUser.apellido} ${managedUser.usuario} ${managedUser.rol?.nombre_rol ?? ''}`
+        .toLowerCase()
+        .includes(term)
+    );
+  }, [userSearch, users]);
+
+  const filteredPermissions = useMemo(() => {
+    const term = permissionSearch.trim().toLowerCase();
+    if (!term) return permissions;
+    return permissions.filter((permission) =>
+      `${permission.rol?.nombre_rol ?? ''} ${permission.modulo?.nombre ?? ''}`.toLowerCase().includes(term)
+    );
+  }, [permissionSearch, permissions]);
+
+  async function handleSaveRole(form: { nombre_rol: string; descripcion?: string }) {
+    if (editingRole) {
+      await rolesApi.update(editingRole.id, form);
+    } else {
+      await rolesApi.create(form);
     }
+    setShowRoleForm(false);
+    setEditingRole(null);
+    await loadData();
+  }
+
+  async function handleDeleteRole(id: string) {
+    try {
+      await rolesApi.delete(id);
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo eliminar el rol.');
+    }
+  }
+
+  async function handleSaveUser(form: UsuarioPayload) {
+    if (editingUser) {
+      const payload = {
+        ...form,
+        contrasena: form.contrasena || undefined,
+      };
+      const updated = await usuariosApi.update(editingUser.id, payload) as Usuario;
+      if (updated.id === user?.id) {
+        updateCurrentUser(toSessionUser(updated));
+      }
+    } else {
+      await usuariosApi.create(form);
+    }
+    setShowUserForm(false);
+    setEditingUser(null);
+    await loadData();
+  }
+
+  async function handleToggleUser(userToToggle: Usuario) {
+    try {
+      const updated = await usuariosApi.update(userToToggle.id, {
+        nombre: userToToggle.nombre,
+        apellido: userToToggle.apellido,
+        usuario: userToToggle.usuario,
+        rol_id: userToToggle.rol_id ?? null,
+        tipo_documento: userToToggle.tipo_documento ?? null,
+        numero_documento: userToToggle.numero_documento ?? null,
+        activo: !userToToggle.activo,
+      }) as Usuario;
+
+      if (updated.id === user?.id) {
+        updateCurrentUser(toSessionUser(updated));
+      }
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo actualizar el estado del usuario.');
+    }
+  }
+
+  async function handleDeletePermission(id: string) {
+    try {
+      await permisosApi.delete(id);
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo eliminar el permiso.');
+    }
+  }
+
+  async function handleCreatePermission(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setPermissionError('');
+
+    if (!permissionForm.rol_id || !permissionForm.modulo_id) {
+      setPermissionError('Selecciona un rol y un módulo.');
+      return;
+    }
+
+    try {
+      await permisosApi.create(permissionForm);
+      setPermissionForm({
+        ...EMPTY_PERMISSION,
+        rol_id: permissionForm.rol_id,
+      });
+      await loadData();
+    } catch (err) {
+      setPermissionError(err instanceof Error ? err.message : 'No se pudo crear el permiso.');
+    }
+  }
+
+  async function handleUpdatePermission(permission: Permiso) {
+    setSavingPermissionId(permission.id);
+    try {
+      await permisosApi.update(permission.id, {
+        rol_id: permission.rol_id,
+        modulo_id: permission.modulo_id,
+        leer: permission.leer,
+        ingresar: permission.ingresar,
+        actualizar: permission.actualizar,
+        eliminar: permission.eliminar,
+      });
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo actualizar el permiso.');
+    } finally {
+      setSavingPermissionId(null);
+    }
+  }
+
+  function updatePermissionState(id: string, key: keyof Pick<Permiso, 'leer' | 'ingresar' | 'actualizar' | 'eliminar'>) {
+    setPermissions((prev) =>
+      prev.map((permission) =>
+        permission.id === id ? { ...permission, [key]: !permission[key] } : permission
+      )
+    );
   }
 
   return (
@@ -142,7 +237,7 @@ export default function SeguridadPage() {
       <div className="page-heading">
         <div>
           <h1 className="page-title">Seguridad</h1>
-          <p className="page-subtitle">Administra roles, permisos y usuarios desde un solo módulo.</p>
+          <p className="page-subtitle">Administra roles, permisos y usuarios desde el backend real del sistema.</p>
         </div>
         <div className="flex gap-2">
           {(['roles', 'permisos', 'usuarios'] as const).map((tab) => (
@@ -166,123 +261,255 @@ export default function SeguridadPage() {
         ))}
       </div>
 
+      {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+
       {activeTab === 'roles' && (
-        <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-          <form onSubmit={addRole} className="surface-card space-y-4 p-6">
-            <h2 className="text-lg font-semibold text-[var(--text-main)]">Nuevo rol</h2>
-            <input className="soft-input" placeholder="Nombre del rol" value={roleForm.nombre} onChange={(e) => setRoleForm((prev) => ({ ...prev, nombre: e.target.value }))} />
-            <textarea className="soft-textarea" placeholder="Descripción del rol" value={roleForm.descripcion} onChange={(e) => setRoleForm((prev) => ({ ...prev, descripcion: e.target.value }))} />
-            <button type="submit" className="soft-btn-primary">Guardar rol</button>
-          </form>
+        <section className="space-y-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <input
+              type="search"
+              value={roleSearch}
+              onChange={(event) => setRoleSearch(event.target.value)}
+              placeholder="Buscar rol..."
+              className="soft-input max-w-sm"
+            />
+            <button
+              onClick={() => {
+                setEditingRole(null);
+                setShowRoleForm(true);
+              }}
+              className="soft-btn-primary"
+            >
+              + Nuevo rol
+            </button>
+          </div>
 
           <div className="table-shell">
-            <table className="w-full text-sm">
-              <thead>
-                <tr>
-                  <th className="px-4 py-3 text-left">Rol</th>
-                  <th className="px-4 py-3 text-left">Descripción</th>
-                  <th className="px-4 py-3 text-right">Acción</th>
-                </tr>
-              </thead>
-              <tbody>
-                {roles.map((role) => (
-                  <tr key={role.id}>
-                    <td className="px-4 py-3 font-medium text-[var(--text-main)]">{role.nombre}</td>
-                    <td className="px-4 py-3 text-[var(--text-muted)]">{role.descripcion || '—'}</td>
-                    <td className="px-4 py-3 text-right">
-                      <button onClick={() => removeRole(role.id)} className="text-sm font-medium text-[var(--danger)]">Eliminar</button>
-                    </td>
+            {loading ? (
+              <p className="py-12 text-center text-[var(--text-muted)]">Cargando roles...</p>
+            ) : filteredRoles.length === 0 ? (
+              <p className="py-12 text-center text-[var(--text-muted)]">No hay roles para mostrar.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className="px-4 py-3 text-left">Rol</th>
+                    <th className="px-4 py-3 text-left">Descripción</th>
+                    <th className="px-4 py-3 text-right">Acciones</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filteredRoles.map((role) => (
+                    <tr key={role.id}>
+                      <td className="px-4 py-3 font-medium text-[var(--text-main)]">{role.nombre_rol}</td>
+                      <td className="px-4 py-3 text-[var(--text-muted)]">{role.descripcion || '—'}</td>
+                      <td className="px-4 py-3 text-right space-x-3">
+                        <button
+                          onClick={() => {
+                            setEditingRole(role);
+                            setShowRoleForm(true);
+                          }}
+                          className="text-sm font-medium text-[var(--accent)]"
+                        >
+                          Editar
+                        </button>
+                        <button onClick={() => void handleDeleteRole(role.id)} className="text-sm font-medium text-[var(--danger)]">
+                          Eliminar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
-        </div>
+        </section>
       )}
 
       {activeTab === 'permisos' && (
-        <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-          <form onSubmit={addPermission} className="surface-card space-y-4 p-6">
-            <h2 className="text-lg font-semibold text-[var(--text-main)]">Nuevo permiso</h2>
-            <input className="soft-input" placeholder="Clave del permiso" value={permissionForm.clave} onChange={(e) => setPermissionForm((prev) => ({ ...prev, clave: e.target.value }))} />
-            <textarea className="soft-textarea" placeholder="Descripción del permiso" value={permissionForm.descripcion} onChange={(e) => setPermissionForm((prev) => ({ ...prev, descripcion: e.target.value }))} />
-            <button type="submit" className="soft-btn-primary">Guardar permiso</button>
+        <section className="space-y-6">
+          <form onSubmit={handleCreatePermission} className="surface-card grid gap-4 p-6 lg:grid-cols-[1fr_1fr_auto]">
+            <FilterableSelect
+              label="Rol"
+              options={roles.map((role) => ({ value: role.id, label: role.nombre_rol }))}
+              value={permissionForm.rol_id}
+              onChange={(value) => setPermissionForm((prev) => ({ ...prev, rol_id: value }))}
+              error={!permissionForm.rol_id && permissionError ? 'Selecciona un rol.' : undefined}
+            />
+            <FilterableSelect
+              label="Módulo"
+              options={moduleOptions}
+              value={permissionForm.modulo_id}
+              onChange={(value) => setPermissionForm((prev) => ({ ...prev, modulo_id: value }))}
+              error={!permissionForm.modulo_id && permissionError ? 'Selecciona un módulo.' : undefined}
+            />
+            <div className="flex items-end">
+              <button type="submit" className="soft-btn-primary w-full">Agregar permiso</button>
+            </div>
+
+            <label className="flex items-center gap-2 text-sm text-[var(--text-main)]"><input type="checkbox" checked={permissionForm.leer} onChange={() => setPermissionForm((prev) => ({ ...prev, leer: !prev.leer }))} /> Leer</label>
+            <label className="flex items-center gap-2 text-sm text-[var(--text-main)]"><input type="checkbox" checked={permissionForm.ingresar} onChange={() => setPermissionForm((prev) => ({ ...prev, ingresar: !prev.ingresar }))} /> Ingresar</label>
+            <label className="flex items-center gap-2 text-sm text-[var(--text-main)]"><input type="checkbox" checked={permissionForm.actualizar} onChange={() => setPermissionForm((prev) => ({ ...prev, actualizar: !prev.actualizar }))} /> Actualizar</label>
+            <label className="flex items-center gap-2 text-sm text-[var(--text-main)]"><input type="checkbox" checked={permissionForm.eliminar} onChange={() => setPermissionForm((prev) => ({ ...prev, eliminar: !prev.eliminar }))} /> Eliminar</label>
+            {permissionError && <p className="lg:col-span-3 text-sm text-red-600">{permissionError}</p>}
           </form>
 
+          <input
+            type="search"
+            value={permissionSearch}
+            onChange={(event) => setPermissionSearch(event.target.value)}
+            placeholder="Buscar por rol o módulo..."
+            className="soft-input max-w-sm"
+          />
+
           <div className="table-shell">
-            <table className="w-full text-sm">
-              <thead>
-                <tr>
-                  <th className="px-4 py-3 text-left">Clave</th>
-                  <th className="px-4 py-3 text-left">Descripción</th>
-                  <th className="px-4 py-3 text-right">Acción</th>
-                </tr>
-              </thead>
-              <tbody>
-                {permissions.map((permission) => (
-                  <tr key={permission.id}>
-                    <td className="px-4 py-3 font-mono text-xs text-[var(--accent-strong)]">{permission.clave}</td>
-                    <td className="px-4 py-3 text-[var(--text-muted)]">{permission.descripcion || '—'}</td>
-                    <td className="px-4 py-3 text-right">
-                      <button onClick={() => removePermission(permission.id)} className="text-sm font-medium text-[var(--danger)]">Eliminar</button>
-                    </td>
+            {loading ? (
+              <p className="py-12 text-center text-[var(--text-muted)]">Cargando permisos...</p>
+            ) : filteredPermissions.length === 0 ? (
+              <p className="py-12 text-center text-[var(--text-muted)]">No hay permisos para mostrar.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className="px-4 py-3 text-left">Rol</th>
+                    <th className="px-4 py-3 text-left">Módulo</th>
+                    <th className="px-4 py-3 text-center">Leer</th>
+                    <th className="px-4 py-3 text-center">Ingresar</th>
+                    <th className="px-4 py-3 text-center">Actualizar</th>
+                    <th className="px-4 py-3 text-center">Eliminar</th>
+                    <th className="px-4 py-3 text-right">Acciones</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filteredPermissions.map((permission) => (
+                    <tr key={permission.id}>
+                      <td className="px-4 py-3 font-medium text-[var(--text-main)]">{permission.rol?.nombre_rol || '—'}</td>
+                      <td className="px-4 py-3 text-[var(--text-muted)]">{permission.modulo?.nombre || '—'}</td>
+                      {(['leer', 'ingresar', 'actualizar', 'eliminar'] as const).map((key) => (
+                        <td key={key} className="px-4 py-3 text-center">
+                          <input
+                            type="checkbox"
+                            checked={permission[key]}
+                            onChange={() => updatePermissionState(permission.id, key)}
+                          />
+                        </td>
+                      ))}
+                      <td className="px-4 py-3 text-right space-x-3">
+                        <button onClick={() => void handleUpdatePermission(permission)} className="text-sm font-medium text-[var(--accent)]">
+                          {savingPermissionId === permission.id ? 'Guardando...' : 'Guardar'}
+                        </button>
+                        <button onClick={() => void handleDeletePermission(permission.id)} className="text-sm font-medium text-[var(--danger)]">
+                          Eliminar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </section>
+      )}
+
+      {activeTab === 'usuarios' && (
+        <section className="space-y-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <input
+              type="search"
+              value={userSearch}
+              onChange={(event) => setUserSearch(event.target.value)}
+              placeholder="Buscar por nombre, usuario o rol..."
+              className="soft-input max-w-sm"
+            />
+            <button
+              onClick={() => {
+                setEditingUser(null);
+                setShowUserForm(true);
+              }}
+              className="soft-btn-primary"
+            >
+              + Nuevo usuario
+            </button>
+          </div>
+
+          <div className="table-shell">
+            {loading ? (
+              <p className="py-12 text-center text-[var(--text-muted)]">Cargando usuarios...</p>
+            ) : filteredUsers.length === 0 ? (
+              <p className="py-12 text-center text-[var(--text-muted)]">No hay usuarios para mostrar.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className="px-4 py-3 text-left">Usuario</th>
+                    <th className="px-4 py-3 text-left">Rol</th>
+                    <th className="px-4 py-3 text-left">Estado</th>
+                    <th className="px-4 py-3 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredUsers.map((managedUser) => (
+                    <tr key={managedUser.id}>
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-[var(--text-main)]">{managedUser.nombre} {managedUser.apellido}</p>
+                        <p className="text-xs text-[var(--text-muted)]">{managedUser.usuario}</p>
+                      </td>
+                      <td className="px-4 py-3 text-[var(--text-muted)]">{managedUser.rol?.nombre_rol || 'Sin rol'}</td>
+                      <td className="px-4 py-3">
+                        <span className={`status-badge ${managedUser.activo ? 'status-success' : 'status-warning'}`}>
+                          {managedUser.activo ? 'Activo' : 'Inactivo'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right space-x-3">
+                        <button
+                          onClick={() => {
+                            setEditingUser(managedUser);
+                            setShowUserForm(true);
+                          }}
+                          className="text-sm font-medium text-[var(--accent)]"
+                        >
+                          Editar
+                        </button>
+                        <button onClick={() => void handleToggleUser(managedUser)} className="text-sm font-medium text-[var(--accent-strong)]">
+                          {managedUser.activo ? 'Desactivar' : 'Activar'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </section>
+      )}
+
+      {showRoleForm && (
+        <div className="modal-backdrop">
+          <div className="modal-panel max-w-2xl p-6">
+            <RoleForm
+              initialData={editingRole}
+              onSuccess={handleSaveRole}
+              onCancel={() => {
+                setShowRoleForm(false);
+                setEditingRole(null);
+              }}
+            />
           </div>
         </div>
       )}
 
-      {activeTab === 'usuarios' && (
-        <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-          <form onSubmit={addUser} className="surface-card space-y-4 p-6">
-            <h2 className="text-lg font-semibold text-[var(--text-main)]">Nuevo usuario</h2>
-            <input className="soft-input" placeholder="Nombre completo" value={userForm.nombre} onChange={(e) => setUserForm((prev) => ({ ...prev, nombre: e.target.value }))} />
-            <input className="soft-input" placeholder="Correo electrónico" value={userForm.email} onChange={(e) => setUserForm((prev) => ({ ...prev, email: e.target.value }))} />
-            <select className="soft-select" value={userForm.rol} onChange={(e) => setUserForm((prev) => ({ ...prev, rol: e.target.value }))}>
-              {roles.map((role) => <option key={role.id} value={role.nombre}>{role.nombre}</option>)}
-            </select>
-            <input type="password" className="soft-input" placeholder="Contraseña temporal" value={userForm.password} onChange={(e) => setUserForm((prev) => ({ ...prev, password: e.target.value }))} />
-            <select className="soft-select" value={userForm.estado} onChange={(e) => setUserForm((prev) => ({ ...prev, estado: e.target.value as ManagedUser['estado'] }))}>
-              <option value="Activo">Activo</option>
-              <option value="Inactivo">Inactivo</option>
-            </select>
-            <button type="submit" className="soft-btn-primary">Guardar usuario</button>
-          </form>
-
-          <div className="table-shell">
-            <table className="w-full text-sm">
-              <thead>
-                <tr>
-                  <th className="px-4 py-3 text-left">Usuario</th>
-                  <th className="px-4 py-3 text-left">Rol</th>
-                  <th className="px-4 py-3 text-left">Estado</th>
-                  <th className="px-4 py-3 text-right">Acción</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((managedUser) => (
-                  <tr key={managedUser.id}>
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-[var(--text-main)]">{managedUser.nombre}</p>
-                      <p className="text-xs text-[var(--text-muted)]">{managedUser.email}</p>
-                    </td>
-                    <td className="px-4 py-3 text-[var(--text-muted)]">{managedUser.rol}</td>
-                    <td className="px-4 py-3">
-                      <span className={`status-badge ${managedUser.estado === 'Activo' ? 'status-success' : 'status-warning'}`}>
-                        {managedUser.estado}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button onClick={() => toggleUserStatus(managedUser.id)} className="text-sm font-medium text-[var(--accent-strong)]">
-                        {managedUser.estado === 'Activo' ? 'Desactivar' : 'Activar'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {showUserForm && (
+        <div className="modal-backdrop">
+          <div className="modal-panel max-w-3xl p-6">
+            <UsuarioForm
+              initialData={editingUser}
+              roles={roles}
+              onSuccess={handleSaveUser}
+              onCancel={() => {
+                setShowUserForm(false);
+                setEditingUser(null);
+              }}
+            />
           </div>
         </div>
       )}

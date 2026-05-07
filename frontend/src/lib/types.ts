@@ -133,6 +133,7 @@ export interface InventarioPayload {
   estado?: string;
   cantidad: number;
   cantidad_minima: number;
+  imagen?: File | null;
 }
 
 export interface PrestamoPayload {
@@ -184,6 +185,15 @@ export interface Permiso {
   eliminar: boolean;
   rol?: Role | null;
   modulo?: Modulo | null;
+}
+
+export interface PermisoPayload {
+  rol_id: string;
+  modulo_id: string;
+  leer: boolean;
+  ingresar: boolean;
+  actualizar: boolean;
+  eliminar: boolean;
 }
 
 export interface Usuario {

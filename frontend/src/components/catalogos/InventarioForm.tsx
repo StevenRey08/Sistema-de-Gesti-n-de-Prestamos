@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { herramientasApi, ubicacionesApi, categoriasApi } from '../../lib/api';
+import { ubicacionesApi, categoriasApi } from '../../lib/api';
+import FilterableSelect from '../ui/FilterableSelect';
 import type { ItemInventario, InventarioPayload, Herramienta, Ubicacion, Categoria, FormErrors } from '../../lib/types';
 
 interface InventarioFormProps {
@@ -36,12 +37,20 @@ export default function InventarioForm({ item = null, onGuardar, onCancelar }: I
   const [errores, setErrores] = useState<FormErrors<InventarioFormState>>({});
   const [cargando, setCargando] = useState(false);
   const [apiError, setApiError] = useState('');
+  const [imagenArchivo, setImagenArchivo] = useState<File | null>(null);
+  const [imagenPreview, setImagenPreview] = useState(item?.imagen_ruta || '');
 
   useEffect(() => {
-    herramientasApi.getAll().then((d) => setHerramientas(d as Herramienta[]));
     categoriasApi.getAll().then((d) => setCategorias(d as Categoria[]));
     ubicacionesApi.getAll().then((d) => setUbicaciones(d as Ubicacion[]));
   }, []);
+
+  useEffect(() => {
+    if (!imagenArchivo) return;
+    const previewUrl = URL.createObjectURL(imagenArchivo);
+    setImagenPreview(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [imagenArchivo]);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = e.target;
@@ -72,6 +81,7 @@ export default function InventarioForm({ item = null, onGuardar, onCancelar }: I
       estado: form.estado,
       cantidad: Number(form.cantidad),
       cantidad_minima: Number(form.cantidad_minima),
+      imagen: imagenArchivo,
     };
 
     try {
@@ -101,20 +111,30 @@ export default function InventarioForm({ item = null, onGuardar, onCancelar }: I
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Categoría</label>
-          <select name="categoria_id" value={form.categoria_id} onChange={handleChange} className="soft-select">
-            <option value="">— Sin categoría —</option>
-            {categorias.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Ubicación</label>
-          <select name="ubicacion_id" value={form.ubicacion_id} onChange={handleChange} className="soft-select">
-            <option value="">— Sin ubicación —</option>
-            {ubicaciones.map((u) => <option key={u.id} value={u.id}>{u.tipo}: {u.codigo} — {u.nombre}</option>)}
-          </select>
-        </div>
+        <FilterableSelect
+          label="Categoría"
+          value={form.categoria_id}
+          onChange={(value) => setForm((prev) => ({ ...prev, categoria_id: value }))}
+          options={categorias.map((categoria) => ({
+            value: categoria.id,
+            label: categoria.nombre,
+            searchText: categoria.descripcion ?? '',
+          }))}
+          placeholder="Buscar categoría..."
+          emptyLabel="Sin categorías coincidentes"
+        />
+        <FilterableSelect
+          label="Ubicación"
+          value={form.ubicacion_id}
+          onChange={(value) => setForm((prev) => ({ ...prev, ubicacion_id: value }))}
+          options={ubicaciones.map((ubicacion) => ({
+            value: ubicacion.id,
+            label: `${ubicacion.tipo}: ${ubicacion.codigo} - ${ubicacion.nombre}`,
+            searchText: ubicacion.descripcion ?? '',
+          }))}
+          placeholder="Buscar ubicación..."
+          emptyLabel="Sin ubicaciones coincidentes"
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -133,6 +153,29 @@ export default function InventarioForm({ item = null, onGuardar, onCancelar }: I
         <div>
           <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Stock Mínimo</label>
           <input type="number" name="cantidad_minima" value={form.cantidad_minima} onChange={handleChange} min={0} className="soft-input" />
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-[0.9fr_1.1fr]">
+        <div>
+          <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Imagen del artículo</label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(event) => setImagenArchivo(event.target.files?.[0] ?? null)}
+            className="soft-input cursor-pointer"
+          />
+          <p className="mt-1 text-xs text-[var(--text-muted)]">Se permiten imágenes para identificar mejor el objeto del inventario.</p>
+        </div>
+        <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-2)] p-4">
+          <p className="mb-3 text-sm font-medium text-[var(--text-main)]">Vista previa</p>
+          {imagenPreview ? (
+            <img src={imagenPreview} alt="Vista previa del artículo" className="h-40 w-full rounded-2xl object-cover" />
+          ) : (
+            <div className="flex h-40 items-center justify-center rounded-2xl border border-dashed border-[var(--border)] text-sm text-[var(--text-muted)]">
+              Sin imagen seleccionada
+            </div>
+          )}
         </div>
       </div>
 

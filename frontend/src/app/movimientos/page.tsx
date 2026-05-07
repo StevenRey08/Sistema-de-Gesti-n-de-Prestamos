@@ -39,14 +39,14 @@ export default function MovimientosPage() {
     : movimientos.filter((m: Movimiento) => m.tipo === filtro);
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="page-shell">
+      <div className="page-heading">
         <div>
-          <h1 className="text-2xl font-bold text-white">Movimientos</h1>
-          <p className="text-sm text-gray-400 mt-1">Historial completo — {movimientos.length} registros</p>
+          <h1 className="page-title">Movimientos</h1>
+          <p className="page-subtitle">Historial completo — {movimientos.length} registros</p>
         </div>
         <button onClick={cargar}
-          className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+          className="soft-btn-secondary">
           ↻ Actualizar
         </button>
       </div>
@@ -55,23 +55,22 @@ export default function MovimientosPage() {
       <div className="flex gap-2 flex-wrap">
         {tipos.map(t => (
           <button key={t} onClick={() => setFiltro(t)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
-              ${filtro === t ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>
+            className={`filter-pill ${filtro === t ? 'active' : ''}`}>
             {t === 'todos' ? 'Todos' : t}
           </button>
         ))}
       </div>
 
-      {error && <div className="bg-red-900 border border-red-700 text-red-300 px-4 py-3 rounded-lg text-sm">{error}</div>}
+      {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
-      <div className="bg-gray-800 rounded-xl overflow-hidden border border-gray-700">
+      <div className="table-shell">
         {cargando ? (
-          <p className="text-gray-400 text-center py-12">Cargando...</p>
+          <p className="py-12 text-center text-[var(--text-muted)]">Cargando...</p>
         ) : lista.length === 0 ? (
-          <p className="text-gray-500 text-center py-12">No hay movimientos registrados.</p>
+          <p className="py-12 text-center text-[var(--text-muted)]">No hay movimientos registrados.</p>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-gray-900 text-gray-400 text-xs uppercase">
+            <thead>
               <tr>
                 <th className="px-4 py-3 text-left">Tipo</th>
                 <th className="px-4 py-3 text-left">Herramienta</th>
@@ -82,28 +81,28 @@ export default function MovimientosPage() {
                 <th className="px-4 py-3 text-left">Observaciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-700">
+            <tbody>
               {lista.map((m: Movimiento) => (
-                <tr key={m.id} className="text-gray-300 hover:bg-gray-700/50 transition-colors">
+                <tr key={m.id}>
                   <td className="px-4 py-3">
                     <span className={`text-xs px-2 py-1 rounded-full font-medium ${BADGE[m.tipo] || 'bg-gray-700 text-gray-300'}`}>
                       {m.tipo}
                     </span>
                   </td>
-                  <td className="px-4 py-3 font-medium text-white">
+                  <td className="px-4 py-3 font-medium text-[var(--text-main)]">
                     {m.inventario?.nombre || '—'}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-[var(--text-main)]">
                     {m.persona ? `${m.persona.nombres} ${m.persona.apellidos}` : '—'}
                   </td>
-                  <td className="px-4 py-3 font-bold">{m.cantidad}</td>
-                  <td className="px-4 py-3 text-xs text-gray-400">
+                  <td className="px-4 py-3 font-bold text-[var(--accent-strong)]">{m.cantidad}</td>
+                  <td className="px-4 py-3 text-xs text-[var(--text-muted)]">
                     {m.ubicacion_origen?.codigo || '—'}
                     {' → '}
                     {m.ubicacion_destino?.codigo || '—'}
                   </td>
-                  <td className="px-4 py-3 text-gray-400 text-xs">{fmt(m.fecha)}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{m.observaciones || '—'}</td>
+                  <td className="px-4 py-3 text-xs text-[var(--text-muted)]">{fmt(m.fecha)}</td>
+                  <td className="px-4 py-3 text-xs text-[var(--text-muted)]">{m.observaciones || '—'}</td>
                 </tr>
               ))}
             </tbody>

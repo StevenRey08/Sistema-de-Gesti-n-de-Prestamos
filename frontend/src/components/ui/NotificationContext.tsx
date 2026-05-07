@@ -25,6 +25,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   }, []);
 
   const notify = useCallback((type: NotificationType, message: string, details?: string[]) => {
+    if (type === 'error') return;
     const id = Math.random().toString(36).substring(2, 9);
     setNotifications((prev) => [...prev, { id, type, message, details }]);
 
