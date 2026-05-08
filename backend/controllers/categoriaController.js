@@ -1,4 +1,5 @@
 const { prisma } = require('../db'); // Usando tu misma importación de prisma
+const { buildUniqueConstraintError } = require('../utils/prismaErrors');
 
 const categoriaController = {
     // Listar y buscar por nombre de categoría
@@ -23,9 +24,10 @@ const categoriaController = {
             const nueva = await prisma.categoriaHerramienta.create({ data: req.body });
             res.status(201).json(nueva);
         } catch (error) {
-            if (error.code === 'P2002') {
-                return res.status(400).json({ error: "El nombre de esta categoría ya existe" });
-            }
+            const duplicateError = buildUniqueConstraintError(error, {
+                nombre: "Ya existe una categoría registrada con ese nombre.",
+            }, "Ya existe una categoría con uno de los datos únicos ingresados.");
+            if (duplicateError) return res.status(duplicateError.status).json(duplicateError.body);
             res.status(500).json({ error: "Error al crear la categoría" });
         }
     },
@@ -52,6 +54,10 @@ const categoriaController = {
             });
             res.json(actualizada);
         } catch (error) {
+            const duplicateError = buildUniqueConstraintError(error, {
+                nombre: "Ya existe una categoría registrada con ese nombre.",
+            }, "Ya existe una categoría con uno de los datos únicos ingresados.");
+            if (duplicateError) return res.status(duplicateError.status).json(duplicateError.body);
             res.status(500).json({ error: "Error al actualizar" });
         }
     },

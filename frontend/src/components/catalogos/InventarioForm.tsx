@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 import { ubicacionesApi, categoriasApi } from '../../lib/api';
 import FilterableSelect from '../ui/FilterableSelect';
 import type { ItemInventario, InventarioPayload, Ubicacion, Categoria, FormErrors } from '../../lib/types';
+import { notifyErrorPayload } from '../../lib/errors';
+import { useNotification } from '../ui/NotificationContext';
 
 interface InventarioFormProps {
   item?: ItemInventario | null;
@@ -21,6 +23,7 @@ interface InventarioFormState {
 }
 
 export default function InventarioForm({ item = null, onGuardar, onCancelar }: InventarioFormProps) {
+  const { notify } = useNotification();
   const [form, setForm] = useState<InventarioFormState>({
     codigo: item?.codigo || '',
     nombre: item?.nombre || '',
@@ -35,7 +38,6 @@ export default function InventarioForm({ item = null, onGuardar, onCancelar }: I
   const [ubicaciones, setUbicaciones] = useState<Ubicacion[]>([]);
   const [errores, setErrores] = useState<FormErrors<InventarioFormState>>({});
   const [cargando, setCargando] = useState(false);
-  const [apiError, setApiError] = useState('');
   const [imagenArchivo, setImagenArchivo] = useState<File | null>(null);
   const [imagenPreview, setImagenPreview] = useState(item?.imagen_ruta || '');
 
@@ -63,14 +65,15 @@ export default function InventarioForm({ item = null, onGuardar, onCancelar }: I
     if (!form.nombre.trim()) e.nombre = 'Nombre obligatorio';
     if (!form.cantidad || Number(form.cantidad) < 0) e.cantidad = 'Inválido';
     setErrores(e);
-    return Object.keys(e).length === 0;
+    const detalles = Object.entries(e).map(([campo, mensaje]) => `${campo}: ${mensaje}`);
+    if (detalles.length > 0) notify('error', 'Revisa los datos del inventario', detalles);
+    return detalles.length === 0;
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!validar()) return;
     setCargando(true);
-    setApiError('');
     
     const body: InventarioPayload = {
       codigo: form.codigo.trim().toUpperCase(),
@@ -86,7 +89,8 @@ export default function InventarioForm({ item = null, onGuardar, onCancelar }: I
     try {
       await onGuardar(body);
     } catch (err: unknown) {
-      setApiError(err instanceof Error ? err.message : 'Error al guardar');
+      const { message, details } = notifyErrorPayload(err, 'Error al guardar');
+      notify('error', message, details);
     } finally {
       setCargando(false);
     }
@@ -94,18 +98,14 @@ export default function InventarioForm({ item = null, onGuardar, onCancelar }: I
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {apiError && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{apiError}</div>}
-
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
           <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Código *</label>
-          <input name="codigo" value={form.codigo} onChange={handleChange} className={`soft-input ${errores.codigo ? 'border-red-400' : ''}`} placeholder="Ej: HERR-001" />
-          {errores.codigo && <p className="mt-1 text-xs text-red-500">{errores.codigo}</p>}
+          <input name="codigo" value={form.codigo} onChange={handleChange} className="soft-input" placeholder="Ej: HERR-001" />
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Nombre *</label>
-          <input name="nombre" value={form.nombre} onChange={handleChange} className={`soft-input ${errores.nombre ? 'border-red-400' : ''}`} placeholder="Ej: Martillo" />
-          {errores.nombre && <p className="mt-1 text-xs text-red-500">{errores.nombre}</p>}
+          <input name="nombre" value={form.nombre} onChange={handleChange} className="soft-input" placeholder="Ej: Martillo" />
         </div>
       </div>
 

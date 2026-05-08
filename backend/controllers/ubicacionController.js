@@ -1,5 +1,6 @@
 const { prisma } = require('../db');
 const { generarCodigoAleatorio } = require('../utils/generadores');
+const { buildUniqueConstraintError } = require('../utils/prismaErrors');
 
 const ubicacionController = {
     // Listar ubicaciones con búsqueda y filtro de tipo
@@ -59,9 +60,10 @@ const ubicacionController = {
             res.status(201).json(nueva);
         } catch (error) {
             console.error("Error en ubicaciones.create:", error);
-            if (error.code === 'P2002') {
-                return res.status(400).json({ error: "El código de ubicación ya existe" });
-            }
+            const duplicateError = buildUniqueConstraintError(error, {
+                codigo: "Ya existe una ubicación registrada con ese código.",
+            }, "Ya existe una ubicación con uno de los datos únicos ingresados.");
+            if (duplicateError) return res.status(duplicateError.status).json(duplicateError.body);
             res.status(500).json({ error: "Error al crear la ubicación" });
         }
     },
@@ -93,9 +95,10 @@ const ubicacionController = {
             });
             res.json(actualizada);
         } catch (error) {
-            if (error.code === 'P2002') {
-                return res.status(400).json({ error: "Ese código ya está en uso" });
-            }
+            const duplicateError = buildUniqueConstraintError(error, {
+                codigo: "Ya existe una ubicación registrada con ese código.",
+            }, "Ya existe una ubicación con uno de los datos únicos ingresados.");
+            if (duplicateError) return res.status(duplicateError.status).json(duplicateError.body);
             res.status(500).json({ error: "Error al actualizar la ubicación" });
         }
     },

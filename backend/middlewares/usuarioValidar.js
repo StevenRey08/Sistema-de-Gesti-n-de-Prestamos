@@ -35,9 +35,14 @@ const validarUsuario = (req, res, next) => {
             errores.push("Tipo de documento no válido. Use 'Cédula' o 'Matrícula'.");
         }
 
-        if (tipo_documento?.toLowerCase().includes("cedula")) {
+        const tipoLogico = tipo_documento
+            ?.normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLowerCase();
+
+        if (tipoLogico?.includes("cedula")) {
             if (!esCedula(numero_documento)) errores.push("Formato de cédula inválido (000-0000000-0).");
-        } else if (tipo_documento?.toLowerCase().includes("matricula")) {
+        } else if (tipoLogico?.includes("matricula")) {
             if (!esMatricula(numero_documento)) errores.push("Formato de matrícula inválido (0000-0000).");
         }
     }

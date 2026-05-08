@@ -5,16 +5,17 @@ import { useAuth } from '../../components/auth/AuthProvider';
 import { toSessionUser } from '../../lib/auth';
 import { usuariosApi } from '../../lib/api';
 import type { Usuario } from '../../lib/types';
+import { useNotification } from '../../components/ui/NotificationContext';
+import { notifyErrorPayload } from '../../lib/errors';
 
 export default function MiCuentaPage() {
   const { user, updateCurrentUser } = useAuth();
+  const { notify } = useNotification();
   const [nombre, setNombre] = useState('');
   const [apellido, setApellido] = useState('');
   const [usuario, setUsuario] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<Usuario | null>(null);
 
@@ -28,31 +29,33 @@ export default function MiCuentaPage() {
         setApellido(data.apellido);
         setUsuario(data.usuario);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'No se pudo cargar el perfil actual.');
+        const { message, details } = notifyErrorPayload(err, 'No se pudo cargar el perfil actual.');
+        notify('error', message, details);
       }
     };
 
     void loadCurrentUser();
-  }, [user]);
+  }, [notify, user]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!user || !currentUser) return;
-    setError('');
-    setMessage('');
 
+    const detalles = [];
     if (!nombre.trim() || !apellido.trim() || !usuario.trim()) {
-      setError('Completa el nombre, el apellido y el usuario.');
-      return;
+      detalles.push('Completa el nombre, el apellido y el usuario.');
     }
 
     if (password && password.length < 6) {
-      setError('La nueva contraseña debe tener al menos 6 caracteres.');
-      return;
+      detalles.push('La nueva contraseña debe tener al menos 6 caracteres.');
     }
 
     if (password !== confirmPassword) {
-      setError('La confirmación de contraseña no coincide.');
+      detalles.push('La confirmación de contraseña no coincide.');
+    }
+
+    if (detalles.length > 0) {
+      notify('error', 'Revisa los datos del perfil', detalles);
       return;
     }
 
@@ -74,9 +77,10 @@ export default function MiCuentaPage() {
       updateCurrentUser(toSessionUser(updated));
       setPassword('');
       setConfirmPassword('');
-      setMessage('Tus datos fueron actualizados correctamente.');
+      notify('success', 'Tus datos fueron actualizados correctamente.');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo actualizar el perfil.');
+      const { message, details } = notifyErrorPayload(err, 'No se pudo actualizar el perfil.');
+      notify('error', message, details);
     } finally {
       setLoading(false);
     }
@@ -108,8 +112,6 @@ export default function MiCuentaPage() {
 
         <form onSubmit={handleSubmit} className="surface-card space-y-4 p-6">
           <h2 className="text-lg font-semibold text-[var(--text-main)]">Editar perfil</h2>
-          {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
-          {message && <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">{message}</div>}
           <div>
             <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Nombre</label>
             <input className="soft-input" value={nombre} onChange={(e) => setNombre(e.target.value)} />

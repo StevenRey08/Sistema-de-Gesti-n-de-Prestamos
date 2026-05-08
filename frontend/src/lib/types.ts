@@ -43,24 +43,6 @@ export interface Herramienta {
   categoria_id?: string | null;
   valor_estimado?: number | string | null;
   categoria?: Categoria | null;
-  proveedor?: { nombre_empresa?: string | null } | null;
-}
-
-export interface Proveedor {
-  id: string;
-  codigo: string;
-  nombre_empresa: string;
-  nombre_contacto?: string | null;
-  telefono?: string | null;
-  email?: string | null;
-}
-
-export interface ProveedorPayload {
-  codigo: string;
-  nombre_empresa: string;
-  nombre_contacto?: string;
-  telefono?: string;
-  email?: string;
 }
 
 export type EstadoInventario = 'Nuevo' | 'Usado' | 'Dañado' | string;

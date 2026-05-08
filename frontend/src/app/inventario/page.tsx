@@ -4,6 +4,8 @@ import { herramientasApi, inventarioApi } from '../../lib/api';
 import HerramientaForm from '../../components/catalogos/HerramientaForm';
 import InventarioForm from '../../components/catalogos/InventarioForm';
 import type { Herramienta, HerramientaPayload, InventarioPayload, ItemInventario } from '../../lib/types';
+import { useNotification } from '../../components/ui/NotificationContext';
+import { notifyErrorPayload } from '../../lib/errors';
 
 type TabKey = 'herramientas' | 'existencias';
 
@@ -38,12 +40,12 @@ function TabButton({
 }
 
 export default function InventarioPage() {
+  const { notify } = useNotification();
   const [activeTab, setActiveTab] = useState<TabKey>('existencias');
 
   const [herramientas, setHerramientas] = useState<Herramienta[]>([]);
   const [herramientasSearch, setHerramientasSearch] = useState('');
   const [herramientasLoading, setHerramientasLoading] = useState(true);
-  const [herramientasError, setHerramientasError] = useState('');
   const [showHerramientaForm, setShowHerramientaForm] = useState(false);
   const [editandoHerramienta, setEditandoHerramienta] = useState<Herramienta | null>(null);
   const [eliminandoHerramienta, setEliminandoHerramienta] = useState<string | null>(null);
@@ -51,7 +53,6 @@ export default function InventarioPage() {
   const [items, setItems] = useState<ItemInventario[]>([]);
   const [inventarioSearch, setInventarioSearch] = useState('');
   const [inventarioLoading, setInventarioLoading] = useState(true);
-  const [inventarioError, setInventarioError] = useState('');
   const [showInventarioForm, setShowInventarioForm] = useState(false);
   const [editandoInventario, setEditandoInventario] = useState<ItemInventario | null>(null);
   const [eliminandoInventario, setEliminandoInventario] = useState<string | null>(null);
@@ -72,27 +73,27 @@ export default function InventarioPage() {
 
   const cargarHerramientas = useCallback(async () => {
     setHerramientasLoading(true);
-    setHerramientasError('');
     try {
       setHerramientas(await herramientasApi.getAll(herramientasSearch) as Herramienta[]);
     } catch (e: unknown) {
-      setHerramientasError(e instanceof Error ? e.message : 'Error al cargar herramientas');
+      const { message, details } = notifyErrorPayload(e, 'Error al cargar herramientas');
+      notify('error', message, details);
     } finally {
       setHerramientasLoading(false);
     }
-  }, [herramientasSearch]);
+  }, [herramientasSearch, notify]);
 
   const cargarInventario = useCallback(async () => {
     setInventarioLoading(true);
-    setInventarioError('');
     try {
       setItems(await inventarioApi.getAll() as ItemInventario[]);
     } catch (e: unknown) {
-      setInventarioError(e instanceof Error ? e.message : 'Error al cargar inventario');
+      const { message, details } = notifyErrorPayload(e, 'Error al cargar inventario');
+      notify('error', message, details);
     } finally {
       setInventarioLoading(false);
     }
-  }, []);
+  }, [notify]);
 
   useEffect(() => {
     void cargarHerramientas();
@@ -132,9 +133,14 @@ export default function InventarioPage() {
   }
 
   async function handleEliminarHerramienta() {
-    if (eliminandoHerramienta !== null) await herramientasApi.delete(eliminandoHerramienta);
-    setEliminandoHerramienta(null);
-    void cargarHerramientas();
+    try {
+      if (eliminandoHerramienta !== null) await herramientasApi.delete(eliminandoHerramienta);
+      setEliminandoHerramienta(null);
+      void cargarHerramientas();
+    } catch (e: unknown) {
+      const { message, details } = notifyErrorPayload(e, 'Error al eliminar herramienta');
+      notify('error', message, details);
+    }
   }
 
   async function handleGuardarInventario(form: InventarioPayload) {
@@ -157,9 +163,14 @@ export default function InventarioPage() {
   }
 
   async function handleEliminarInventario() {
-    if (eliminandoInventario !== null) await inventarioApi.delete(eliminandoInventario);
-    setEliminandoInventario(null);
-    void cargarInventario();
+    try {
+      if (eliminandoInventario !== null) await inventarioApi.delete(eliminandoInventario);
+      setEliminandoInventario(null);
+      void cargarInventario();
+    } catch (e: unknown) {
+      const { message, details } = notifyErrorPayload(e, 'Error al eliminar inventario');
+      notify('error', message, details);
+    }
   }
 
   return (
@@ -226,12 +237,6 @@ export default function InventarioPage() {
             className="soft-input max-w-sm"
           />
 
-          {herramientasError && (
-            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-              {herramientasError}
-            </div>
-          )}
-
           <div className="table-shell">
             {herramientasLoading ? (
               <p className="py-12 text-center text-[var(--text-muted)]">Cargando...</p>
@@ -244,7 +249,6 @@ export default function InventarioPage() {
                     <th className="px-4 py-3 text-left">Código</th>
                     <th className="px-4 py-3 text-left">Nombre</th>
                     <th className="px-4 py-3 text-left">Categoría</th>
-                    <th className="px-4 py-3 text-left">Proveedor</th>
                     <th className="px-4 py-3 text-left">Valor estimado</th>
                     <th className="px-4 py-3 text-right">Acciones</th>
                   </tr>
@@ -255,7 +259,6 @@ export default function InventarioPage() {
                       <td className="px-4 py-3 font-mono text-xs text-[var(--accent-strong)]">{herramienta.codigo}</td>
                       <td className="px-4 py-3 font-medium text-[var(--text-main)]">{herramienta.nombre}</td>
                       <td className="px-4 py-3 text-[var(--text-muted)]">{herramienta.categoria?.nombre || '—'}</td>
-                      <td className="px-4 py-3 text-[var(--text-muted)]">{herramienta.proveedor?.nombre_empresa || '—'}</td>
                       <td className="px-4 py-3">
                         {herramienta.valor_estimado
                           ? `RD$ ${Number(herramienta.valor_estimado).toLocaleString()}`
@@ -313,12 +316,6 @@ export default function InventarioPage() {
             onChange={(e) => setInventarioSearch(e.target.value)}
             className="soft-input max-w-md"
           />
-
-          {inventarioError && (
-            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-              {inventarioError}
-            </div>
-          )}
 
           <div className="table-shell">
             {inventarioLoading ? (

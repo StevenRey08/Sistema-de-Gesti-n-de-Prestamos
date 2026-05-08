@@ -4,6 +4,8 @@ import { inventarioApi, personasApi } from '../../lib/api';
 import { useAuth } from '../auth/AuthProvider';
 import FilterableSelect from '../ui/FilterableSelect';
 import type { Prestamo, PrestamoPayload, EstadoPrestamo, ItemInventario, Persona, FormErrors } from '../../lib/types';
+import { notifyErrorPayload } from '../../lib/errors';
+import { useNotification } from '../ui/NotificationContext';
 
 const ESTADOS: EstadoPrestamo[] = ['PENDIENTE', 'DEVUELTO'];
 
@@ -24,6 +26,7 @@ interface PrestamoFormState {
 
 export default function PrestamoForm({ prestamo = null, onGuardar, onCancelar }: PrestamoFormProps) {
   const { user } = useAuth();
+  const { notify } = useNotification();
   
   const [form, setForm] = useState<PrestamoFormState>({
     inventario_id: prestamo?.inventario_id ? String(prestamo.inventario_id) : '',
@@ -38,7 +41,6 @@ export default function PrestamoForm({ prestamo = null, onGuardar, onCancelar }:
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [errores, setErrores] = useState<FormErrors<PrestamoFormState>>({});
   const [cargando, setCargando] = useState(false);
-  const [apiError, setApiError] = useState('');
 
   useEffect(() => {
     inventarioApi.getAll().then((d) => setInventario(d as ItemInventario[]));
@@ -57,14 +59,15 @@ export default function PrestamoForm({ prestamo = null, onGuardar, onCancelar }:
     if (!form.persona_id) e.persona_id = 'Selecciona el responsable';
     if (!form.cantidad || Number(form.cantidad) < 1) e.cantidad = 'Mínimo 1';
     setErrores(e);
-    return Object.keys(e).length === 0;
+    const detalles = Object.entries(e).map(([campo, mensaje]) => `${campo}: ${mensaje}`);
+    if (detalles.length > 0) notify('error', 'Revisa los datos del préstamo', detalles);
+    return detalles.length === 0;
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!validar()) return;
     setCargando(true);
-    setApiError('');
     
     const body: PrestamoPayload = {
       inventario_id: form.inventario_id,
@@ -79,7 +82,8 @@ export default function PrestamoForm({ prestamo = null, onGuardar, onCancelar }:
     try {
       await onGuardar(body);
     } catch (err: unknown) {
-      setApiError(err instanceof Error ? err.message : 'Error al guardar');
+      const { message, details } = notifyErrorPayload(err, 'Error al guardar');
+      notify('error', message, details);
     } finally {
       setCargando(false);
     }
@@ -87,8 +91,6 @@ export default function PrestamoForm({ prestamo = null, onGuardar, onCancelar }:
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {apiError && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{apiError}</div>}
-
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <FilterableSelect
           label="Artículo (inventario) *"
@@ -101,7 +103,6 @@ export default function PrestamoForm({ prestamo = null, onGuardar, onCancelar }:
           }))}
           placeholder="Buscar artículo..."
           emptyLabel="Sin artículos coincidentes"
-          error={errores.inventario_id}
         />
         <FilterableSelect
           label="Responsable *"
@@ -114,15 +115,13 @@ export default function PrestamoForm({ prestamo = null, onGuardar, onCancelar }:
           }))}
           placeholder="Buscar responsable..."
           emptyLabel="Sin personas coincidentes"
-          error={errores.persona_id}
         />
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <div>
           <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Cantidad *</label>
-          <input type="number" name="cantidad" value={form.cantidad} onChange={handleChange} min={1} className={`soft-input ${errores.cantidad ? 'border-red-400' : ''}`} />
-          {errores.cantidad && <p className="mt-1 text-xs text-red-500">{errores.cantidad}</p>}
+          <input type="number" name="cantidad" value={form.cantidad} onChange={handleChange} min={1} className="soft-input" />
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Fecha devolución</label>

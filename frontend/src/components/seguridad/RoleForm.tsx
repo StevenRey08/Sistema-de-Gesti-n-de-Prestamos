@@ -1,6 +1,8 @@
 'use client';
 import React, { useState } from 'react';
 import type { Role, RolePayload } from '../../lib/types';
+import { notifyErrorPayload } from '../../lib/errors';
+import { useNotification } from '../ui/NotificationContext';
 
 interface RoleFormProps {
   initialData?: Role | null;
@@ -9,12 +11,12 @@ interface RoleFormProps {
 }
 
 export default function RoleForm({ initialData = null, onSuccess, onCancel }: RoleFormProps) {
+  const { notify } = useNotification();
   const [form, setForm] = useState({
     nombre_rol:  initialData?.nombre_rol  ?? '',
     descripcion: initialData?.descripcion ?? '',
   });
   const [guardando, setGuardando] = useState(false);
-  const [error, setError]         = useState('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -23,17 +25,23 @@ export default function RoleForm({ initialData = null, onSuccess, onCancel }: Ro
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!form.nombre_rol.trim())         { setError('El nombre del rol es obligatorio'); return; }
-    if (form.nombre_rol.trim().length < 4)  { setError('Mínimo 4 caracteres'); return; }
-    if (form.nombre_rol.trim().length > 30) { setError('Máximo 30 caracteres'); return; }
-    setGuardando(true); setError('');
+    const detalles = [];
+    if (!form.nombre_rol.trim()) detalles.push('El nombre del rol es obligatorio');
+    if (form.nombre_rol.trim() && form.nombre_rol.trim().length < 4) detalles.push('El nombre del rol debe tener mínimo 4 caracteres');
+    if (form.nombre_rol.trim().length > 30) detalles.push('El nombre del rol debe tener máximo 30 caracteres');
+    if (detalles.length > 0) {
+      notify('error', 'Revisa los datos del rol', detalles);
+      return;
+    }
+    setGuardando(true);
     try {
       await onSuccess({
         nombre_rol:  form.nombre_rol.trim(),
         descripcion: form.descripcion.trim() || undefined,
       });
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Error al guardar');
+      const { message, details } = notifyErrorPayload(e, 'Error al guardar');
+      notify('error', message, details);
     } finally {
       setGuardando(false);
     }
@@ -51,13 +59,6 @@ export default function RoleForm({ initialData = null, onSuccess, onCancel }: Ro
           Define un rol para asignar permisos a los usuarios.
         </p>
       </div>
-
-      {error && (
-        <p className="text-sm rounded-lg px-3 py-2"
-          style={{ background: 'var(--danger-soft)', color: 'var(--danger)' }}>
-          {error}
-        </p>
-      )}
 
       <div className="space-y-4">
         <div className="flex flex-col gap-1.5">

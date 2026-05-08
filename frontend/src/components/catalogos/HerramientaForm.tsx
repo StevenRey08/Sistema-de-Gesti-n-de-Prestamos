@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react';
 import { categoriasApi } from '../../lib/api';
 import type { Herramienta, HerramientaPayload, Categoria, FormErrors } from '../../lib/types';
+import { notifyErrorPayload } from '../../lib/errors';
+import { useNotification } from '../ui/NotificationContext';
 
 interface HerramientaFormProps {
   herramienta?: Herramienta | null;
@@ -17,6 +19,7 @@ interface HerramientaFormState {
 }
 
 export default function HerramientaForm({ herramienta = null, onGuardar, onCancelar }: HerramientaFormProps) {
+  const { notify } = useNotification();
   const [form, setForm] = useState<HerramientaFormState>({
     codigo: herramienta?.codigo || '',
     nombre: herramienta?.nombre || '',
@@ -26,7 +29,6 @@ export default function HerramientaForm({ herramienta = null, onGuardar, onCance
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [errores, setErrores] = useState<FormErrors<HerramientaFormState>>({});
   const [cargando, setCargando] = useState(false);
-  const [apiError, setApiError] = useState('');
 
   useEffect(() => {
     categoriasApi.getAll().then((d) => setCategorias(d as Categoria[]));
@@ -43,14 +45,15 @@ export default function HerramientaForm({ herramienta = null, onGuardar, onCance
     if (!form.codigo.trim()) e.codigo = 'Obligatorio';
     if (!form.nombre.trim()) e.nombre = 'Obligatorio';
     setErrores(e);
-    return Object.keys(e).length === 0;
+    const detalles = Object.entries(e).map(([campo, mensaje]) => `${campo}: ${mensaje}`);
+    if (detalles.length > 0) notify('error', 'Revisa los datos de la herramienta', detalles);
+    return detalles.length === 0;
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!validar()) return;
     setCargando(true);
-    setApiError('');
 
     const body: HerramientaPayload = {
       codigo: form.codigo.trim().toUpperCase(),
@@ -62,7 +65,8 @@ export default function HerramientaForm({ herramienta = null, onGuardar, onCance
     try {
       await onGuardar(body);
     } catch (err: unknown) {
-      setApiError(err instanceof Error ? err.message : 'Error');
+      const { message, details } = notifyErrorPayload(err, 'Error al guardar');
+      notify('error', message, details);
     } finally {
       setCargando(false);
     }
@@ -76,15 +80,13 @@ export default function HerramientaForm({ herramienta = null, onGuardar, onCance
         value={form[name]}
         onChange={handleChange}
         placeholder={placeholder}
-        className={`soft-input ${errores[name] ? 'border-red-400' : ''}`}
+        className="soft-input"
       />
-      {errores[name] && <p className="mt-1 text-xs text-red-500">{errores[name]}</p>}
     </div>
   );
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {apiError && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{apiError}</div>}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {campo('codigo', 'Código', 'Ej: TOOL-001', true)}
         {campo('nombre', 'Nombre de la herramienta', 'Ej: Taladro percutor', true)}

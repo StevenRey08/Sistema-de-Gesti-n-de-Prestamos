@@ -8,6 +8,8 @@ import UsuarioForm from '../../components/seguridad/UsuarioForm';
 import FilterableSelect from '../../components/ui/FilterableSelect';
 import { useAuth } from '../../components/auth/AuthProvider';
 import { toSessionUser } from '../../lib/auth';
+import { useNotification } from '../../components/ui/NotificationContext';
+import { notifyErrorPayload } from '../../lib/errors';
 
 type TabKey = 'roles' | 'permisos' | 'usuarios';
 
@@ -22,19 +24,18 @@ const EMPTY_PERMISSION: PermisoPayload = {
 
 export default function SeguridadPage() {
   const { user, updateCurrentUser } = useAuth();
+  const { notify } = useNotification();
   const [activeTab, setActiveTab] = useState<TabKey>('roles');
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permiso[]>([]);
   const [users, setUsers] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
 
   const [showRoleForm, setShowRoleForm] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [showUserForm, setShowUserForm] = useState(false);
   const [editingUser, setEditingUser] = useState<Usuario | null>(null);
   const [permissionForm, setPermissionForm] = useState<PermisoPayload>(EMPTY_PERMISSION);
-  const [permissionError, setPermissionError] = useState('');
   const [savingPermissionId, setSavingPermissionId] = useState<string | null>(null);
   const [roleSearch, setRoleSearch] = useState('');
   const [userSearch, setUserSearch] = useState('');
@@ -42,7 +43,6 @@ export default function SeguridadPage() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    setError('');
     try {
       const [rolesData, permissionsData, usersData] = await Promise.all([
         rolesApi.getAll() as Promise<Role[]>,
@@ -58,11 +58,12 @@ export default function SeguridadPage() {
         rol_id: prev.rol_id || rolesData[0]?.id || '',
       }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo cargar el módulo de seguridad.');
+      const { message, details } = notifyErrorPayload(err, 'No se pudo cargar el módulo de seguridad.');
+      notify('error', message, details);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [notify]);
 
   useEffect(() => {
     void loadData();
@@ -132,7 +133,8 @@ export default function SeguridadPage() {
       await rolesApi.delete(id);
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo eliminar el rol.');
+      const { message, details } = notifyErrorPayload(err, 'No se pudo eliminar el rol.');
+      notify('error', message, details);
     }
   }
 
@@ -171,7 +173,8 @@ export default function SeguridadPage() {
       }
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo actualizar el estado del usuario.');
+      const { message, details } = notifyErrorPayload(err, 'No se pudo actualizar el estado del usuario.');
+      notify('error', message, details);
     }
   }
 
@@ -180,16 +183,16 @@ export default function SeguridadPage() {
       await permisosApi.delete(id);
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo eliminar el permiso.');
+      const { message, details } = notifyErrorPayload(err, 'No se pudo eliminar el permiso.');
+      notify('error', message, details);
     }
   }
 
   async function handleCreatePermission(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setPermissionError('');
 
     if (!permissionForm.rol_id || !permissionForm.modulo_id) {
-      setPermissionError('Selecciona un rol y un módulo.');
+      notify('error', 'Revisa los datos del permiso', ['Selecciona un rol y un módulo.']);
       return;
     }
 
@@ -201,7 +204,8 @@ export default function SeguridadPage() {
       });
       await loadData();
     } catch (err) {
-      setPermissionError(err instanceof Error ? err.message : 'No se pudo crear el permiso.');
+      const { message, details } = notifyErrorPayload(err, 'No se pudo crear el permiso.');
+      notify('error', message, details);
     }
   }
 
@@ -218,7 +222,8 @@ export default function SeguridadPage() {
       });
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo actualizar el permiso.');
+      const { message, details } = notifyErrorPayload(err, 'No se pudo actualizar el permiso.');
+      notify('error', message, details);
     } finally {
       setSavingPermissionId(null);
     }
@@ -260,8 +265,6 @@ export default function SeguridadPage() {
           </div>
         ))}
       </div>
-
-      {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
       {activeTab === 'roles' && (
         <section className="space-y-6">
@@ -334,14 +337,12 @@ export default function SeguridadPage() {
               options={roles.map((role) => ({ value: role.id, label: role.nombre_rol }))}
               value={permissionForm.rol_id}
               onChange={(value) => setPermissionForm((prev) => ({ ...prev, rol_id: value }))}
-              error={!permissionForm.rol_id && permissionError ? 'Selecciona un rol.' : undefined}
             />
             <FilterableSelect
               label="Módulo"
               options={moduleOptions}
               value={permissionForm.modulo_id}
               onChange={(value) => setPermissionForm((prev) => ({ ...prev, modulo_id: value }))}
-              error={!permissionForm.modulo_id && permissionError ? 'Selecciona un módulo.' : undefined}
             />
             <div className="flex items-end">
               <button type="submit" className="soft-btn-primary w-full">Agregar permiso</button>
@@ -351,7 +352,6 @@ export default function SeguridadPage() {
             <label className="flex items-center gap-2 text-sm text-[var(--text-main)]"><input type="checkbox" checked={permissionForm.ingresar} onChange={() => setPermissionForm((prev) => ({ ...prev, ingresar: !prev.ingresar }))} /> Ingresar</label>
             <label className="flex items-center gap-2 text-sm text-[var(--text-main)]"><input type="checkbox" checked={permissionForm.actualizar} onChange={() => setPermissionForm((prev) => ({ ...prev, actualizar: !prev.actualizar }))} /> Actualizar</label>
             <label className="flex items-center gap-2 text-sm text-[var(--text-main)]"><input type="checkbox" checked={permissionForm.eliminar} onChange={() => setPermissionForm((prev) => ({ ...prev, eliminar: !prev.eliminar }))} /> Eliminar</label>
-            {permissionError && <p className="lg:col-span-3 text-sm text-red-600">{permissionError}</p>}
           </form>
 
           <input

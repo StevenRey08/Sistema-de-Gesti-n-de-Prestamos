@@ -1,6 +1,8 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ubicacionesApi } from '../../lib/api';
+import { useNotification } from '../../components/ui/NotificationContext';
+import { notifyErrorPayload } from '../../lib/errors';
 
 interface Ubicacion {
   id: string;
@@ -21,29 +23,28 @@ const EMPTY_UBICACION = {
 };
 
 export default function UbicacionesPage() {
+  const { notify } = useNotification();
   const [ubicaciones, setUbicaciones] = useState<Ubicacion[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editando, setEditando] = useState<Ubicacion | null>(null);
   const [form, setForm] = useState(EMPTY_UBICACION);
-  const [errores, setErrores] = useState<Record<string, string>>({});
   const [guardando, setGuardando] = useState(false);
   const [elimId, setElimId] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState('');
 
   const cargar = useCallback(async () => {
     setLoading(true);
-    setError('');
     try {
       const data = await ubicacionesApi.getAll() as Ubicacion[];
       setUbicaciones(data);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Error al cargar ubicaciones');
+      const { message, details } = notifyErrorPayload(e, 'Error al cargar ubicaciones');
+      notify('error', message, details);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [notify]);
 
   useEffect(() => {
     void cargar();
@@ -61,7 +62,6 @@ export default function UbicacionesPage() {
   function abrirNuevo() {
     setEditando(null);
     setForm(EMPTY_UBICACION);
-    setErrores({});
     setShowForm(true);
   }
 
@@ -74,7 +74,6 @@ export default function UbicacionesPage() {
       descripcion: u.descripcion ?? '',
       ubicacion_padre_id: u.ubicacion_padre_id ?? '',
     });
-    setErrores({});
     setShowForm(true);
   }
 
@@ -82,8 +81,9 @@ export default function UbicacionesPage() {
     const err: Record<string, string> = {};
     if (!form.codigo.trim()) err.codigo = 'El código es obligatorio';
     if (!form.nombre.trim()) err.nombre = 'El nombre es obligatorio';
-    setErrores(err);
-    return Object.keys(err).length === 0;
+    const detalles = Object.values(err);
+    if (detalles.length > 0) notify('error', 'Revisa los datos de la ubicación', detalles);
+    return detalles.length === 0;
   }
 
   async function guardar(e: React.FormEvent) {
@@ -105,7 +105,8 @@ export default function UbicacionesPage() {
       setShowForm(false);
       void cargar();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Error al guardar');
+      const { message, details } = notifyErrorPayload(e, 'Error al guardar');
+      notify('error', message, details);
     } finally {
       setGuardando(false);
     }
@@ -117,7 +118,8 @@ export default function UbicacionesPage() {
       await ubicacionesApi.delete(elimId);
       void cargar();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Error al eliminar');
+      const { message, details } = notifyErrorPayload(e, 'Error al eliminar');
+      notify('error', message, details);
     } finally {
       setElimId(null);
     }
@@ -150,12 +152,6 @@ export default function UbicacionesPage() {
           {filtrados.length} / {ubicaciones.length} registros
         </span>
       </div>
-
-      {error && (
-        <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-          {error}
-        </div>
-      )}
 
       <div className="table-shell mt-6">
         {loading ? (
@@ -236,7 +232,6 @@ export default function UbicacionesPage() {
                     onChange={(e) => setForm({ ...form, codigo: e.target.value })}
                     className="soft-input"
                   />
-                  {errores.codigo && <p className="text-xs text-red-400">{errores.codigo}</p>}
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-bold text-[var(--text-muted)]">TIPO</label>
@@ -260,7 +255,6 @@ export default function UbicacionesPage() {
                   onChange={(e) => setForm({ ...form, nombre: e.target.value })}
                   className="soft-input"
                 />
-                {errores.nombre && <p className="text-xs text-red-400">{errores.nombre}</p>}
               </div>
 
               <div className="flex flex-col gap-1.5">

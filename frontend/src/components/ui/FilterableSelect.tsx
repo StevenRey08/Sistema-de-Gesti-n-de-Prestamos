@@ -16,7 +16,6 @@ interface FilterableSelectProps {
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
-  error?: string;
 }
 
 export default function FilterableSelect({
@@ -27,7 +26,6 @@ export default function FilterableSelect({
   value,
   onChange,
   disabled = false,
-  error,
 }: FilterableSelectProps) {
   const selectedOption = useMemo(
     () => options.find((option) => option.value === value) ?? null,
@@ -85,7 +83,7 @@ export default function FilterableSelect({
           onBlur={() => setTimeout(() => setOpen(false), 120)}
           placeholder={placeholder}
           disabled={disabled}
-          className={`soft-input pr-10 ${error ? 'border-red-400' : ''}`}
+          className="soft-input pr-10"
         />
         <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs text-[var(--text-muted)]">
           Buscar
@@ -115,7 +113,6 @@ export default function FilterableSelect({
           </div>
         )}
       </div>
-      {error && <p className="text-xs text-red-500">{error}</p>}
     </div>
   );
 }

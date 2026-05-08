@@ -1,5 +1,6 @@
 const { prisma } = require('../db');
 const bcrypt = require('bcrypt');
+const { buildUniqueConstraintError } = require('../utils/prismaErrors');
 
 const usuarioController = {
     // Listar y buscar usuarios
@@ -43,15 +44,11 @@ const usuarioController = {
             const { contrasena, ...usuarioSinPass } = nuevo;
             res.status(201).json(usuarioSinPass);
         } catch (error) {
-            if (error.code === 'P2002') {
-                const target = error.meta.target;
-                if (target.includes('usuario')) {
-                    return res.status(400).json({ error: "El nombre de usuario ya está en uso" });
-                }
-                if (target.includes('numero_documento')) {
-                    return res.status(400).json({ error: "El número de documento ya existe" });
-                }
-            }
+            const duplicateError = buildUniqueConstraintError(error, {
+                usuario: "Ya existe un usuario registrado con ese nombre de usuario.",
+                numero_documento: "Ya existe un usuario registrado con ese número de documento.",
+            }, "Ya existe un usuario con uno de los datos únicos ingresados.");
+            if (duplicateError) return res.status(duplicateError.status).json(duplicateError.body);
             res.status(500).json({ error: "Error al crear usuario" });
         }
     },
@@ -89,6 +86,11 @@ const usuarioController = {
             const { contrasena, ...usuarioSinPass } = actualizado;
             res.json(usuarioSinPass);
         } catch (error) {
+            const duplicateError = buildUniqueConstraintError(error, {
+                usuario: "Ya existe un usuario registrado con ese nombre de usuario.",
+                numero_documento: "Ya existe un usuario registrado con ese número de documento.",
+            }, "Ya existe un usuario con uno de los datos únicos ingresados.");
+            if (duplicateError) return res.status(duplicateError.status).json(duplicateError.body);
             res.status(500).json({ error: "Error al actualizar usuario" });
         }
     },

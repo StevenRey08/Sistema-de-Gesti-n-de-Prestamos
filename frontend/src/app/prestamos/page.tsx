@@ -3,6 +3,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { prestamosApi } from '../../lib/api';
 import PrestamoForm from '../../components/catalogos/PrestamoForm';
 import type { Prestamo, PrestamoPayload } from '../../lib/types';
+import { useNotification } from '../../components/ui/NotificationContext';
+import { notifyErrorPayload } from '../../lib/errors';
 
 const BADGE: Record<string, string> = {
   PENDIENTE: 'bg-yellow-900 text-yellow-300',
@@ -15,23 +17,26 @@ function fmt(fecha: string | null) {
 }
 
 export default function PrestamosPage() {
+  const { notify } = useNotification();
   const [prestamos, setPrestamos] = useState<Prestamo[]>([]);
   const [filtro, setFiltro]       = useState('todos');
   const [cargando, setCargando]   = useState(true);
-  const [error, setError]         = useState('');
   const [showForm, setShowForm]   = useState(false);
   const [editando, setEditando]   = useState<Prestamo | null>(null);
   const [eliminando, setElim]     = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
-    setCargando(true); setError('');
+    setCargando(true);
     try { 
       const data = await prestamosApi.getAll() as Prestamo[];
       setPrestamos(data);
     }
-    catch (e: unknown) { setError(e instanceof Error ? e.message : 'Error'); }
+    catch (e: unknown) {
+      const { message, details } = notifyErrorPayload(e, 'Error al cargar préstamos');
+      notify('error', message, details);
+    }
     finally { setCargando(false); }
-  }, []);
+  }, [notify]);
 
   useEffect(() => { cargar(); }, [cargar]);
 
@@ -42,16 +47,26 @@ export default function PrestamosPage() {
   }
 
   async function handleEliminar() {
-    if (eliminando) await prestamosApi.delete(eliminando);
-    setElim(null); cargar();
+    try {
+      if (eliminando) await prestamosApi.delete(eliminando);
+      setElim(null); cargar();
+    } catch (e: unknown) {
+      const { message, details } = notifyErrorPayload(e, 'Error al eliminar');
+      notify('error', message, details);
+    }
   }
 
   async function marcarDevuelto(id: string) {
-    await prestamosApi.update(id, { 
-      estado: 'DEVUELTO', 
-      fecha_devolucion: new Date().toISOString() 
-    } as Partial<Prestamo>);
-    cargar();
+    try {
+      await prestamosApi.update(id, {
+        estado: 'DEVUELTO',
+        fecha_devolucion: new Date().toISOString()
+      } as Partial<Prestamo>);
+      cargar();
+    } catch (e: unknown) {
+      const { message, details } = notifyErrorPayload(e, 'Error al actualizar préstamo');
+      notify('error', message, details);
+    }
   }
 
   const lista = filtro === 'todos' ? prestamos
@@ -84,8 +99,6 @@ export default function PrestamosPage() {
           </button>
         ))}
       </div>
-
-      {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">

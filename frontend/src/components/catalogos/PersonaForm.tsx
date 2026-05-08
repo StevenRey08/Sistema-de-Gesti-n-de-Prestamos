@@ -1,11 +1,22 @@
 'use client';
 import { useState } from 'react';
 import type { Persona, PersonaPayload, FormErrors } from '../../lib/types';
+import {
+  CEDULA_RE,
+  MATRICULA_RE,
+  TELEFONO_RE,
+  formatDocumento,
+  formatTelefono,
+  normalizeTipoDocumento,
+  type TipoDocumentoFormato,
+} from '../../lib/formatters';
+import { notifyErrorPayload } from '../../lib/errors';
+import { useNotification } from '../ui/NotificationContext';
 
-type TipoDocumento = 'Cédula' | 'Pasaporte' | 'RNC' | 'Otro';
+type TipoDocumento = TipoDocumentoFormato;
 type TipoPersona = 'Estudiante' | 'Profesor' | 'Técnico' | 'Administrativo';
 
-const TIPOS_DOC: TipoDocumento[] = ['Cédula', 'Pasaporte', 'RNC', 'Otro'];
+const TIPOS_DOC: TipoDocumento[] = ['Cédula', 'Matrícula'];
 const TIPOS_PERS: TipoPersona[] = ['Estudiante', 'Profesor', 'Técnico', 'Administrativo'];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -26,40 +37,67 @@ interface PersonaFormState {
 }
 
 export default function PersonaForm({ persona = null, onGuardar, onCancelar }: PersonaFormProps) {
+  const { notify } = useNotification();
+  const tipoDocumentoInicial = normalizeTipoDocumento(persona?.tipo_documento);
+
   const [form, setForm] = useState<PersonaFormState>({
-    tipo_documento: (persona?.tipo_documento as TipoDocumento) ?? 'Cédula',
-    numero_documento: persona?.numero_documento ?? '',
+    tipo_documento: tipoDocumentoInicial,
+    numero_documento: formatDocumento(persona?.numero_documento ?? '', tipoDocumentoInicial),
     nombres: persona?.nombres ?? '',
     apellidos: persona?.apellidos ?? '',
     tipo: (persona?.tipo as TipoPersona) ?? 'Estudiante',
-    telefono: persona?.telefono ?? '',
+    telefono: formatTelefono(persona?.telefono ?? ''),
     email: persona?.email ?? '',
   });
   const [errores, setErrores] = useState<FormErrors<PersonaFormState>>({});
   const [cargando, setCargando] = useState(false);
-  const [apiError, setApiError] = useState('');
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => {
+      if (name === 'tipo_documento') {
+        const nextTipo = value as TipoDocumento;
+        return {
+          ...prev,
+          tipo_documento: nextTipo,
+          numero_documento: formatDocumento(prev.numero_documento, nextTipo),
+        };
+      }
+
+      if (name === 'numero_documento') {
+        return { ...prev, numero_documento: formatDocumento(value, prev.tipo_documento) };
+      }
+
+      if (name === 'telefono') {
+        return { ...prev, telefono: formatTelefono(value) };
+      }
+
+      return { ...prev, [name]: value };
+    });
     if (errores[name as keyof PersonaFormState]) setErrores((prev) => ({ ...prev, [name]: '' }));
   }
 
   function validar() {
     const e: FormErrors<PersonaFormState> = {};
     if (!form.numero_documento.trim()) e.numero_documento = 'Obligatorio';
+    else if (form.tipo_documento === 'Cédula' && !CEDULA_RE.test(form.numero_documento)) e.numero_documento = 'Formato: 000-0000000-0';
+    else if (form.tipo_documento === 'Matrícula' && !MATRICULA_RE.test(form.numero_documento)) e.numero_documento = 'Formato: 0000-0000';
     if (!form.nombres.trim()) e.nombres = 'Obligatorio';
     if (!form.apellidos.trim()) e.apellidos = 'Obligatorio';
+    if (form.telefono && !TELEFONO_RE.test(form.telefono)) e.telefono = 'Formato: 000-000-0000';
     if (form.email && !EMAIL_RE.test(form.email)) e.email = 'Email no válido';
     setErrores(e);
-    return Object.keys(e).length === 0;
+    const detalles = Object.entries(e).map(([campo, mensaje]) => `${campo}: ${mensaje}`);
+    if (detalles.length > 0) {
+      notify('error', 'Revisa los datos de la persona', detalles);
+    }
+    return detalles.length === 0;
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!validar()) return;
     setCargando(true);
-    setApiError('');
     try {
       await onGuardar({
         tipo_documento: form.tipo_documento,
@@ -71,7 +109,8 @@ export default function PersonaForm({ persona = null, onGuardar, onCancelar }: P
         email: form.email.trim() || undefined,
       });
     } catch (err: unknown) {
-      setApiError(err instanceof Error ? err.message : 'Error al guardar');
+      const { message, details } = notifyErrorPayload(err, 'Error al guardar');
+      notify('error', message, details);
     } finally {
       setCargando(false);
     }
@@ -83,15 +122,28 @@ export default function PersonaForm({ persona = null, onGuardar, onCancelar }: P
     placeholder: string,
     tipo: React.HTMLInputTypeAttribute = 'text',
     requerido = false,
+    maxLength?: number,
+    inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'],
   ) => (
     <div className="flex flex-col gap-1.5">
       <label className="ml-1 text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
         {label}{requerido && ' *'}
       </label>
-      <input name={name} value={form[name]} onChange={handleChange} placeholder={placeholder} type={tipo} className={`soft-input ${errores[name] ? 'border-red-400 bg-red-50' : ''}`} />
-      {errores[name] && <p className="ml-1 mt-1 text-[10px] text-red-500">{errores[name]}</p>}
+      <input
+        name={name}
+        value={form[name]}
+        onChange={handleChange}
+        placeholder={placeholder}
+        type={tipo}
+        maxLength={maxLength}
+        inputMode={inputMode}
+        className="soft-input"
+      />
     </div>
   );
+
+  const documentoPlaceholder = form.tipo_documento === 'Cédula' ? '000-0000000-0' : '0000-0000';
+  const documentoMaxLength = form.tipo_documento === 'Cédula' ? 13 : 9;
 
   return (
     <div className="w-full max-w-2xl overflow-hidden rounded-[28px] border border-[var(--border)] bg-white shadow-[var(--shadow-soft)]">
@@ -101,8 +153,6 @@ export default function PersonaForm({ persona = null, onGuardar, onCancelar }: P
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5 p-6">
-        {apiError && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-600">{apiError}</div>}
-
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <label className="ml-1 text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Tipo de documento</label>
@@ -110,7 +160,7 @@ export default function PersonaForm({ persona = null, onGuardar, onCancelar }: P
               {TIPOS_DOC.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
-          {campo('numero_documento', 'Número de documento', '000-0000000-0', 'text', true)}
+          {campo('numero_documento', 'Número de documento', documentoPlaceholder, 'text', true, documentoMaxLength, 'numeric')}
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -125,7 +175,7 @@ export default function PersonaForm({ persona = null, onGuardar, onCancelar }: P
               {TIPOS_PERS.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
-          {campo('telefono', 'Teléfono', '809-000-0000')}
+          {campo('telefono', 'Teléfono', '809-000-0000', 'text', false, 12, 'numeric')}
           {campo('email', 'Email', 'correo@ejemplo.com', 'email')}
         </div>
 

@@ -7,7 +7,6 @@ const menuItems = [
   { label: 'Dashboard',   icon: '📊', href: '/' },
   { divider: 'Catálogos' },
   { label: 'Personas',    icon: '👥', href: '/catalogos/personas' },
-  { label: 'Proveedores', icon: '🏭', href: '/catalogos/proveedores' },
   { label: 'Categorías',  icon: '🏷️', href: '/catalogos/categorias' },
   { divider: 'Almacén' },
   { label: 'Ubicaciones', icon: '🗄️', href: '/ubicaciones' },

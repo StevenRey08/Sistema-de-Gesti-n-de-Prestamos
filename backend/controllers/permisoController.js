@@ -1,4 +1,5 @@
 const { prisma } = require('../db');
+const { buildUniqueConstraintError } = require('../utils/prismaErrors');
 
 const permisoController = {
     // Listar todos los permisos (con opción de filtrar por rol)
@@ -24,9 +25,10 @@ const permisoController = {
             const nuevo = await prisma.permiso.create({ data: req.body });
             res.status(201).json(nuevo);
         } catch (error) {
-            if (error.code === 'P2002') {
-                return res.status(400).json({ error: "Este rol ya tiene permisos asignados a este módulo" });
-            }
+            const duplicateError = buildUniqueConstraintError(error, {
+                permisos_rol_id_modulo_id_key: "Este rol ya tiene un permiso asignado para ese módulo.",
+            }, "Ya existe un permiso registrado para esa combinación de rol y módulo.");
+            if (duplicateError) return res.status(duplicateError.status).json(duplicateError.body);
             res.status(500).json({ error: "Error al crear el permiso" });
         }
     },
@@ -54,6 +56,10 @@ const permisoController = {
             });
             res.json(actualizado);
         } catch (error) {
+            const duplicateError = buildUniqueConstraintError(error, {
+                permisos_rol_id_modulo_id_key: "Este rol ya tiene un permiso asignado para ese módulo.",
+            }, "Ya existe un permiso registrado para esa combinación de rol y módulo.");
+            if (duplicateError) return res.status(duplicateError.status).json(duplicateError.body);
             res.status(500).json({ error: "Error al actualizar el permiso" });
         }
     },

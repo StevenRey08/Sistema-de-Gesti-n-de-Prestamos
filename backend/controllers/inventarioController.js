@@ -1,5 +1,6 @@
 const { prisma } = require('../db');
 const { generarCodigoAleatorio } = require('../utils/generadores');
+const { buildUniqueConstraintError } = require('../utils/prismaErrors');
 
 const inventarioController = {
     // Listar artículos con búsqueda por nombre/código y filtros
@@ -93,9 +94,10 @@ const inventarioController = {
             res.status(201).json(nuevo);
         } catch (error) {
             console.error("Error en inventario.create:", error);
-            if (error.code === 'P2002') {
-                return res.status(400).json({ error: "El código de inventario ya existe" });
-            }
+            const duplicateError = buildUniqueConstraintError(error, {
+                codigo: "Ya existe un artículo de inventario registrado con ese código.",
+            }, "Ya existe un artículo de inventario con uno de los datos únicos ingresados.");
+            if (duplicateError) return res.status(duplicateError.status).json(duplicateError.body);
             res.status(500).json({ error: "Error al crear el artículo" });
         }
     },
@@ -143,9 +145,10 @@ const inventarioController = {
             res.json(actualizado);
         } catch (error) {
             console.error("Error en inventario.update:", error);
-            if (error.code === 'P2002') {
-                return res.status(400).json({ error: "El código ya está en uso por otro artículo" });
-            }
+            const duplicateError = buildUniqueConstraintError(error, {
+                codigo: "Ya existe un artículo de inventario registrado con ese código.",
+            }, "Ya existe un artículo de inventario con uno de los datos únicos ingresados.");
+            if (duplicateError) return res.status(duplicateError.status).json(duplicateError.body);
             res.status(500).json({ error: "Error al actualizar el artículo" });
         }
     },

@@ -3,29 +3,31 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../components/auth/AuthProvider';
+import { useNotification } from '../../components/ui/NotificationContext';
+import { notifyErrorPayload } from '../../lib/errors';
 
 export default function LoginPage() {
   const router = useRouter();
   const { signIn } = useAuth();
+  const { notify } = useNotification();
   const [usuario, setUsuario] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!usuario.trim() || !password.trim()) {
-      setError('Por favor completa todos los campos.');
+      notify('error', 'Revisa los datos de acceso', ['Por favor completa todos los campos.']);
       return;
     }
     setLoading(true);
-    setError('');
 
     try {
       await signIn(usuario.trim(), password);
       router.replace('/');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Credenciales inválidas.');
+      const { message, details } = notifyErrorPayload(err, 'Credenciales inválidas.');
+      notify('error', message, details);
     } finally {
       setLoading(false);
     }
@@ -83,12 +85,6 @@ export default function LoginPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
-              {error && (
-                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-                  {error}
-                </div>
-              )}
-
               <div className="space-y-2">
                 <label className="text-sm font-medium text-[var(--text-main)]">
                   Nombre de usuario

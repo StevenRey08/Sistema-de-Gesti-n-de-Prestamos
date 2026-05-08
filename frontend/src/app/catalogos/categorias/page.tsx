@@ -5,22 +5,25 @@ import CategoriaForm from '../../../components/catalogos/CategoriaForm';
 import type { Categoria, CategoriaPayload } from '../../../lib/types';
 
 import { useNotification } from '../../../components/ui/NotificationContext';
+import { notifyErrorPayload } from '../../../lib/errors';
 
 export default function CategoriasPage() {
   const { notify } = useNotification();
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editando, setEditando] = useState<Categoria | null>(null);
   const [eliminando, setElim] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
-    setCargando(true); setError('');
+    setCargando(true);
     try { setCategorias(await categoriasApi.getAll() as Categoria[]); }
-    catch (e: unknown) { setError(e instanceof Error ? e.message : 'Error'); }
+    catch (e: unknown) {
+      const { message, details } = notifyErrorPayload(e, 'Error al cargar categorías');
+      notify('error', message, details);
+    }
     finally { setCargando(false); }
-  }, []);
+  }, [notify]);
 
   useEffect(() => { cargar(); }, [cargar]);
 
@@ -36,9 +39,8 @@ export default function CategoriasPage() {
       setShowForm(false); setEditando(null);
       cargar();
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Error al guardar';
-      const details = ((e as { details?: unknown[] }).details || []).map(String);
-      notify('error', msg, details);
+      const { message, details } = notifyErrorPayload(e, 'Error al guardar');
+      notify('error', message, details);
     }
   }
 
@@ -48,8 +50,9 @@ export default function CategoriasPage() {
       await categoriasApi.delete(eliminando);
       notify('success', 'Categoría eliminada');
       setElim(null); cargar();
-    } catch {
-      notify('error', 'Error al eliminar');
+    } catch (e: unknown) {
+      const { message, details } = notifyErrorPayload(e, 'Error al eliminar');
+      notify('error', message, details);
     }
   }
 
@@ -67,8 +70,6 @@ export default function CategoriasPage() {
           Nueva Categoría
         </button>
       </div>
-
-      {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
       {/* Modal Formulario */}
       {showForm && (

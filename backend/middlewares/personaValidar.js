@@ -33,7 +33,10 @@ const validarPersona = (req, res, next) => {
     if (!numero_documento || numero_documento.trim() === "") {
         errores.push("El número de documento es obligatorio.");
     } else if (tipo_documento) {
-        const tipoLogico = tipo_documento.toLowerCase();
+        const tipoLogico = tipo_documento
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLowerCase();
 
         // Si es Cédula
         if (tipoLogico.includes("cedula")) {

@@ -1,4 +1,5 @@
 const { prisma } = require('../db');
+const { buildUniqueConstraintError } = require('../utils/prismaErrors');
 
 const roleController = {
     // Listar y buscar por nombre de rol
@@ -23,9 +24,10 @@ const roleController = {
             const nuevo = await prisma.role.create({ data: req.body });
             res.status(201).json(nuevo);
         } catch (error) {
-            if (error.code === 'P2002') {
-                return res.status(400).json({ error: "El nombre de este rol ya existe" });
-            }
+            const duplicateError = buildUniqueConstraintError(error, {
+                nombre_rol: "Ya existe un rol registrado con ese nombre.",
+            }, "Ya existe un rol con uno de los datos únicos ingresados.");
+            if (duplicateError) return res.status(duplicateError.status).json(duplicateError.body);
             res.status(500).json({ error: "Error al crear el rol" });
         }
     },
@@ -50,6 +52,10 @@ const roleController = {
             });
             res.json(actualizado);
         } catch (error) {
+            const duplicateError = buildUniqueConstraintError(error, {
+                nombre_rol: "Ya existe un rol registrado con ese nombre.",
+            }, "Ya existe un rol con uno de los datos únicos ingresados.");
+            if (duplicateError) return res.status(duplicateError.status).json(duplicateError.body);
             res.status(500).json({ error: "Error al actualizar" });
         }
     },

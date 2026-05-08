@@ -2,6 +2,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { movimientosApi } from '../../lib/api';
 import type { Movimiento } from '../../lib/types';
+import { useNotification } from '../../components/ui/NotificationContext';
+import { notifyErrorPayload } from '../../lib/errors';
 
 const BADGE: Record<string, string> = {
   ENTRADA:  'bg-green-900 text-green-300',
@@ -19,17 +21,20 @@ function fmt(fecha: string | null) {
 }
 
 export default function MovimientosPage() {
+  const { notify } = useNotification();
   const [movimientos, setMovimientos] = useState<Movimiento[]>([]);
   const [filtro, setFiltro]           = useState('todos');
   const [cargando, setCargando]       = useState(true);
-  const [error, setError]             = useState('');
 
   const cargar = useCallback(async () => {
-    setCargando(true); setError('');
+    setCargando(true);
     try { setMovimientos(await movimientosApi.getAll() as Movimiento[]); }
-    catch (e: unknown) { setError(e instanceof Error ? e.message : 'Error'); }
+    catch (e: unknown) {
+      const { message, details } = notifyErrorPayload(e, 'Error al cargar movimientos');
+      notify('error', message, details);
+    }
     finally { setCargando(false); }
-  }, []);
+  }, [notify]);
 
   useEffect(() => { cargar(); }, [cargar]);
 
@@ -60,8 +65,6 @@ export default function MovimientosPage() {
           </button>
         ))}
       </div>
-
-      {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
       <div className="table-shell">
         {cargando ? (

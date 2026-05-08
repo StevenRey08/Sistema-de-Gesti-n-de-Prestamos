@@ -3,22 +3,27 @@ import { useState, useEffect, useCallback } from 'react';
 import { personasApi } from '../../../lib/api';
 import PersonaForm from '../../../components/catalogos/PersonaForm';
 import type { Persona, PersonaPayload } from '../../../lib/types';
+import { useNotification } from '../../../components/ui/NotificationContext';
+import { notifyErrorPayload } from '../../../lib/errors';
 
 export default function PersonasPage() {
+  const { notify } = useNotification();
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [search, setSearch] = useState('');
   const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editando, setEditando] = useState<Persona | null>(null);   // persona a editar
   const [eliminando, setElim] = useState<string | null>(null);   // id a eliminar
 
   const cargar = useCallback(async () => {
-    setCargando(true); setError('');
+    setCargando(true);
     try { setPersonas(await personasApi.getAll(search) as Persona[]); }
-    catch (e: unknown) { setError(e instanceof Error ? e.message : 'Error'); }
+    catch (e: unknown) {
+      const { message, details } = notifyErrorPayload(e, 'Error al cargar personas');
+      notify('error', message, details);
+    }
     finally { setCargando(false); }
-  }, [search]);
+  }, [notify, search]);
 
   useEffect(() => { cargar(); }, [cargar]);
 
@@ -30,8 +35,13 @@ export default function PersonasPage() {
   }
 
   async function handleEliminar() {
-    if (eliminando) await personasApi.delete(eliminando);
-    setElim(null); cargar();
+    try {
+      if (eliminando) await personasApi.delete(eliminando);
+      setElim(null); cargar();
+    } catch (e: unknown) {
+      const { message, details } = notifyErrorPayload(e, 'Error al eliminar');
+      notify('error', message, details);
+    }
   }
 
   function abrirEditar(p: Persona) { setEditando(p); setShowForm(true); }
@@ -56,8 +66,6 @@ export default function PersonasPage() {
         value={search} onChange={e => setSearch(e.target.value)}
         className="soft-input max-w-sm"
       />
-
-      {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
       {/* Modal Formulario */}
       {showForm && (

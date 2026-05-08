@@ -25,12 +25,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   }, []);
 
   const notify = useCallback((type: NotificationType, message: string, details?: string[]) => {
-    if (type === 'error') return;
     const id = Math.random().toString(36).substring(2, 9);
     setNotifications((prev) => [...prev, { id, type, message, details }]);
 
-    // Auto-remove after 5 seconds
-    setTimeout(() => removeNotification(id), 5000);
+    const duration = type === 'error' ? 10000 : 5000;
+    setTimeout(() => removeNotification(id), duration);
   }, [removeNotification]);
 
   return (
