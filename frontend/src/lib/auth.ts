@@ -20,8 +20,17 @@ declare const process: { env: { NEXT_PUBLIC_API_URL?: string } };
  * Convierte la respuesta del backend al formato de sesión del frontend.
  * El backend devuelve: { id, nombre, apellido, usuario, rol: { nombre_rol } }
  */
-export function toSessionUser(user: Record<string, unknown>): SessionUser {
-  const rol = user.rol as { nombre_rol?: string } | string | null;
+export function toSessionUser(rawUser: unknown): SessionUser {
+  const user = rawUser as {
+    id?: unknown;
+    nombre?: unknown;
+    apellido?: unknown;
+    usuario?: unknown;
+    email?: unknown;
+    rol?: { nombre_rol?: string } | string | null;
+    token?: string;
+  };
+  const rol = user.rol;
 
   return {
     id:     String(user.id ?? ''),

@@ -13,7 +13,7 @@ export default function CategoriasPage() {
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editando, setEditando] = useState<Categoria | null>(null);
-  const [eliminando, setElim] = useState<number | null>(null);
+  const [eliminando, setElim] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
     setCargando(true); setError('');
@@ -37,7 +37,7 @@ export default function CategoriasPage() {
       cargar();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Error al guardar';
-      const details = (e as any).details || [];
+      const details = ((e as { details?: unknown[] }).details || []).map(String);
       notify('error', msg, details);
     }
   }
@@ -48,7 +48,7 @@ export default function CategoriasPage() {
       await categoriasApi.delete(eliminando);
       notify('success', 'Categoría eliminada');
       setElim(null); cargar();
-    } catch (e: unknown) {
+    } catch {
       notify('error', 'Error al eliminar');
     }
   }

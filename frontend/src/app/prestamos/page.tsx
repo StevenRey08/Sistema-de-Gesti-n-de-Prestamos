@@ -50,7 +50,7 @@ export default function PrestamosPage() {
     await prestamosApi.update(id, { 
       estado: 'DEVUELTO', 
       fecha_devolucion: new Date().toISOString() 
-    } as any);
+    } as Partial<Prestamo>);
     cargar();
   }
 

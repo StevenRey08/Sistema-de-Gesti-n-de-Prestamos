@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { ubicacionesApi, categoriasApi } from '../../lib/api';
 import FilterableSelect from '../ui/FilterableSelect';
-import type { ItemInventario, InventarioPayload, Herramienta, Ubicacion, Categoria, FormErrors } from '../../lib/types';
+import type { ItemInventario, InventarioPayload, Ubicacion, Categoria, FormErrors } from '../../lib/types';
 
 interface InventarioFormProps {
   item?: ItemInventario | null;
@@ -31,7 +31,6 @@ export default function InventarioForm({ item = null, onGuardar, onCancelar }: I
     cantidad_minima: item?.cantidad_minima || 1,
   });
   
-  const [herramientas, setHerramientas] = useState<Herramienta[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [ubicaciones, setUbicaciones] = useState<Ubicacion[]>([]);
   const [errores, setErrores] = useState<FormErrors<InventarioFormState>>({});

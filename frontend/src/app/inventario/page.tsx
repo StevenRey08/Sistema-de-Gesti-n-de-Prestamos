@@ -46,7 +46,7 @@ export default function InventarioPage() {
   const [herramientasError, setHerramientasError] = useState('');
   const [showHerramientaForm, setShowHerramientaForm] = useState(false);
   const [editandoHerramienta, setEditandoHerramienta] = useState<Herramienta | null>(null);
-  const [eliminandoHerramienta, setEliminandoHerramienta] = useState<number | null>(null);
+  const [eliminandoHerramienta, setEliminandoHerramienta] = useState<string | null>(null);
 
   const [items, setItems] = useState<ItemInventario[]>([]);
   const [inventarioSearch, setInventarioSearch] = useState('');
@@ -54,7 +54,7 @@ export default function InventarioPage() {
   const [inventarioError, setInventarioError] = useState('');
   const [showInventarioForm, setShowInventarioForm] = useState(false);
   const [editandoInventario, setEditandoInventario] = useState<ItemInventario | null>(null);
-  const [eliminandoInventario, setEliminandoInventario] = useState<number | null>(null);
+  const [eliminandoInventario, setEliminandoInventario] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -108,8 +108,8 @@ export default function InventarioPage() {
 
     return items.filter((item) => {
       const texto = [
-        item.herramienta?.nombre,
-        item.herramienta?.codigo,
+        item.nombre,
+        item.codigo,
         item.estado,
         item.ubicacion?.codigo,
         item.ubicacion?.nombre,
@@ -356,8 +356,8 @@ export default function InventarioPage() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <p className="font-medium text-[var(--text-main)]">{item.herramienta?.nombre || '—'}</p>
-                        <p className="text-xs text-[var(--text-muted)]">{item.herramienta?.codigo}</p>
+                        <p className="font-medium text-[var(--text-main)]">{item.nombre || '—'}</p>
+                        <p className="text-xs text-[var(--text-muted)]">{item.codigo}</p>
                       </td>
                       <td className="px-4 py-3">
                         <span className={BADGE[item.estado] || 'status-badge status-info'}>

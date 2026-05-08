@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import api from '../lib/api';
 import LoansTable from '../components/ui/LoansTable';
 import ActivityFeed from '../components/ui/ActivityFeed';
-import type { DashboardCounts, ItemInventario, Persona, Prestamo } from '../lib/types';
+import type { DashboardCounts } from '../lib/types';
 
 export default function DashboardPage() {
   const [counts, setCounts] = useState<DashboardCounts>({ 
@@ -17,7 +17,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const cargar = async () => {
       try {
-        const data = await api.get('/dashboard') as { counts: DashboardCounts };
+        const data = await api.get('/dashboard/stats') as { counts: DashboardCounts };
         if (data && data.counts) {
           setCounts(data.counts);
         }

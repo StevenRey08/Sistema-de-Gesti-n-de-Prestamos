@@ -52,7 +52,7 @@ async function request<T = unknown>(endpoint: string, options: RequestInit = {})
   if (!res.ok) {
     const error = new Error(data?.error || data?.mensaje || data?.message || 'Error en la solicitud');
     // Guardamos los detalles (ej. errores de validación) para mostrarlos en la UI
-    (error as any).details = data?.detalles || [];
+    (error as Error & { details?: unknown[] }).details = Array.isArray(data?.detalles) ? data.detalles : [];
     throw error;
   }
   return data as T;

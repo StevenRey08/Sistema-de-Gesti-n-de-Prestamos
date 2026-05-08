@@ -11,7 +11,7 @@ export default function PersonasPage() {
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editando, setEditando] = useState<Persona | null>(null);   // persona a editar
-  const [eliminando, setElim] = useState<number | null>(null);   // id a eliminar
+  const [eliminando, setElim] = useState<string | null>(null);   // id a eliminar
 
   const cargar = useCallback(async () => {
     setCargando(true); setError('');

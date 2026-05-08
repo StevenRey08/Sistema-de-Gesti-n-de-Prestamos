@@ -1,0 +1,22 @@
+
+> frontend@0.1.0 dev
+> next dev
+
+   ▲ Next.js 15.3.1
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.56.1:3000
+
+ ✓ Starting...
+ ✓ Ready in 8.8s
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 4.5s (732 modules)
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 945ms (1066 modules)
+ GET /_next/static/webpack/40ed57bd98b77185.webpack.hot-update.json 500 in 17579ms
+ GET /_next/static/webpack/40ed57bd98b77185.webpack.hot-update.json 500 in 898ms
+ ✓ Compiled / in 417ms (1102 modules)
+ GET / 500 in 4084ms
+ GET / 500 in 341ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 951ms (544 modules)
+ GET /favicon.ico 200 in 1194ms

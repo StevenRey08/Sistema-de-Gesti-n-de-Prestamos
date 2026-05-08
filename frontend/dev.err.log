@@ -1,0 +1,53 @@
+ ⨯ [TypeError: localStorage.getItem is not a function] {
+  digest: '332611086'
+}
+[TypeError: localStorage.getItem is not a function]
+ ⨯ [TypeError: localStorage.getItem is not a function]
+(node:6924) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+[TypeError: localStorage.getItem is not a function]
+[TypeError: localStorage.getItem is not a function]
+ ⨯ [TypeError: localStorage.getItem is not a function]
+[TypeError: localStorage.getItem is not a function]
+[TypeError: localStorage.getItem is not a function]
+ ⨯ unhandledRejection: [TypeError: localStorage.getItem is not a function]
+ ⨯ unhandledRejection:  [TypeError: localStorage.getItem is not a function]
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ ⨯ [TypeError: localStorage.getItem is not a function] {
+  digest: '332611086'
+}
+[TypeError: localStorage.getItem is not a function]
+ ⨯ [TypeError: localStorage.getItem is not a function] { page: '/' }
+ ⨯ [TypeError: localStorage.getItem is not a function] {
+  digest: '332611086'
+}
+[TypeError: localStorage.getItem is not a function]
+ ⨯ [TypeError: localStorage.getItem is not a function] { page: '/' }
+[TypeError: localStorage.getItem is not a function]
+[TypeError: localStorage.getItem is not a function]
+ ⨯ [TypeError: localStorage.getItem is not a function]
+ ⨯ [TypeError: localStorage.getItem is not a function]
+[TypeError: localStorage.getItem is not a function]
+ ⨯ unhandledRejection: [TypeError: localStorage.getItem is not a function]
+ ⨯ unhandledRejection:  [TypeError: localStorage.getItem is not a function]
+[TypeError: localStorage.getItem is not a function]
+[TypeError: localStorage.getItem is not a function]
+ ⨯ [TypeError: localStorage.getItem is not a function]
+ ⨯ [TypeError: localStorage.getItem is not a function]
+[TypeError: localStorage.getItem is not a function]
+ ⨯ unhandledRejection: [TypeError: localStorage.getItem is not a function]
+ ⨯ unhandledRejection:  [TypeError: localStorage.getItem is not a function]
+[TypeError: localStorage.getItem is not a function]
+[TypeError: localStorage.getItem is not a function]
+[TypeError: localStorage.getItem is not a function]
+[TypeError: localStorage.getItem is not a function]
+ ⨯ [TypeError: localStorage.getItem is not a function]
+ ⨯ [TypeError: localStorage.getItem is not a function]
+[TypeError: localStorage.getItem is not a function] { page: '/' }
+[TypeError: localStorage.getItem is not a function] { page: '/' }
+[TypeError: localStorage.getItem is not a function]
+ ⨯ unhandledRejection: [TypeError: localStorage.getItem is not a function]
+ ⨯ unhandledRejection:  [TypeError: localStorage.getItem is not a function]
+[TypeError: localStorage.getItem is not a function]
+ ⨯ unhandledRejection: [TypeError: localStorage.getItem is not a function]
+ ⨯ unhandledRejection:  [TypeError: localStorage.getItem is not a function]
