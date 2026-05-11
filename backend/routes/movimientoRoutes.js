@@ -10,6 +10,6 @@ router.use(verificarToken);
 router.post('/', checkPermiso('MOVIMIENTOS', 'ingresar'), validarMovimiento, movimientoController.create);
 router.get('/', checkPermiso('MOVIMIENTOS', 'leer'), movimientoController.getAll);
 router.get('/:id', checkPermiso('MOVIMIENTOS', 'leer'), movimientoController.getById);
-router.delete('/:id', movimientoController.delete);
+router.delete('/:id', checkPermiso('MOVIMIENTOS', 'eliminar'), movimientoController.delete);
 
 module.exports = router;

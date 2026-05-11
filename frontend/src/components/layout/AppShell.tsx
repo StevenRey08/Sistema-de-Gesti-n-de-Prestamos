@@ -18,13 +18,20 @@ function AppFrame({ children }: { children: React.ReactNode }) {
 
     if (!user && !isLoginRoute) {
       router.replace('/login');
-      return;
     }
 
     if (user && isLoginRoute) {
       router.replace('/');
     }
   }, [hydrated, isLoginRoute, router, user]);
+
+  useEffect(() => {
+    const onShow = (e: PageTransitionEvent) => {
+      if (e.persisted) window.location.reload();
+    };
+    window.addEventListener('pageshow', onShow);
+    return () => window.removeEventListener('pageshow', onShow);
+  }, []);
 
   if (!hydrated) {
     return (

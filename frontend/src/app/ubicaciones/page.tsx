@@ -79,7 +79,6 @@ export default function UbicacionesPage() {
 
   function validar() {
     const err: Record<string, string> = {};
-    if (!form.codigo.trim()) err.codigo = 'El código es obligatorio';
     if (!form.nombre.trim()) err.nombre = 'El nombre es obligatorio';
     const detalles = Object.values(err);
     if (detalles.length > 0) notify('error', 'Revisa los datos de la ubicación', detalles);
@@ -225,7 +224,7 @@ export default function UbicacionesPage() {
             <form onSubmit={guardar} className="space-y-4 px-8 pb-8 pt-5">
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-[var(--text-muted)]">CÓDIGO *</label>
+                  <label className="text-xs font-bold text-[var(--text-muted)]">CÓDIGO (OPCIONAL)</label>
                   <input
                     type="text"
                     value={form.codigo}
@@ -266,7 +265,7 @@ export default function UbicacionesPage() {
                 >
                   <option value="">— Sin padre (Ubicación raíz) —</option>
                   {ubicaciones
-                    .filter(u => u.id !== editando?.id && u.tipo !== 'CAJA' && u.tipo !== 'ESTUCHE')
+                    .filter(u => u.id !== editando?.id)
                     .map(u => (
                       <option key={u.id} value={u.id}>{u.codigo} - {u.nombre}</option>
                     ))

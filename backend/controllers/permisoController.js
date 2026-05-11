@@ -15,7 +15,7 @@ const permisoController = {
             });
             res.json(permisos);
         } catch (error) {
-            res.status(500).json({ error: "Error al obtener permisos" });
+            res.status(500).json({ status: "error", mensaje: "Error al obtener permisos" });
         }
     },
 
@@ -29,7 +29,7 @@ const permisoController = {
                 permisos_rol_id_modulo_id_key: "Este rol ya tiene un permiso asignado para ese módulo.",
             }, "Ya existe un permiso registrado para esa combinación de rol y módulo.");
             if (duplicateError) return res.status(duplicateError.status).json(duplicateError.body);
-            res.status(500).json({ error: "Error al crear el permiso" });
+            res.status(500).json({ status: "error", mensaje: "Error al crear el permiso" });
         }
     },
 
@@ -40,10 +40,10 @@ const permisoController = {
                 where: { id: req.params.id },
                 include: { rol: true, modulo: true }
             });
-            if (!permiso) return res.status(404).json({ error: "Permiso no encontrado" });
+            if (!permiso) return res.status(404).json({ status: "error", mensaje: "Permiso no encontrado" });
             res.json(permiso);
         } catch (error) {
-            res.status(500).json({ error: "Error al buscar el permiso" });
+            res.status(500).json({ status: "error", mensaje: "Error al buscar el permiso" });
         }
     },
 
@@ -60,7 +60,7 @@ const permisoController = {
                 permisos_rol_id_modulo_id_key: "Este rol ya tiene un permiso asignado para ese módulo.",
             }, "Ya existe un permiso registrado para esa combinación de rol y módulo.");
             if (duplicateError) return res.status(duplicateError.status).json(duplicateError.body);
-            res.status(500).json({ error: "Error al actualizar el permiso" });
+            res.status(500).json({ status: "error", mensaje: "Error al actualizar el permiso" });
         }
     },
 
@@ -70,7 +70,7 @@ const permisoController = {
             await prisma.permiso.delete({ where: { id: req.params.id } });
             res.json({ message: "Permiso eliminado correctamente" });
         } catch (error) {
-            res.status(500).json({ error: "Error al eliminar el permiso" });
+            res.status(500).json({ status: "error", mensaje: "Error al eliminar el permiso" });
         }
     }
 };

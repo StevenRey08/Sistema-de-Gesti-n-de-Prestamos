@@ -61,9 +61,9 @@ export default function Topbar() {
     .join('')
     .toUpperCase();
 
-  function handleLogout() {
-    signOut();
-    router.replace('/login');
+  async function handleLogout() {
+    await signOut();
+    window.location.replace('/login');
   }
 
   return (

@@ -1,4 +1,5 @@
 const { prisma } = require('../db');
+const logger = require('../utils/logger');
 const { buildUniqueConstraintError } = require('../utils/prismaErrors');
 
 const personaController = {
@@ -18,8 +19,8 @@ const personaController = {
             });
             res.json(personas);
         } catch (error) {
-            console.error("Error en personas.getAll:", error);
-            res.status(500).json({ error: "Error al obtener personas" });
+            logger.error("Error en personas.getAll:", error);
+            res.status(500).json({ status: "error", mensaje: "Error al obtener personas" });
         }
     },
 
@@ -29,12 +30,12 @@ const personaController = {
             const nueva = await prisma.persona.create({ data: req.body });
             res.status(201).json(nueva);
         } catch (error) {
-            console.error("Error en personas.create:", error);
+            logger.error("Error en personas.create:", error);
             const duplicateError = buildUniqueConstraintError(error, {
                 numero_documento: "Ya existe una persona registrada con ese número de documento.",
             }, "Ya existe un registro de persona con uno de los datos únicos ingresados.");
             if (duplicateError) return res.status(duplicateError.status).json(duplicateError.body);
-            res.status(500).json({ error: "Error al crear persona" });
+            res.status(500).json({ status: "error", mensaje: "Error al crear persona" });
         }
     },
 
@@ -42,10 +43,10 @@ const personaController = {
     getById: async (req, res) => {
         try {
             const persona = await prisma.persona.findUnique({ where: { id: req.params.id } });
-            if (!persona) return res.status(404).json({ error: "Persona no encontrada" });
+            if (!persona) return res.status(404).json({ status: "error", mensaje: "Persona no encontrada" });
             res.json(persona);
         } catch (error) {
-            res.status(500).json({ error: "Error al buscar persona" });
+            res.status(500).json({ status: "error", mensaje: "Error al buscar persona" });
         }
     },
 
@@ -62,7 +63,7 @@ const personaController = {
                 numero_documento: "Ya existe una persona registrada con ese número de documento.",
             }, "Ya existe un registro de persona con uno de los datos únicos ingresados.");
             if (duplicateError) return res.status(duplicateError.status).json(duplicateError.body);
-            res.status(500).json({ error: "Error al actualizar" });
+            res.status(500).json({ status: "error", mensaje: "Error al actualizar" });
         }
     },
 
@@ -72,7 +73,7 @@ const personaController = {
             await prisma.persona.delete({ where: { id: req.params.id } });
             res.json({ message: "Persona eliminada correctamente" });
         } catch (error) {
-            res.status(500).json({ error: "Error al eliminar (puede que tenga préstamos asociados)" });
+            res.status(500).json({ status: "error", mensaje: "Error al eliminar (puede que tenga préstamos asociados)" });
         }
     }
 };

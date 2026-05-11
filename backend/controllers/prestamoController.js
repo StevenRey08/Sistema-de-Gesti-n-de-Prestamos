@@ -28,7 +28,7 @@ const prestamoController = {
             });
             res.json(prestamos);
         } catch (error) {
-            res.status(500).json({ error: "Error al obtener los préstamos" });
+            res.status(500).json({ status: "error", mensaje: "Error al obtener los préstamos" });
         }
     },
 
@@ -45,7 +45,7 @@ const prestamoController = {
             });
             res.json(pendientes);
         } catch (error) {
-            res.status(500).json({ error: "Error al obtener préstamos pendientes" });
+            res.status(500).json({ status: "error", mensaje: "Error al obtener préstamos pendientes" });
         }
     },
 
@@ -168,7 +168,24 @@ const prestamoController = {
 
             res.json(resultado);
         } catch (error) {
-            res.status(400).json({ error: error.message });
+            res.status(400).json({ status: "error", mensaje: error.message });
+        }
+    },
+
+    // Actualizar préstamo (solo campos no críticos para stock)
+    update: async (req, res) => {
+        try {
+            const { observaciones, fecha_devolucion } = req.body;
+            const actualizado = await prisma.prestamo.update({
+                where: { id: req.params.id },
+                data: {
+                    ...(observaciones !== undefined && { observaciones }),
+                    ...(fecha_devolucion !== undefined && { fecha_devolucion }),
+                }
+            });
+            res.json(actualizado);
+        } catch (error) {
+            res.status(500).json({ status: "error", mensaje: "Error al actualizar el préstamo" });
         }
     },
 
@@ -178,19 +195,46 @@ const prestamoController = {
                 where: { id: req.params.id },
                 include: { inventario: true, persona: true, usuario: true }
             });
-            if (!prestamo) return res.status(404).json({ error: "Préstamo no encontrado" });
+            if (!prestamo) return res.status(404).json({ status: "error", mensaje: "Préstamo no encontrado" });
             res.json(prestamo);
         } catch (error) {
-            res.status(500).json({ error: "Error al buscar el préstamo" });
+            res.status(500).json({ status: "error", mensaje: "Error al buscar el préstamo" });
         }
     },
 
     delete: async (req, res) => {
         try {
-            await prisma.prestamo.delete({ where: { id: req.params.id } });
-            res.json({ message: "Registro eliminado" });
+            const prestamo = await prisma.prestamo.findUnique({
+                where: { id: req.params.id },
+                include: { movimientos: true }
+            });
+
+            if (!prestamo) {
+                return res.status(404).json({ status: "error", mensaje: "Préstamo no encontrado" });
+            }
+
+            await prisma.$transaction(async (tx) => {
+                // Si está ACTIVO, restaurar el stock antes de eliminar
+                if (prestamo.estado === 'ACTIVO') {
+                    await tx.inventario.update({
+                        where: { id: prestamo.inventario_id },
+                        data: { cantidad: { increment: prestamo.cantidad } }
+                    });
+                }
+
+                // Eliminar movimientos asociados
+                if (prestamo.movimientos?.length > 0) {
+                    await tx.movimiento.deleteMany({
+                        where: { prestamo_id: prestamo.id }
+                    });
+                }
+
+                await tx.prestamo.delete({ where: { id: prestamo.id } });
+            });
+
+            res.json({ message: "Préstamo eliminado correctamente. Stock restaurado." });
         } catch (error) {
-            res.status(500).json({ error: "No se puede eliminar un préstamo con historial activo" });
+            res.status(500).json({ status: "error", mensaje: "Error al eliminar el préstamo" });
         }
     }
 };

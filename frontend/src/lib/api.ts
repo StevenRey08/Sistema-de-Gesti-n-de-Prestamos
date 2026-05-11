@@ -14,22 +14,22 @@ function isFormData(body: unknown): body is FormData {
 }
 
 async function request<T = unknown>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  // Intentar obtener el token del localStorage (solo en el cliente)
+  // Obtener token de localStorage como fallback (cuando la cookie no aplica, ej. desarrollo cross-origin)
   let token = null;
   if (typeof window !== 'undefined') {
-    // Primero buscamos si está guardado directamente como 'token'
-    token = window.localStorage.getItem('token');
-    
-    // Si no, buscamos dentro del objeto de sesión 'sgp-session'
+    const session = window.localStorage.getItem('sgp-session');
+    if (session && session !== 'undefined' && session !== 'null') {
+      try {
+        const parsed = JSON.parse(session);
+        token = parsed?.token || null;
+      } catch {
+        // Silently handle
+      }
+    }
     if (!token) {
-      const session = window.localStorage.getItem('sgp-session');
-      if (session) {
-        try {
-          const parsed = JSON.parse(session);
-          token = parsed.token || null;
-        } catch (e) {
-          console.error('Error al parsear la sesión para obtener el token', e);
-        }
+      const directToken = window.localStorage.getItem('token');
+      if (directToken && directToken !== 'undefined' && directToken !== 'null') {
+        token = directToken;
       }
     }
   }
@@ -46,11 +46,12 @@ async function request<T = unknown>(endpoint: string, options: RequestInit = {})
   const res = await fetch(`${BASE_URL}${endpoint}`, {
     ...options,
     headers,
+    credentials: 'include',
   });
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const error = new Error(data?.error || data?.mensaje || data?.message || 'Error en la solicitud');
+    const error = new Error(data?.mensaje || data?.error || data?.message || 'Error en la solicitud');
     // Guardamos los detalles (ej. errores de validación) para mostrarlos en la UI
     (error as Error & { details?: unknown[] }).details = Array.isArray(data?.detalles) ? data.detalles : [];
     throw error;
@@ -92,6 +93,7 @@ const api = {
   get:    (endpoint: string)                 => request(endpoint),
   post:   (endpoint: string, body: unknown)  => request(endpoint, { method: 'POST',   body: JSON.stringify(body) }),
   put:    (endpoint: string, body: unknown)  => request(endpoint, { method: 'PUT',    body: JSON.stringify(body) }),
+  patch:  (endpoint: string, body: unknown)  => request(endpoint, { method: 'PATCH',  body: JSON.stringify(body) }),
   delete: (endpoint: string)                 => request(endpoint, { method: 'DELETE' }),
 };
 

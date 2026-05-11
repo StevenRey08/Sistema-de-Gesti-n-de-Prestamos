@@ -6,7 +6,7 @@ const { checkPermiso } = require('../middlewares/permisoMiddleware');
 
 router.use(verificarToken);
 
-router.get('/', dashboardController.getStats);
-router.get('/stats', dashboardController.getStats);
+router.get('/', checkPermiso('DASHBOARD', 'leer'), dashboardController.getStats);
+router.get('/stats', checkPermiso('DASHBOARD', 'leer'), dashboardController.getStats);
 
 module.exports = router;

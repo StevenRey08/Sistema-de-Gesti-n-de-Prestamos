@@ -1,4 +1,5 @@
 const { prisma } = require('../db');
+const logger = require('../utils/logger');
 const { generarCodigoAleatorio } = require('../utils/generadores');
 const { buildUniqueConstraintError } = require('../utils/prismaErrors');
 
@@ -27,8 +28,8 @@ const ubicacionController = {
             });
             res.json(ubicaciones);
         } catch (error) {
-            console.error("Error en ubicaciones.getAll:", error);
-            res.status(500).json({ error: "Error al obtener las ubicaciones" });
+            logger.error("Error en ubicaciones.getAll:", error);
+            res.status(500).json({ status: "error", mensaje: "Error al obtener las ubicaciones" });
         }
     },
 
@@ -59,12 +60,12 @@ const ubicacionController = {
             const nueva = await prisma.ubicacion.create({ data });
             res.status(201).json(nueva);
         } catch (error) {
-            console.error("Error en ubicaciones.create:", error);
+            logger.error("Error en ubicaciones.create:", error);
             const duplicateError = buildUniqueConstraintError(error, {
                 codigo: "Ya existe una ubicación registrada con ese código.",
             }, "Ya existe una ubicación con uno de los datos únicos ingresados.");
             if (duplicateError) return res.status(duplicateError.status).json(duplicateError.body);
-            res.status(500).json({ error: "Error al crear la ubicación" });
+            res.status(500).json({ status: "error", mensaje: "Error al crear la ubicación" });
         }
     },
 
@@ -79,10 +80,10 @@ const ubicacionController = {
                     inventarios: true // Ver qué herramientas hay exactamente aquí
                 }
             });
-            if (!ubicacion) return res.status(404).json({ error: "Ubicación no encontrada" });
+            if (!ubicacion) return res.status(404).json({ status: "error", mensaje: "Ubicación no encontrada" });
             res.json(ubicacion);
         } catch (error) {
-            res.status(500).json({ error: "Error al buscar la ubicación" });
+            res.status(500).json({ status: "error", mensaje: "Error al buscar la ubicación" });
         }
     },
 
@@ -99,7 +100,7 @@ const ubicacionController = {
                 codigo: "Ya existe una ubicación registrada con ese código.",
             }, "Ya existe una ubicación con uno de los datos únicos ingresados.");
             if (duplicateError) return res.status(duplicateError.status).json(duplicateError.body);
-            res.status(500).json({ error: "Error al actualizar la ubicación" });
+            res.status(500).json({ status: "error", mensaje: "Error al actualizar la ubicación" });
         }
     },
 

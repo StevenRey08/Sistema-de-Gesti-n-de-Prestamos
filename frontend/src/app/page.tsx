@@ -13,19 +13,56 @@ export default function DashboardPage() {
     prestamos_activos: 0, 
     alertas_stock: 0 
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const cargar = async () => {
       try {
+        setLoading(true);
+        setError(null);
         const data = await api.get('/dashboard/stats') as { counts: DashboardCounts };
         if (data && data.counts) {
           setCounts(data.counts);
         }
-      } catch (e) { console.error(e); }
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Error al cargar el dashboard');
+      } finally {
+        setLoading(false);
+      }
     };
     cargar();
   }, []);
 
+  if (loading) {
+    return (
+      <div className="page-shell">
+        <div className="page-heading">
+          <h1 className="page-title">Panel de control</h1>
+          <p className="page-subtitle">Cargando datos...</p>
+        </div>
+        <div className="stats-grid">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="stats-card animate-pulse">
+              <p className="h-4 bg-gray-200 rounded w-24">&nbsp;</p>
+              <p className="h-8 bg-gray-200 rounded w-12 mt-2">&nbsp;</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="page-shell">
+        <div className="page-heading">
+          <h1 className="page-title">Panel de control</h1>
+          <p className="page-subtitle text-red-500">Error: {error}</p>
+        </div>
+      </div>
+    );
+  }
 
   const cards = [
     { label: 'Préstamos activos', value: counts.prestamos_activos, color: 'from-blue-600 to-blue-800', icon: '' },
@@ -33,7 +70,6 @@ export default function DashboardPage() {
     { label: 'Personas', value: counts.personas, color: 'from-violet-600 to-violet-800', icon: '' },
     { label: 'Alertas de stock', value: counts.alertas_stock, color: 'from-amber-600 to-amber-800', icon: '' },
   ];
-
 
   return (
     <div className="page-shell">

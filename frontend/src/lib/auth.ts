@@ -58,6 +58,7 @@ export async function authenticate(usuario: string, contrasena: string): Promise
     response = await fetch(`${baseUrl}/auth/login`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body:    JSON.stringify({ usuario, contrasena }),
     });
   } catch {

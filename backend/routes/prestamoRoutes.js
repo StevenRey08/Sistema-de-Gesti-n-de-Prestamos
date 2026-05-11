@@ -7,13 +7,14 @@ const { checkPermiso } = require('../middlewares/permisoMiddleware');
 
 router.use(verificarToken);
 
-router.get('/', checkPermiso('Prestamos', 'leer'), prestamoController.getAll);
-router.get('/pendientes', checkPermiso('Prestamos', 'leer'), prestamoController.getPendientes);
-router.get('/:id', checkPermiso('Prestamos', 'leer'), prestamoController.getById);
+router.get('/', checkPermiso('PRESTAMOS', 'leer'), prestamoController.getAll);
+router.get('/pendientes', checkPermiso('PRESTAMOS', 'leer'), prestamoController.getPendientes);
+router.get('/:id', checkPermiso('PRESTAMOS', 'leer'), prestamoController.getById);
 
-router.post('/', checkPermiso('Prestamos', 'ingresar'), validarPrestamo, prestamoController.create);
-router.patch('/:id/devolucion', checkPermiso('Prestamos', 'actualizar'), validarDevolucion, prestamoController.registrarDevolucion);
+router.post('/', checkPermiso('PRESTAMOS', 'ingresar'), validarPrestamo, prestamoController.create);
+router.put('/:id', checkPermiso('PRESTAMOS', 'actualizar'), prestamoController.update);
+router.patch('/:id/devolucion', checkPermiso('PRESTAMOS', 'actualizar'), validarDevolucion, prestamoController.registrarDevolucion);
 
-router.delete('/:id', checkPermiso('Prestamos', 'eliminar'), prestamoController.delete);
+router.delete('/:id', checkPermiso('PRESTAMOS', 'eliminar'), prestamoController.delete);
 
 module.exports = router;

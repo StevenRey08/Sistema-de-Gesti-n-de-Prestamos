@@ -29,6 +29,7 @@ async function main() {
 
     // ── 2. Módulos ────────────────────────────────────────────
     const modulosData = [
+        { nombre: 'DASHBOARD',    descripcion: 'Panel de control y estadísticas' },
         { nombre: 'USUARIOS',     descripcion: 'Gestión de usuarios y accesos' },
         { nombre: 'INVENTARIO',   descripcion: 'Control de herramientas y materiales' },
         { nombre: 'PRESTAMOS',    descripcion: 'Registro de salidas y entradas de herramientas' },

@@ -145,7 +145,7 @@ export default function InventarioPage() {
 
   async function handleGuardarInventario(form: InventarioPayload) {
     const body = new FormData();
-    body.append('codigo', form.codigo);
+    if (form.codigo) body.append('codigo', form.codigo);
     body.append('nombre', form.nombre);
     body.append('estado', form.estado ?? 'Nuevo');
     body.append('cantidad', String(form.cantidad));
@@ -357,7 +357,7 @@ export default function InventarioPage() {
                         <p className="text-xs text-[var(--text-muted)]">{item.codigo}</p>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={BADGE[item.estado] || 'status-badge status-info'}>
+                        <span className={BADGE[item.estado ?? ''] || 'status-badge status-info'}>
                           {item.estado}
                         </span>
                       </td>

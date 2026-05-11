@@ -1,14 +1,15 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { prestamosApi } from '../../lib/api';
+import api, { prestamosApi } from '../../lib/api';
 import PrestamoForm from '../../components/catalogos/PrestamoForm';
 import type { Prestamo, PrestamoPayload } from '../../lib/types';
 import { useNotification } from '../../components/ui/NotificationContext';
 import { notifyErrorPayload } from '../../lib/errors';
 
 const BADGE: Record<string, string> = {
-  PENDIENTE: 'bg-yellow-900 text-yellow-300',
-  DEVUELTO:  'bg-green-900 text-green-300',
+  ACTIVO:   'bg-yellow-900 text-yellow-300',
+  DEVUELTO: 'bg-green-900 text-green-300',
+  VENCIDO:  'bg-red-900 text-red-300',
 };
 
 function fmt(fecha: string | null) {
@@ -58,10 +59,9 @@ export default function PrestamosPage() {
 
   async function marcarDevuelto(id: string) {
     try {
-      await prestamosApi.update(id, {
-        estado: 'DEVUELTO',
-        fecha_devolucion: new Date().toISOString()
-      } as Partial<Prestamo>);
+      await api.patch(`/prestamos/${id}/devolucion`, {
+        observaciones_dev: 'Devuelto voluntariamente'
+      });
       cargar();
     } catch (e: unknown) {
       const { message, details } = notifyErrorPayload(e, 'Error al actualizar préstamo');
@@ -72,7 +72,7 @@ export default function PrestamosPage() {
   const lista = filtro === 'todos' ? prestamos
     : prestamos.filter((p: Prestamo) => p.estado === filtro);
 
-  const pendientes = prestamos.filter((p: Prestamo) => p.estado === 'PENDIENTE').length;
+  const activos = prestamos.filter((p: Prestamo) => p.estado === 'ACTIVO').length;
 
   return (
     <div className="page-shell">
@@ -81,7 +81,7 @@ export default function PrestamosPage() {
           <h1 className="page-title">Préstamos</h1>
           <p className="page-subtitle">
             {prestamos.length} total —
-            <span className="ml-1 font-semibold text-[var(--warning)]">{pendientes} pendientes</span>
+            <span className="ml-1 font-semibold text-[var(--warning)]">{activos} activos</span>
           </p>
         </div>
         <button onClick={() => { setEditando(null); setShowForm(true); }}
@@ -92,7 +92,7 @@ export default function PrestamosPage() {
 
       {/* Filtros rápidos */}
       <div className="flex gap-2">
-        {['todos', 'PENDIENTE', 'DEVUELTO'].map(f => (
+        {['todos', 'ACTIVO', 'DEVUELTO'].map(f => (
           <button key={f} onClick={() => setFiltro(f)}
             className={`filter-pill capitalize ${filtro === f ? 'active' : ''}`}>
             {f}
@@ -160,7 +160,7 @@ export default function PrestamosPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right space-x-2">
-                    {p.estado === 'PENDIENTE' && (
+                    {p.estado === 'ACTIVO' && (
                       <button onClick={() => marcarDevuelto(p.id)}
                         className="text-green-400 hover:text-green-300 text-xs font-medium">✓ Devuelto</button>
                     )}

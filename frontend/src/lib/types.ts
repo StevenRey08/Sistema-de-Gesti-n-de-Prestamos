@@ -63,7 +63,7 @@ export interface ItemInventario {
 
 // ── Préstamos ─────────────────────────────────────────────
 
-export type EstadoPrestamo = 'PENDIENTE' | 'DEVUELTO' | string;
+export type EstadoPrestamo = 'ACTIVO' | 'DEVUELTO' | 'VENCIDO' | string;
 
 export interface Prestamo {
   id: string;
@@ -126,7 +126,7 @@ export interface HerramientaPayload {
 }
 
 export interface InventarioPayload {
-  codigo: string;
+  codigo?: string;
   nombre: string;
   categoria_id?: string | null;
   ubicacion_id?: string | null;

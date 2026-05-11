@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react';
 import api from '../../lib/api';
 import type { Movimiento } from '../../lib/types';
 
-function tiempoRelativo(fecha: string) {
+function tiempoRelativo(fecha: string | null) {
+  if (!fecha) return '—';
   const diff = Date.now() - new Date(fecha).getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 1)  return 'Hace un momento';
@@ -49,10 +50,10 @@ export default function ActivityFeed() {
     <div className="space-y-4">
       {movimientos.map((m) => (
         <div key={m.id} className="flex items-start gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-3">
-          <div className={`w-2.5 h-2.5 mt-1.5 rounded-full shrink-0 ${TIPO_COLOR[m.tipo] || 'bg-slate-500'}`} />
+          <div className={`w-2.5 h-2.5 mt-1.5 rounded-full shrink-0 ${TIPO_COLOR[m.tipo ?? ''] || 'bg-slate-500'}`} />
           <div className="flex-1 min-w-0">
             <p className="truncate text-sm text-[var(--text-muted)]">
-              <span className="font-medium text-[var(--text-main)]">{TIPO_LABEL[m.tipo] || m.tipo}</span>
+              <span className="font-medium text-[var(--text-main)]">{TIPO_LABEL[m.tipo ?? ''] || m.tipo}</span>
               {' — '}
               {m.inventario?.nombre || 'Artículo'}
               {m.persona ? ` · ${m.persona.nombres}` : ''}

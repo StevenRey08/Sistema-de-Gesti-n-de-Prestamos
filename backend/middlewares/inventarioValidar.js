@@ -1,4 +1,4 @@
-const { esUUID } = require('../utils/validadores'); // Asegúrate de tener esta función en tus utilidades
+const { esUUID } = require('../utils/validadores');
 
 const validarInventario = (req, res, next) => {
     const { nombre, codigo, categoria_id, ubicacion_id, estado, cantidad, cantidad_minima } = req.body;

@@ -23,7 +23,7 @@ const usuarioController = {
             });
             res.json(usuarios);
         } catch (error) {
-            res.status(500).json({ error: "Error al obtener usuarios" });
+            res.status(500).json({ status: "error", mensaje: "Error al obtener usuarios" });
         }
     },
 
@@ -34,7 +34,7 @@ const usuarioController = {
             
             // Hashear la contraseña si existe
             if (data.contrasena) {
-                const salt = await bcrypt.genSalt(10);
+                const salt = await bcrypt.genSalt(12);
                 data.contrasena = await bcrypt.hash(data.contrasena, salt);
             }
 
@@ -49,7 +49,7 @@ const usuarioController = {
                 numero_documento: "Ya existe un usuario registrado con ese número de documento.",
             }, "Ya existe un usuario con uno de los datos únicos ingresados.");
             if (duplicateError) return res.status(duplicateError.status).json(duplicateError.body);
-            res.status(500).json({ error: "Error al crear usuario" });
+            res.status(500).json({ status: "error", mensaje: "Error al crear usuario" });
         }
     },
 
@@ -60,10 +60,10 @@ const usuarioController = {
                 where: { id: req.params.id },
                 include: { rol: true }
             });
-            if (!usuario) return res.status(404).json({ error: "Usuario no encontrado" });
+            if (!usuario) return res.status(404).json({ status: "error", mensaje: "Usuario no encontrado" });
             res.json(usuario);
         } catch (error) {
-            res.status(500).json({ error: "Error al buscar usuario" });
+            res.status(500).json({ status: "error", mensaje: "Error al buscar usuario" });
         }
     },
 
@@ -74,7 +74,7 @@ const usuarioController = {
 
             // Si se envía una nueva contraseña, la hasheamos
             if (data.contrasena) {
-                const salt = await bcrypt.genSalt(10);
+                const salt = await bcrypt.genSalt(12);
                 data.contrasena = await bcrypt.hash(data.contrasena, salt);
             }
 
@@ -91,7 +91,7 @@ const usuarioController = {
                 numero_documento: "Ya existe un usuario registrado con ese número de documento.",
             }, "Ya existe un usuario con uno de los datos únicos ingresados.");
             if (duplicateError) return res.status(duplicateError.status).json(duplicateError.body);
-            res.status(500).json({ error: "Error al actualizar usuario" });
+            res.status(500).json({ status: "error", mensaje: "Error al actualizar usuario" });
         }
     },
 
@@ -101,7 +101,7 @@ const usuarioController = {
             await prisma.usuario.delete({ where: { id: req.params.id } });
             res.json({ message: "Usuario eliminado correctamente" });
         } catch (error) {
-            res.status(500).json({ error: "Error al eliminar usuario (puede tener registros asociados)" });
+            res.status(500).json({ status: "error", mensaje: "Error al eliminar usuario (puede tener registros asociados)" });
         }
     }
 };

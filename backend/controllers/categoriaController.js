@@ -14,7 +14,7 @@ const categoriaController = {
             });
             res.json(categorias);
         } catch (error) {
-            res.status(500).json({ error: "Error al obtener categorías" });
+            res.status(500).json({ status: "error", mensaje: "Error al obtener categorías" });
         }
     },
 
@@ -28,7 +28,7 @@ const categoriaController = {
                 nombre: "Ya existe una categoría registrada con ese nombre.",
             }, "Ya existe una categoría con uno de los datos únicos ingresados.");
             if (duplicateError) return res.status(duplicateError.status).json(duplicateError.body);
-            res.status(500).json({ error: "Error al crear la categoría" });
+            res.status(500).json({ status: "error", mensaje: "Error al crear la categoría" });
         }
     },
 
@@ -38,10 +38,10 @@ const categoriaController = {
             const categoria = await prisma.categoriaHerramienta.findUnique({
                 where: { id: req.params.id }
             });
-            if (!categoria) return res.status(404).json({ error: "Categoría no encontrada" });
+            if (!categoria) return res.status(404).json({ status: "error", mensaje: "Categoría no encontrada" });
             res.json(categoria);
         } catch (error) {
-            res.status(500).json({ error: "Error al buscar la categoría" });
+            res.status(500).json({ status: "error", mensaje: "Error al buscar la categoría" });
         }
     },
 
@@ -58,7 +58,7 @@ const categoriaController = {
                 nombre: "Ya existe una categoría registrada con ese nombre.",
             }, "Ya existe una categoría con uno de los datos únicos ingresados.");
             if (duplicateError) return res.status(duplicateError.status).json(duplicateError.body);
-            res.status(500).json({ error: "Error al actualizar" });
+            res.status(500).json({ status: "error", mensaje: "Error al actualizar" });
         }
     },
 
@@ -68,7 +68,7 @@ const categoriaController = {
             await prisma.categoriaHerramienta.delete({ where: { id: req.params.id } });
             res.json({ message: "Categoría eliminada correctamente" });
         } catch (error) {
-            res.status(500).json({ error: "Error al eliminar (puede que tenga inventario asociado)" });
+            res.status(500).json({ status: "error", mensaje: "Error al eliminar (puede que tenga inventario asociado)" });
         }
     }
 };

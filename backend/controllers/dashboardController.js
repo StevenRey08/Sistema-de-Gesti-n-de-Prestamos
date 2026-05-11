@@ -1,4 +1,5 @@
 const { prisma } = require('../db');
+const logger = require('../utils/logger');
 
 const dashboardController = {
     getStats: async (req, res) => {
@@ -42,8 +43,8 @@ const dashboardController = {
                 movimientos_recientes: movimientosRecientes
             });
         } catch (error) {
-            console.error("Error en dashboardController:", error);
-            res.status(500).json({ error: "Error al obtener estadísticas del dashboard" });
+            logger.error("Error en dashboardController:", error);
+            res.status(500).json({ status: "error", mensaje: "Error al obtener estadísticas del dashboard" });
         }
     }
 };

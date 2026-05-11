@@ -14,7 +14,7 @@ const roleController = {
             });
             res.json(roles);
         } catch (error) {
-            res.status(500).json({ error: "Error al obtener roles" });
+            res.status(500).json({ status: "error", mensaje: "Error al obtener roles" });
         }
     },
 
@@ -28,7 +28,7 @@ const roleController = {
                 nombre_rol: "Ya existe un rol registrado con ese nombre.",
             }, "Ya existe un rol con uno de los datos únicos ingresados.");
             if (duplicateError) return res.status(duplicateError.status).json(duplicateError.body);
-            res.status(500).json({ error: "Error al crear el rol" });
+            res.status(500).json({ status: "error", mensaje: "Error al crear el rol" });
         }
     },
 
@@ -36,10 +36,10 @@ const roleController = {
     getById: async (req, res) => {
         try {
             const role = await prisma.role.findUnique({ where: { id: req.params.id } });
-            if (!role) return res.status(404).json({ error: "Rol no encontrado" });
+            if (!role) return res.status(404).json({ status: "error", mensaje: "Rol no encontrado" });
             res.json(role);
         } catch (error) {
-            res.status(500).json({ error: "Error al buscar el rol" });
+            res.status(500).json({ status: "error", mensaje: "Error al buscar el rol" });
         }
     },
 
@@ -56,7 +56,7 @@ const roleController = {
                 nombre_rol: "Ya existe un rol registrado con ese nombre.",
             }, "Ya existe un rol con uno de los datos únicos ingresados.");
             if (duplicateError) return res.status(duplicateError.status).json(duplicateError.body);
-            res.status(500).json({ error: "Error al actualizar" });
+            res.status(500).json({ status: "error", mensaje: "Error al actualizar" });
         }
     },
 
@@ -66,7 +66,7 @@ const roleController = {
             await prisma.role.delete({ where: { id: req.params.id } });
             res.json({ message: "Rol eliminado correctamente" });
         } catch (error) {
-            res.status(500).json({ error: "Error al eliminar (puede que tenga usuarios o permisos asociados)" });
+            res.status(500).json({ status: "error", mensaje: "Error al eliminar (puede que tenga usuarios o permisos asociados)" });
         }
     }
 };

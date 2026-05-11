@@ -1,4 +1,5 @@
 const { prisma } = require('../db');
+const logger = require('../utils/logger');
 const { generarCodigoAleatorio } = require('../utils/generadores');
 const { buildUniqueConstraintError } = require('../utils/prismaErrors');
 
@@ -30,8 +31,8 @@ const inventarioController = {
             });
             res.json(items);
         } catch (error) {
-            console.error("Error en inventario.getAll:", error);
-            res.status(500).json({ error: "Error al obtener el inventario" });
+            logger.error("Error en inventario.getAll:", error);
+            res.status(500).json({ status: "error", mensaje: "Error al obtener el inventario" });
         }
     },
 
@@ -54,7 +55,7 @@ const inventarioController = {
             });
         } catch (error) {
             console.error("Error al obtener alertas:", error);
-            res.status(500).json({ error: "Error al generar reporte de alertas" });
+            res.status(500).json({ status: "error", mensaje: "Error al generar reporte de alertas" });
         }
     },
     // Crear artículo con generación de código automática
@@ -83,8 +84,9 @@ const inventarioController = {
                 data.codigo = codigoGenerado;
             }
 
-            // Asegurar que cantidad sea un entero
-            if (data.cantidad) data.cantidad = parseInt(data.cantidad);
+            // Asegurar que cantidad y cantidad_minima sean enteros
+            data.cantidad = data.cantidad !== undefined && data.cantidad !== null && data.cantidad !== '' ? parseInt(data.cantidad) : 1;
+            data.cantidad_minima = data.cantidad_minima !== undefined && data.cantidad_minima !== null && data.cantidad_minima !== '' ? parseInt(data.cantidad_minima) : 1;
 
             const nuevo = await prisma.inventario.create({
                 data,
@@ -93,12 +95,12 @@ const inventarioController = {
 
             res.status(201).json(nuevo);
         } catch (error) {
-            console.error("Error en inventario.create:", error);
+            logger.error("Error en inventario.create:", error);
             const duplicateError = buildUniqueConstraintError(error, {
                 codigo: "Ya existe un artículo de inventario registrado con ese código.",
             }, "Ya existe un artículo de inventario con uno de los datos únicos ingresados.");
             if (duplicateError) return res.status(duplicateError.status).json(duplicateError.body);
-            res.status(500).json({ error: "Error al crear el artículo" });
+            res.status(500).json({ status: "error", mensaje: "Error al crear el artículo" });
         }
     },
 
@@ -118,11 +120,11 @@ const inventarioController = {
                     }
                 }
             });
-            if (!item) return res.status(404).json({ error: "Artículo no encontrado" });
+            if (!item) return res.status(404).json({ status: "error", mensaje: "Artículo no encontrado" });
             res.json(item);
         } catch (error) {
-            console.error("Error en inventario.getById:", error);
-            res.status(500).json({ error: "Error al buscar el artículo" });
+            logger.error("Error en inventario.getById:", error);
+            res.status(500).json({ status: "error", mensaje: "Error al buscar el artículo" });
         }
     },
 
@@ -136,7 +138,8 @@ const inventarioController = {
                 data.imagen_ruta = req.file.path.replace(/\\/g, '/');
             }
 
-            if (data.cantidad) data.cantidad = parseInt(data.cantidad);
+            if (data.cantidad !== undefined && data.cantidad !== null && data.cantidad !== '') data.cantidad = parseInt(data.cantidad);
+            if (data.cantidad_minima !== undefined && data.cantidad_minima !== null && data.cantidad_minima !== '') data.cantidad_minima = parseInt(data.cantidad_minima);
 
             const actualizado = await prisma.inventario.update({
                 where: { id: req.params.id },
@@ -144,12 +147,12 @@ const inventarioController = {
             });
             res.json(actualizado);
         } catch (error) {
-            console.error("Error en inventario.update:", error);
+            logger.error("Error en inventario.update:", error);
             const duplicateError = buildUniqueConstraintError(error, {
                 codigo: "Ya existe un artículo de inventario registrado con ese código.",
             }, "Ya existe un artículo de inventario con uno de los datos únicos ingresados.");
             if (duplicateError) return res.status(duplicateError.status).json(duplicateError.body);
-            res.status(500).json({ error: "Error al actualizar el artículo" });
+            res.status(500).json({ status: "error", mensaje: "Error al actualizar el artículo" });
         }
     },
 
@@ -159,14 +162,14 @@ const inventarioController = {
             await prisma.inventario.delete({ where: { id: req.params.id } });
             res.json({ message: "Artículo eliminado correctamente" });
         } catch (error) {
-            console.error("Error en inventario.delete:", error);
+            logger.error("Error en inventario.delete:", error);
             // Error de restricción de llave foránea (si tiene préstamos o movimientos)
             if (error.code === 'P2003') {
                 return res.status(400).json({
                     error: "No se puede eliminar: el artículo tiene historial de movimientos o préstamos asociados."
                 });
             }
-            res.status(500).json({ error: "Error al eliminar el artículo" });
+            res.status(500).json({ status: "error", mensaje: "Error al eliminar el artículo" });
         }
     }
 };

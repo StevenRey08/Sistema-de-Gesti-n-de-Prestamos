@@ -52,8 +52,9 @@ model Usuario {
   activo           Boolean      @default(true)
   movimientos      Movimiento[]
   prestamos        Prestamo[]
-  rol              Role?        @relation(fields: [rol_id], references: [id])
+  rol              Role?        @relation(fields: [rol_id], references: [id], onDelete: Restrict)
 
+  @@index([rol_id])
   @@map("usuarios")
 }
 
@@ -107,11 +108,13 @@ model Inventario {
   ubicacion_id    String?               @db.Uuid
   cantidad_minima Int                   @default(1)
   imagen_ruta     String?
-  categoria       CategoriaHerramienta? @relation(fields: [categoria_id], references: [id])
-  ubicacion       Ubicacion?            @relation(fields: [ubicacion_id], references: [id])
+  categoria       CategoriaHerramienta? @relation(fields: [categoria_id], references: [id], onDelete: Restrict)
+  ubicacion       Ubicacion?            @relation(fields: [ubicacion_id], references: [id], onDelete: Restrict)
   movimientos     Movimiento[]
   prestamos       Prestamo[]
 
+  @@index([categoria_id])
+  @@index([ubicacion_id])
   @@map("inventario")
 }
 
@@ -127,9 +130,12 @@ model Prestamo {
   observaciones    String?
   movimientos      Movimiento[]
   inventario       Inventario?  @relation(fields: [inventario_id], references: [id], onDelete: Cascade)
-  persona          Persona?     @relation(fields: [persona_id], references: [id])
-  usuario          Usuario?     @relation(fields: [usuario_id], references: [id])
+  persona          Persona?     @relation(fields: [persona_id], references: [id], onDelete: Restrict)
+  usuario          Usuario?     @relation(fields: [usuario_id], references: [id], onDelete: Restrict)
 
+  @@index([inventario_id])
+  @@index([persona_id])
+  @@index([estado])
   @@map("prestamos")
 }
 
@@ -152,5 +158,7 @@ model Movimiento {
   ubicacion_origen     Ubicacion?  @relation("UbicacionOrigen", fields: [ubicacion_origen_id], references: [id])
   usuario              Usuario?    @relation(fields: [usuario_id], references: [id])
 
+  @@index([inventario_id])
+  @@index([tipo])
   @@map("movimientos")
 }

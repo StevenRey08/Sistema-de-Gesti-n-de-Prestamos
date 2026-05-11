@@ -1,4 +1,5 @@
 const { prisma } = require('../db');
+const logger = require('../utils/logger');
 
 /**
  * Middleware para verificar permisos dinámicos basados en la base de datos
@@ -11,35 +12,33 @@ const checkPermiso = (nombreModulo, accion) => {
             const { rol_id } = req.usuario; // Extraído por verificarToken
 
             if (!rol_id) {
-                return res.status(403).json({ error: "No tienes un rol asignado" });
+                return res.status(403).json({ status: "error", mensaje: "No tienes un rol asignado" });
             }
 
-            // Buscar el permiso para este rol y este módulo
+            // Normalizar a mayúsculas para consistencia con BD
+            const modulo = nombreModulo.toUpperCase();
+
             const permiso = await prisma.permiso.findFirst({
                 where: {
                     rol_id: rol_id,
                     modulo: {
-                        nombre: {
-                            contains: nombreModulo,
-                            mode: 'insensitive'
-                        }
+                        nombre: modulo
                     }
                 }
             });
 
             if (!permiso) {
-                return res.status(403).json({ error: `No tienes permisos para el módulo ${nombreModulo}` });
+                return res.status(403).json({ status: "error", mensaje: `No tienes permisos para el módulo ${modulo}` });
             }
 
-            // Verificar la acción específica
             if (!permiso[accion]) {
-                return res.status(403).json({ error: `No tienes permiso para ${accion} en ${nombreModulo}` });
+                return res.status(403).json({ status: "error", mensaje: `No tienes permiso para ${accion} en ${modulo}` });
             }
 
             next();
         } catch (error) {
-            console.error("Error en checkPermiso:", error);
-            res.status(500).json({ error: "Error al verificar permisos" });
+            logger.error("Error en checkPermiso:", error);
+            res.status(500).json({ status: "error", mensaje: "Error al verificar permisos" });
         }
     };
 };

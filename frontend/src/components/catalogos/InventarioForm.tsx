@@ -61,7 +61,6 @@ export default function InventarioForm({ item = null, onGuardar, onCancelar }: I
 
   function validar() {
     const e: FormErrors<InventarioFormState> = {};
-    if (!form.codigo.trim()) e.codigo = 'Código obligatorio';
     if (!form.nombre.trim()) e.nombre = 'Nombre obligatorio';
     if (!form.cantidad || Number(form.cantidad) < 0) e.cantidad = 'Inválido';
     setErrores(e);
@@ -75,8 +74,9 @@ export default function InventarioForm({ item = null, onGuardar, onCancelar }: I
     if (!validar()) return;
     setCargando(true);
     
+    const codigoTrimmed = form.codigo.trim().toUpperCase();
     const body: InventarioPayload = {
-      codigo: form.codigo.trim().toUpperCase(),
+      ...(codigoTrimmed ? { codigo: codigoTrimmed } : {}),
       nombre: form.nombre.trim(),
       categoria_id: form.categoria_id || null,
       ubicacion_id: form.ubicacion_id || null,
@@ -100,8 +100,8 @@ export default function InventarioForm({ item = null, onGuardar, onCancelar }: I
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
-          <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Código *</label>
-          <input name="codigo" value={form.codigo} onChange={handleChange} className="soft-input" placeholder="Ej: HERR-001" />
+          <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Código <span className="text-[var(--text-muted)]">(opcional — se auto-genera si se deja vacío)</span></label>
+          <input name="codigo" value={form.codigo} onChange={handleChange} className="soft-input" placeholder="Dejar vacío para auto-generar" />
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Nombre *</label>

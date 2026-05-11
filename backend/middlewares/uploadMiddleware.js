@@ -2,6 +2,14 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
+// Firmas de archivos de imagen (magic bytes)
+const IMAGE_SIGNATURES = {
+    'ffd8ff': 'image/jpeg',
+    '89504e47': 'image/png',
+    '47494638': 'image/gif',
+    '52494646': 'image/webp',  // WEBP (los bytes 8-11 deben ser 'WEBP')
+};
+
 // Asegurar que la carpeta de subidas existe
 const uploadDir = 'uploads/inventario';
 if (!fs.existsSync(uploadDir)) {
@@ -19,13 +27,13 @@ const storage = multer.diskStorage({
     }
 });
 
-// Filtro de archivos (solo imágenes)
+// Filtro de archivos (solo imágenes con verificación de magic bytes)
 const fileFilter = (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-        cb(null, true);
-    } else {
-        cb(new Error('No es una imagen válida. Por favor sube solo archivos de imagen.'), false);
+    // Primera verificación por mimetype
+    if (!file.mimetype.startsWith('image/')) {
+        return cb(new Error('No es una imagen válida. Por favor sube solo archivos de imagen.'), false);
     }
+    cb(null, true);
 };
 
 const upload = multer({ 
@@ -34,4 +42,28 @@ const upload = multer({
     limits: { fileSize: 2 * 1024 * 1024 } // Límite de 2MB
 });
 
-module.exports = upload;
+// Middleware para validar magic bytes del archivo ya subido
+const validarImagenSubida = (req, res, next) => {
+    if (!req.file) return next();
+
+    const buffer = Buffer.alloc(12);
+    try {
+        const fd = fs.openSync(req.file.path, 'r');
+        fs.readSync(fd, buffer, 0, 12, 0);
+        fs.closeSync(fd);
+    } catch {
+        return res.status(400).json({ status: "error", mensaje: "Error al validar la imagen" });
+    }
+
+    const header = buffer.toString('hex', 0, 4);
+    const esValida = Object.keys(IMAGE_SIGNATURES).some(sig => header.startsWith(sig));
+
+    if (!esValida) {
+        fs.unlink(req.file.path, () => {});
+        return res.status(400).json({ status: "error", mensaje: "El archivo no es una imagen válida" });
+    }
+
+    next();
+};
+
+module.exports = { upload, validarImagenSubida };

@@ -1,4 +1,5 @@
 const { prisma } = require('../db');
+const logger = require('../utils/logger');
 
 const movimientoController = {
     // ... (getAll se mantiene igual)
@@ -24,7 +25,7 @@ const movimientoController = {
             });
             res.json(movimientos);
         } catch (error) {
-            res.status(500).json({ error: "Error al obtener historial" });
+            res.status(500).json({ status: "error", mensaje: "Error al obtener historial" });
         }
     },
 
@@ -98,10 +99,8 @@ const movimientoController = {
 
             res.status(201).json(resultado);
         } catch (error) {
-            console.error("Error en movimientos.create:", error);
-            res.status(400).json({
-                error: error.message || "Error al procesar el movimiento"
-            });
+            logger.error("Error en movimientos.create:", error);
+            res.status(400).json({ status: "error", mensaje: error.message || "Error al procesar el movimiento" });
         }
     },
 
@@ -117,10 +116,10 @@ const movimientoController = {
                     persona: true
                 }
             });
-            if (!movimiento) return res.status(404).json({ error: "No encontrado" });
+            if (!movimiento) return res.status(404).json({ status: "error", mensaje: "No encontrado" });
             res.json(movimiento);
         } catch (error) {
-            res.status(500).json({ error: "Error al buscar" });
+            res.status(500).json({ status: "error", mensaje: "Error al buscar" });
         }
     },
 
@@ -129,7 +128,7 @@ const movimientoController = {
             await prisma.movimiento.delete({ where: { id: req.params.id } });
             res.json({ message: "Eliminado" });
         } catch (error) {
-            res.status(500).json({ error: "Error al eliminar" });
+            res.status(500).json({ status: "error", mensaje: "Error al eliminar" });
         }
     }
 };

@@ -7,7 +7,7 @@ import type { Prestamo, PrestamoPayload, EstadoPrestamo, ItemInventario, Persona
 import { notifyErrorPayload } from '../../lib/errors';
 import { useNotification } from '../ui/NotificationContext';
 
-const ESTADOS: EstadoPrestamo[] = ['PENDIENTE', 'DEVUELTO'];
+const ESTADOS: EstadoPrestamo[] = ['ACTIVO', 'DEVUELTO', 'VENCIDO'];
 
 interface PrestamoFormProps {
   prestamo?: Prestamo | null;
@@ -33,7 +33,7 @@ export default function PrestamoForm({ prestamo = null, onGuardar, onCancelar }:
     persona_id: prestamo?.persona_id ? String(prestamo.persona_id) : '',
     cantidad: prestamo?.cantidad || 1,
     fecha_devolucion: prestamo?.fecha_devolucion ? prestamo.fecha_devolucion.split('T')[0] : '',
-    estado: prestamo?.estado || 'PENDIENTE',
+    estado: prestamo?.estado || 'ACTIVO',
     observaciones: prestamo?.observaciones || '',
   });
   
