@@ -1,11 +1,13 @@
 const { esUUID } = require('../utils/validadores');
 
 const validarMovimiento = (req, res, next) => {
+    const usuario_id = req.usuario?.id || req.body.usuario_id;
+    req.body.usuario_id = usuario_id;
+
     const {
         inventario_id,
         tipo,
         cantidad,
-        usuario_id,
         ubicacion_destino_id,
         persona_id
     } = req.body;

@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../components/auth/AuthProvider';
 import { toSessionUser } from '../../lib/auth';
-import { usuariosApi } from '../../lib/api';
-import type { Usuario } from '../../lib/types';
+import api from '../../lib/api';
 import { useNotification } from '../../components/ui/NotificationContext';
 import { notifyErrorPayload } from '../../lib/errors';
 
@@ -17,17 +16,17 @@ export default function MiCuentaPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [currentUser, setCurrentUser] = useState<Usuario | null>(null);
 
   useEffect(() => {
     if (!user) return;
     const loadCurrentUser = async () => {
       try {
-        const data = await usuariosApi.getById(user.id) as Usuario;
-        setCurrentUser(data);
-        setNombre(data.nombre);
-        setApellido(data.apellido);
-        setUsuario(data.usuario);
+        const res = await api.get('/auth/me') as { status: string; usuario: { nombre: string; apellido: string; usuario: string } };
+        if (res.status === 'ok' && res.usuario) {
+          setNombre(res.usuario.nombre);
+          setApellido(res.usuario.apellido);
+          setUsuario(res.usuario.usuario);
+        }
       } catch (err) {
         const { message, details } = notifyErrorPayload(err, 'No se pudo cargar el perfil actual.');
         notify('error', message, details);
@@ -39,7 +38,7 @@ export default function MiCuentaPage() {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!user || !currentUser) return;
+    if (!user) return;
 
     const detalles = [];
     if (!nombre.trim() || !apellido.trim() || !usuario.trim()) {
@@ -61,20 +60,19 @@ export default function MiCuentaPage() {
 
     setLoading(true);
     try {
-      const payload = {
+      const payload: Record<string, string> = {
         nombre: nombre.trim(),
         apellido: apellido.trim(),
         usuario: usuario.trim(),
-        rol_id: currentUser.rol_id ?? null,
-        tipo_documento: currentUser.tipo_documento ?? null,
-        numero_documento: currentUser.numero_documento ?? null,
-        activo: currentUser.activo,
-        ...(password ? { contrasena: password } : {}),
       };
+      if (password) {
+        payload.contrasena = password;
+      }
 
-      const updated = await usuariosApi.update(user.id, payload) as Usuario;
-      setCurrentUser(updated);
-      updateCurrentUser(toSessionUser(updated));
+      const res = await api.put('/auth/me', payload) as { status: string; usuario: Record<string, unknown> };
+      if (res.status === 'ok' && res.usuario) {
+        updateCurrentUser(toSessionUser(res.usuario));
+      }
       setPassword('');
       setConfirmPassword('');
       notify('success', 'Tus datos fueron actualizados correctamente.');

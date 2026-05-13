@@ -53,8 +53,9 @@ const validarPrestamo = (req, res, next) => {
  * Valida el proceso de devolución de un préstamo existente
  */
 const validarDevolucion = (req, res, next) => {
-    const { id } = req.params; // ID del préstamo que viene en la URL
-    const { usuario_id, estado_fisico } = req.body;
+    const { id } = req.params;
+    const { estado_fisico } = req.body;
+    const usuario_id = req.usuario?.id;
 
     const errores = [];
 

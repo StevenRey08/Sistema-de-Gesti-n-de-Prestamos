@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ubicacionesApi } from '../../lib/api';
 import { useNotification } from '../../components/ui/NotificationContext';
+import { usePermiso } from '../../lib/permissions';
 import { notifyErrorPayload } from '../../lib/errors';
 
 interface Ubicacion {
@@ -24,6 +25,7 @@ const EMPTY_UBICACION = {
 
 export default function UbicacionesPage() {
   const { notify } = useNotification();
+  const { puedeIngresar, puedeActualizar, puedeEliminar } = usePermiso('UBICACIONES');
   const [ubicaciones, setUbicaciones] = useState<Ubicacion[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -134,9 +136,11 @@ export default function UbicacionesPage() {
           </p>
         </div>
 
-        <button onClick={abrirNuevo} className="soft-btn-primary">
-          + Nueva Ubicación
-        </button>
+        {puedeIngresar && (
+          <button onClick={abrirNuevo} className="soft-btn-primary">
+            + Nueva Ubicación
+          </button>
+        )}
       </div>
 
       <div className="flex items-center gap-3 mt-6">
@@ -191,18 +195,22 @@ export default function UbicacionesPage() {
                     {u.padre ? `${u.padre.codigo} - ${u.padre.nombre}` : '—'}
                   </td>
                   <td className="px-4 py-3 text-right space-x-2">
-                    <button
-                      onClick={() => abrirEditar(u)}
-                      className="text-xs font-medium text-[var(--accent)] hover:text-[var(--accent-strong)]"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => setElimId(u.id)}
-                      className="text-xs font-medium text-[var(--danger)] hover:opacity-80"
-                    >
-                      Eliminar
-                    </button>
+                    {puedeActualizar && (
+                      <button
+                        onClick={() => abrirEditar(u)}
+                        className="text-xs font-medium text-[var(--accent)] hover:text-[var(--accent-strong)]"
+                      >
+                        Editar
+                      </button>
+                    )}
+                    {puedeEliminar && (
+                      <button
+                        onClick={() => setElimId(u.id)}
+                        className="text-xs font-medium text-[var(--danger)] hover:opacity-80"
+                      >
+                        Eliminar
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

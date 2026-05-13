@@ -53,7 +53,6 @@ export interface ItemInventario {
   nombre: string;
   estado?: string | null;
   cantidad: number;
-  cantidad_minima: number;
   imagen_ruta?: string | null;
   categoria_id?: string | null;
   ubicacion_id?: string | null;
@@ -132,8 +131,7 @@ export interface InventarioPayload {
   ubicacion_id?: string | null;
   estado?: string;
   cantidad: number;
-  cantidad_minima: number;
-  imagen?: File | null;
+  imagen_ruta?: string | null;
 }
 
 export interface PrestamoPayload {

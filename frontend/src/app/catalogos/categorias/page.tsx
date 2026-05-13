@@ -5,10 +5,12 @@ import CategoriaForm from '../../../components/catalogos/CategoriaForm';
 import type { Categoria, CategoriaPayload } from '../../../lib/types';
 
 import { useNotification } from '../../../components/ui/NotificationContext';
+import { usePermiso } from '../../../lib/permissions';
 import { notifyErrorPayload } from '../../../lib/errors';
 
 export default function CategoriasPage() {
   const { notify } = useNotification();
+  const { puedeIngresar, puedeActualizar, puedeEliminar } = usePermiso('CATEGORIAS');
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [cargando, setCargando] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -63,12 +65,14 @@ export default function CategoriasPage() {
           <h1 className="page-title">Categorías</h1>
           <p className="page-subtitle">{categorias.length} registros</p>
         </div>
-        <button
-          onClick={() => { setEditando(null); setShowForm(true); }}
-          className="soft-btn-primary"
-        >
-          Nueva Categoría
-        </button>
+        {puedeIngresar && (
+          <button
+            onClick={() => { setEditando(null); setShowForm(true); }}
+            className="soft-btn-primary"
+          >
+            Nueva Categoría
+          </button>
+        )}
       </div>
 
       {/* Modal Formulario */}
@@ -122,10 +126,14 @@ export default function CategoriasPage() {
                   <td className="px-4 py-3 font-medium text-[var(--text-main)]">{c.nombre}</td>
                   <td className="px-4 py-3 text-[var(--text-muted)]">{c.descripcion || '—'}</td>
                   <td className="px-4 py-3 text-right space-x-2">
-                    <button onClick={() => { setEditando(c); setShowForm(true); }}
-                      className="text-blue-400 hover:text-blue-300 text-xs font-medium">Editar</button>
-                    <button onClick={() => setElim(c.id)}
-                      className="text-red-400 hover:text-red-300 text-xs font-medium">Eliminar</button>
+                    {puedeActualizar && (
+                      <button onClick={() => { setEditando(c); setShowForm(true); }}
+                        className="text-blue-400 hover:text-blue-300 text-xs font-medium">Editar</button>
+                    )}
+                    {puedeEliminar && (
+                      <button onClick={() => setElim(c.id)}
+                        className="text-red-400 hover:text-red-300 text-xs font-medium">Eliminar</button>
+                    )}
                   </td>
                 </tr>
               ))}

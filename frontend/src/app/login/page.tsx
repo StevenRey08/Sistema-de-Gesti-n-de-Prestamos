@@ -1,18 +1,25 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../components/auth/AuthProvider';
 import { useNotification } from '../../components/ui/NotificationContext';
 import { notifyErrorPayload } from '../../lib/errors';
+import { obtenerRutaDestino } from '../../lib/permissions';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { signIn } = useAuth();
+  const { user, signIn } = useAuth();
   const { notify } = useNotification();
   const [usuario, setUsuario] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      router.replace(obtenerRutaDestino(user.permisos));
+    }
+  }, [user, router]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -24,7 +31,6 @@ export default function LoginPage() {
 
     try {
       await signIn(usuario.trim(), password);
-      router.replace('/');
     } catch (err: unknown) {
       const { message, details } = notifyErrorPayload(err, 'Credenciales inválidas.');
       notify('error', message, details);

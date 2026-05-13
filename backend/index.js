@@ -4,7 +4,6 @@ const cors = require('cors');
 const morgan = require('morgan');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
-const rateLimit = require('express-rate-limit');
 const { pool } = require('./db');
 const app = express();
 
@@ -15,24 +14,6 @@ if (missingVars.length > 0) {
     console.error(`ERROR FATAL: Faltan variables de entorno: ${missingVars.join(', ')}`);
     process.exit(1);
 }
-
-// Rate limiting global para toda la API
-const apiLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 200,
-    message: { status: "error", mensaje: "Demasiadas peticiones. Intenta de nuevo en 15 minutos." },
-    standardHeaders: true,
-    legacyHeaders: false,
-});
-
-// Rate limit más estricto para login (se aplica en la ruta)
-const loginLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 5,
-    message: { status: "error", mensaje: "Demasiados intentos de inicio de sesión. Intenta de nuevo en 15 minutos." },
-    standardHeaders: true,
-    legacyHeaders: false,
-});
 
 // Importar middlewares
 const { verificarToken } = require('./middlewares/authMiddleware');
@@ -49,11 +30,14 @@ const movimientoRoutes = require('./routes/movimientoRoutes');
 const ubicacionRoutes = require('./routes/ubicacionRoutes');
 const authRoutes = require('./routes/authRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const reportesRoutes = require('./routes/reportesRoutes');
 
 // Middlewares
-app.use(helmet());
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: process.env.FRONTEND_URL
+      ? process.env.FRONTEND_URL.split(',')
+      : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:3003'],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
@@ -61,11 +45,9 @@ app.use(cors({
 app.use(morgan('combined'));
 app.use(express.json());
 app.use(cookieParser());
-app.use('/uploads', verificarToken, express.static('uploads'));
+app.use('/uploads', express.static('uploads'));
 
 // Rutas
-app.use('/api', apiLimiter);
-app.use('/api/auth/login', loginLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/personas', personaRoutes);
 app.use('/api/categorias', categoriaRoutes);
@@ -77,6 +59,7 @@ app.use('/api/prestamos', prestamoRoutes);
 app.use('/api/movimientos', movimientoRoutes);
 app.use('/api/ubicaciones', ubicacionRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/reportes', reportesRoutes);
 
 
 

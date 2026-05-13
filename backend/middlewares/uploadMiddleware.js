@@ -10,15 +10,14 @@ const IMAGE_SIGNATURES = {
     '52494646': 'image/webp',  // WEBP (los bytes 8-11 deben ser 'WEBP')
 };
 
-// Asegurar que la carpeta de subidas existe
 const uploadDir = 'uploads/inventario';
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
 
 // Configuración del almacenamiento
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
         cb(null, uploadDir);
     },
     filename: (req, file, cb) => {

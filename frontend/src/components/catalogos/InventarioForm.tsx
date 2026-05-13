@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { ubicacionesApi, categoriasApi } from '../../lib/api';
+import { ubicacionesApi, categoriasApi, imagenUrl } from '../../lib/api';
 import FilterableSelect from '../ui/FilterableSelect';
 import type { ItemInventario, InventarioPayload, Ubicacion, Categoria, FormErrors } from '../../lib/types';
 import { notifyErrorPayload } from '../../lib/errors';
@@ -8,7 +8,7 @@ import { useNotification } from '../ui/NotificationContext';
 
 interface InventarioFormProps {
   item?: ItemInventario | null;
-  onGuardar: (form: InventarioPayload) => Promise<void>;
+  onGuardar: (form: InventarioPayload | FormData) => Promise<void>;
   onCancelar: () => void;
 }
 
@@ -19,7 +19,7 @@ interface InventarioFormState {
   ubicacion_id: string;
   estado: string;
   cantidad: number | string;
-  cantidad_minima: number | string;
+  imagen_ruta: string;
 }
 
 export default function InventarioForm({ item = null, onGuardar, onCancelar }: InventarioFormProps) {
@@ -31,32 +31,34 @@ export default function InventarioForm({ item = null, onGuardar, onCancelar }: I
     ubicacion_id: item?.ubicacion_id || '',
     estado: item?.estado || 'Nuevo',
     cantidad: item?.cantidad || 1,
-    cantidad_minima: item?.cantidad_minima || 1,
+    imagen_ruta: item?.imagen_ruta || '',
   });
-  
+  const [archivo, setArchivo] = useState<File | null>(null);
+  const [vistaPrevia, setVistaPrevia] = useState<string>(imagenUrl(item?.imagen_ruta) || '');
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [ubicaciones, setUbicaciones] = useState<Ubicacion[]>([]);
   const [errores, setErrores] = useState<FormErrors<InventarioFormState>>({});
   const [cargando, setCargando] = useState(false);
-  const [imagenArchivo, setImagenArchivo] = useState<File | null>(null);
-  const [imagenPreview, setImagenPreview] = useState(item?.imagen_ruta || '');
 
   useEffect(() => {
     categoriasApi.getAll().then((d) => setCategorias(d as Categoria[]));
     ubicacionesApi.getAll().then((d) => setUbicaciones(d as Ubicacion[]));
   }, []);
 
-  useEffect(() => {
-    if (!imagenArchivo) return;
-    const previewUrl = URL.createObjectURL(imagenArchivo);
-    setImagenPreview(previewUrl);
-    return () => URL.revokeObjectURL(previewUrl);
-  }, [imagenArchivo]);
-
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
     if (errores[name as keyof InventarioFormState]) setErrores((prev) => ({ ...prev, [name]: '' }));
+  }
+
+  function handleArchivo(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] || null;
+    setArchivo(file);
+    if (file) {
+      setVistaPrevia(URL.createObjectURL(file));
+    } else {
+      setVistaPrevia(imagenUrl(form.imagen_ruta) || '');
+    }
   }
 
   function validar() {
@@ -73,21 +75,32 @@ export default function InventarioForm({ item = null, onGuardar, onCancelar }: I
     e.preventDefault();
     if (!validar()) return;
     setCargando(true);
-    
-    const codigoTrimmed = form.codigo.trim().toUpperCase();
-    const body: InventarioPayload = {
-      ...(codigoTrimmed ? { codigo: codigoTrimmed } : {}),
-      nombre: form.nombre.trim(),
-      categoria_id: form.categoria_id || null,
-      ubicacion_id: form.ubicacion_id || null,
-      estado: form.estado,
-      cantidad: Number(form.cantidad),
-      cantidad_minima: Number(form.cantidad_minima),
-      imagen: imagenArchivo,
-    };
 
     try {
-      await onGuardar(body);
+      if (archivo) {
+        const fd = new FormData();
+        fd.append('imagen', archivo);
+        fd.append('nombre', form.nombre.trim());
+        fd.append('estado', form.estado);
+        fd.append('cantidad', String(form.cantidad));
+        if (form.categoria_id) fd.append('categoria_id', form.categoria_id);
+        if (form.ubicacion_id) fd.append('ubicacion_id', form.ubicacion_id);
+        const codigoTrimmed = form.codigo.trim().toUpperCase();
+        if (codigoTrimmed) fd.append('codigo', codigoTrimmed);
+        await onGuardar(fd);
+      } else {
+        const codigoTrimmed = form.codigo.trim().toUpperCase();
+        const body: InventarioPayload = {
+          ...(codigoTrimmed ? { codigo: codigoTrimmed } : {}),
+          nombre: form.nombre.trim(),
+          categoria_id: form.categoria_id || null,
+          ubicacion_id: form.ubicacion_id || null,
+          estado: form.estado,
+          cantidad: Number(form.cantidad),
+          imagen_ruta: form.imagen_ruta || null,
+        };
+        await onGuardar(body);
+      }
     } catch (err: unknown) {
       const { message, details } = notifyErrorPayload(err, 'Error al guardar');
       notify('error', message, details);
@@ -133,10 +146,11 @@ export default function InventarioForm({ item = null, onGuardar, onCancelar }: I
           }))}
           placeholder="Buscar ubicación..."
           emptyLabel="Sin ubicaciones coincidentes"
+          disabled={!!item}
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
           <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Estado</label>
           <select name="estado" value={form.estado} onChange={handleChange} className="soft-select">
@@ -149,32 +163,39 @@ export default function InventarioForm({ item = null, onGuardar, onCancelar }: I
           <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Cantidad *</label>
           <input type="number" name="cantidad" value={form.cantidad} onChange={handleChange} min={0} className="soft-input" />
         </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Stock Mínimo</label>
-          <input type="number" name="cantidad_minima" value={form.cantidad_minima} onChange={handleChange} min={0} className="soft-input" />
-        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-[0.9fr_1.1fr]">
+      <div className="space-y-3">
         <div>
-          <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Imagen del artículo</label>
+          <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Subir archivo</label>
           <input
             type="file"
             accept="image/*"
-            onChange={(event) => setImagenArchivo(event.target.files?.[0] ?? null)}
-            className="soft-input cursor-pointer"
+            onChange={handleArchivo}
+            className="soft-input text-sm file:mr-3 file:rounded file:border-0 file:bg-[var(--accent)] file:px-3 file:py-1 file:text-sm file:text-white hover:file:opacity-90"
           />
-          <p className="mt-1 text-xs text-[var(--text-muted)]">Se permiten imágenes para identificar mejor el objeto del inventario.</p>
-        </div>
-        <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-2)] p-4">
-          <p className="mb-3 text-sm font-medium text-[var(--text-main)]">Vista previa</p>
-          {imagenPreview ? (
-            <img src={imagenPreview} alt="Vista previa del artículo" className="h-40 w-full rounded-2xl object-cover" />
-          ) : (
-            <div className="flex h-40 items-center justify-center rounded-2xl border border-dashed border-[var(--border)] text-sm text-[var(--text-muted)]">
-              Sin imagen seleccionada
+          {vistaPrevia && (
+            <div className="mt-2">
+              <img src={vistaPrevia} alt="Vista previa" className="max-h-32 rounded object-contain" />
             </div>
           )}
+        </div>
+        <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
+          <span className="h-px flex-1 bg-[var(--border)]" />
+          <span>o pega una URL externa</span>
+          <span className="h-px flex-1 bg-[var(--border)]" />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">URL de la imagen</label>
+          <input
+            name="imagen_ruta"
+            value={form.imagen_ruta}
+            onChange={handleChange}
+            className="soft-input"
+            placeholder="https://ejemplo.com/imagen.jpg"
+            disabled={!!archivo}
+          />
+          <p className="mt-1 text-xs text-[var(--text-muted)]">Alternativamente, pega una URL externa</p>
         </div>
       </div>
 

@@ -2,27 +2,35 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '../auth/AuthProvider';
 
 interface MenuItem {
   label: string;
   icon: string;
   href: string;
+  modulo?: string;
 }
 
 const menuItems: MenuItem[] = [
-  { label: 'Inicio', icon: '◌', href: '/' },
-  { label: 'Categorías', icon: '◇', href: '/catalogos/categorias' },
-  { label: 'Personas', icon: '◎', href: '/catalogos/personas' },
-  { label: 'Ubicaciones', icon: '▤', href: '/ubicaciones' },
-  { label: 'Inventario', icon: '◫', href: '/inventario' },
-  { label: 'Préstamos', icon: '↗', href: '/prestamos' },
-  { label: 'Movimientos', icon: '↺', href: '/movimientos' },
-  { label: 'Seguridad', icon: '◈', href: '/seguridad' },
+  { label: 'Inicio', icon: '◌', href: '/', modulo: 'DASHBOARD' },
+  { label: 'Categorías', icon: '◇', href: '/catalogos/categorias', modulo: 'CATEGORIAS' },
+  { label: 'Personas', icon: '◎', href: '/catalogos/personas', modulo: 'PERSONAS' },
+  { label: 'Ubicaciones', icon: '▤', href: '/ubicaciones', modulo: 'UBICACIONES' },
+  { label: 'Inventario', icon: '◫', href: '/inventario', modulo: 'INVENTARIO' },
+  { label: 'Préstamos', icon: '↗', href: '/prestamos', modulo: 'PRESTAMOS' },
+  { label: 'Movimientos', icon: '↺', href: '/movimientos', modulo: 'MOVIMIENTOS' },
+  { label: 'Reportes', icon: '▣', href: '/reportes' },
+  { label: 'Seguridad', icon: '◈', href: '/seguridad', modulo: 'USUARIOS' },
 ];
 
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { user } = useAuth();
+
+  const itemsVisibles = user?.permisos
+    ? menuItems.filter((item) => !item.modulo || user.permisos[item.modulo]?.leer)
+    : [];
 
   return (
     <aside
@@ -45,7 +53,7 @@ export default function Sidebar() {
       <div className="px-4">
         <div className="rounded-[28px] border border-white/14 bg-white/8 p-3">
           <nav className="space-y-1">
-            {menuItems.map((item) => {
+            {itemsVisibles.map((item) => {
               const isActive =
                 item.href === '/'
                   ? pathname === item.href

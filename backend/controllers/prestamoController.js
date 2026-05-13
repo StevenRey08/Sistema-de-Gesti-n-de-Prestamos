@@ -1,4 +1,4 @@
-const { prisma } = require('../db');
+﻿const { prisma } = require('../db');
 
 const prestamoController = {
     // Listar y filtrar por estado o búsqueda general
@@ -32,7 +32,7 @@ const prestamoController = {
         }
     },
 
-    // Obtener solo préstamos ACTIVO (Buscador rápido para devoluciones)
+    // Obtener solo préstamos ACTIVO (Buscador rÃ¡pido para devoluciones)
     getPendientes: async (req, res) => {
         try {
             const pendientes = await prisma.prestamo.findMany({
@@ -49,7 +49,7 @@ const prestamoController = {
         }
     },
 
-    // Crear un nuevo préstamo (Con validación de reserva mínima y alertas)
+    // Crear un nuevo préstamo (Con validaciÃ³n de reserva mínima y alertas)
     create: async (req, res) => {
         const { inventario_id, persona_id, cantidad, observaciones } = req.body;
         const usuario_id = req.usuario.id; // Tomamos el ID del token por seguridad
@@ -57,16 +57,16 @@ const prestamoController = {
 
         try {
             const resultado = await prisma.$transaction(async (tx) => {
-                // 1. Obtener artículo y validar stock mínimo
+                // 1. Obtener artículo y validar stock mÃ­nimo
                 const articulo = await tx.inventario.findUnique({ where: { id: inventario_id } });
 
                 if (!articulo) throw new Error("El artículo no existe.");
 
                 const cantidadResultante = articulo.cantidad - cantSolicitada;
 
-                // Bloqueo si baja del stock_minimo
-                if (cantidadResultante < articulo.cantidad_minima) {
-                    throw new Error(`Operación denegada: El stock no puede bajar de la reserva mínima (${articulo.cantidad_minima}). Disponible: ${articulo.cantidad}.`);
+                // Bloqueo si no hay suficiente stock
+                if (cantidadResultante < 0) {
+                    throw new Error(`Stock insuficiente. Disponible: ${articulo.cantidad}, solicitado: ${cantSolicitada}.`);
                 }
 
                 // 2. Crear el préstamo
@@ -81,17 +81,20 @@ const prestamoController = {
                     }
                 });
 
-                // 3. Restar del inventario
+                // 3. Restar del inventario y marcar como Prestado (solo si no lo estaba ya)
+                const prestadoData = articulo.estado === 'Prestado'
+                    ? { cantidad: { decrement: cantSolicitada } }
+                    : { cantidad: { decrement: cantSolicitada }, estado_anterior: articulo.estado, estado: 'Prestado' };
                 const articuloActualizado = await tx.inventario.update({
                     where: { id: inventario_id },
-                    data: { cantidad: { decrement: cantSolicitada } }
+                    data: prestadoData
                 });
 
                 // 4. Registrar movimiento de SALIDA
                 await tx.movimiento.create({
                     data: {
                         inventario_id,
-                        tipo: 'SALIDA',
+                        tipo: 'PRESTAMO',
                         cantidad: cantSolicitada,
                         persona_id,
                         usuario_id,
@@ -99,9 +102,9 @@ const prestamoController = {
                     }
                 });
 
-                // 5. Preparar objeto de alerta si el stock quedó exactamente en el mínimo
-                const alerta = articuloActualizado.cantidad === articuloActualizado.cantidad_minima
-                    ? { mensaje: `¡Alerta! ${articuloActualizado.nombre} ha alcanzado su stock mínimo.`, nivel: 'CRITICO' }
+                // 5. Preparar objeto de alerta si el stock llegó a 0
+                const alerta = articuloActualizado.cantidad <= 2
+                    ? { mensaje: `¡Alerta! ${articuloActualizado.nombre} se ha quedado sin stock.`, nivel: 'CRITICO' }
                     : null;
 
                 return { nuevoPrestamo, alerta };
@@ -117,7 +120,7 @@ const prestamoController = {
         }
     },
 
-    // Registrar Devolución (Suma stock automáticamente)
+    // Registrar Devolución (Suma stock automÃ¡ticamente)
     registrarDevolucion: async (req, res) => {
         const { id } = req.params;
         const { observaciones_dev, estado_fisico } = req.body;
@@ -142,12 +145,20 @@ const prestamoController = {
                     }
                 });
 
-                // 2. Devolver stock al inventario
+                // 2. Devolver stock al inventario y restaurar estado anterior si no hay más préstamos activos
+                const articuloDev = await tx.inventario.findUnique({ where: { id: prestamo.inventario_id } });
+                const activosRestantes = await tx.prestamo.count({
+                    where: { inventario_id: prestamo.inventario_id, estado: 'ACTIVO', id: { not: prestamo.id } }
+                });
+                const estadoRestaurado = activosRestantes === 0
+                    ? (estado_fisico || articuloDev?.estado_anterior || 'Nuevo')
+                    : undefined;
                 await tx.inventario.update({
                     where: { id: prestamo.inventario_id },
                     data: {
                         cantidad: { increment: prestamo.cantidad },
-                        estado: estado_fisico || undefined
+                        estado: estadoRestaurado,
+                        ...(activosRestantes === 0 ? { estado_anterior: null } : {}),
                     }
                 });
 
@@ -155,7 +166,7 @@ const prestamoController = {
                 await tx.movimiento.create({
                     data: {
                         inventario_id: prestamo.inventario_id,
-                        tipo: 'ENTRADA',
+                        tipo: 'DEVUELTO',
                         cantidad: prestamo.cantidad,
                         persona_id: prestamo.persona_id,
                         usuario_id,
@@ -214,11 +225,22 @@ const prestamoController = {
             }
 
             await prisma.$transaction(async (tx) => {
-                // Si está ACTIVO, restaurar el stock antes de eliminar
+                // Si estÃ¡ ACTIVO, restaurar el stock y el estado anterior antes de eliminar
                 if (prestamo.estado === 'ACTIVO') {
+                    const articulo = await tx.inventario.findUnique({ where: { id: prestamo.inventario_id } });
+                    const activosRestantes = await tx.prestamo.count({
+                        where: { inventario_id: prestamo.inventario_id, estado: 'ACTIVO', id: { not: prestamo.id } }
+                    });
+                    const estadoRestaurado = activosRestantes === 0
+                        ? (articulo?.estado_anterior || 'Nuevo')
+                        : undefined;
                     await tx.inventario.update({
                         where: { id: prestamo.inventario_id },
-                        data: { cantidad: { increment: prestamo.cantidad } }
+                        data: {
+                            cantidad: { increment: prestamo.cantidad },
+                            estado: estadoRestaurado,
+                            ...(activosRestantes === 0 ? { estado_anterior: null } : {}),
+                        }
                     });
                 }
 

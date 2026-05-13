@@ -26,11 +26,11 @@ const dashboardController = {
                 })
             ]);
 
-            // Obtener alertas de stock (cantidad <= cantidad_minima)
+            // Obtener alertas de stock (cantidad <= 2)
             const inventario = await prisma.inventario.findMany({
-                select: { cantidad: true, cantidad_minima: true }
+                select: { cantidad: true }
             });
-            const alertasStock = inventario.filter(i => i.cantidad <= i.cantidad_minima).length;
+            const alertasStock = inventario.filter(i => i.cantidad <= 2).length;
 
             res.json({
                 counts: {

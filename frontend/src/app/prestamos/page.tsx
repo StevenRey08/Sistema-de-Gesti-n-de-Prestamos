@@ -1,14 +1,15 @@
-'use client';
+﻿'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import api, { prestamosApi } from '../../lib/api';
 import PrestamoForm from '../../components/catalogos/PrestamoForm';
 import type { Prestamo, PrestamoPayload } from '../../lib/types';
 import { useNotification } from '../../components/ui/NotificationContext';
+import { usePermiso } from '../../lib/permissions';
 import { notifyErrorPayload } from '../../lib/errors';
 
 const BADGE: Record<string, string> = {
   ACTIVO:   'bg-yellow-900 text-yellow-300',
-  DEVUELTO: 'bg-green-900 text-green-300',
+  DEVUELTO: 'bg-[var(--surface-2)] text-sky-500',
   VENCIDO:  'bg-red-900 text-red-300',
 };
 
@@ -19,12 +20,12 @@ function fmt(fecha: string | null) {
 
 export default function PrestamosPage() {
   const { notify } = useNotification();
+  const { puedeIngresar, puedeActualizar } = usePermiso('PRESTAMOS');
   const [prestamos, setPrestamos] = useState<Prestamo[]>([]);
   const [filtro, setFiltro]       = useState('todos');
   const [cargando, setCargando]   = useState(true);
   const [showForm, setShowForm]   = useState(false);
   const [editando, setEditando]   = useState<Prestamo | null>(null);
-  const [eliminando, setElim]     = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -45,16 +46,6 @@ export default function PrestamosPage() {
     if (editando) await prestamosApi.update(editando.id, form);
     else          await prestamosApi.create(form);
     setShowForm(false); setEditando(null); cargar();
-  }
-
-  async function handleEliminar() {
-    try {
-      if (eliminando) await prestamosApi.delete(eliminando);
-      setElim(null); cargar();
-    } catch (e: unknown) {
-      const { message, details } = notifyErrorPayload(e, 'Error al eliminar');
-      notify('error', message, details);
-    }
   }
 
   async function marcarDevuelto(id: string) {
@@ -84,10 +75,12 @@ export default function PrestamosPage() {
             <span className="ml-1 font-semibold text-[var(--warning)]">{activos} activos</span>
           </p>
         </div>
-        <button onClick={() => { setEditando(null); setShowForm(true); }}
-          className="soft-btn-primary">
-          + Nuevo Préstamo
-        </button>
+        {puedeIngresar && (
+          <button onClick={() => { setEditando(null); setShowForm(true); }}
+            className="soft-btn-primary">
+            + Nuevo Préstamo
+          </button>
+        )}
       </div>
 
       {/* Filtros rápidos */}
@@ -105,21 +98,6 @@ export default function PrestamosPage() {
           <div className="modal-panel w-full max-w-2xl p-6">
             <PrestamoForm prestamo={editando} onGuardar={handleGuardar}
               onCancelar={() => { setShowForm(false); setEditando(null); }} />
-          </div>
-        </div>
-      )}
-
-      {eliminando && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-gray-900 rounded-2xl shadow-2xl p-6 max-w-sm w-full text-center space-y-4 border border-gray-700">
-            <p className="text-white font-medium">¿Eliminar este préstamo?</p>
-            <p className="text-sm text-gray-400">Esta acción no se puede deshacer.</p>
-            <div className="flex gap-3 justify-center">
-              <button onClick={() => setElim(null)}
-                className="px-4 py-2 border border-gray-600 rounded-lg text-sm text-gray-300 hover:bg-gray-700">Cancelar</button>
-              <button onClick={handleEliminar}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700">Sí, eliminar</button>
-            </div>
           </div>
         </div>
       )}
@@ -160,14 +138,14 @@ export default function PrestamosPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right space-x-2">
-                    {p.estado === 'ACTIVO' && (
-                      <button onClick={() => marcarDevuelto(p.id)}
-                        className="text-green-400 hover:text-green-300 text-xs font-medium">✓ Devuelto</button>
+                    {puedeActualizar && (
+                      <button onClick={() => { setEditando(p); setShowForm(true); }}
+                        className="text-blue-400 hover:text-blue-300 text-xs font-medium">Editar</button>
                     )}
-                    <button onClick={() => { setEditando(p); setShowForm(true); }}
-                      className="text-blue-400 hover:text-blue-300 text-xs font-medium">Editar</button>
-                    <button onClick={() => setElim(p.id)}
-                      className="text-red-400 hover:text-red-300 text-xs font-medium">Eliminar</button>
+                    {puedeActualizar && p.estado === 'ACTIVO' && (
+                      <button onClick={() => marcarDevuelto(p.id)}
+                        className="text-green-400 hover:text-green-300 text-xs font-medium">DEVOLVER</button>
+                    )}
                   </td>
                 </tr>
               ))}

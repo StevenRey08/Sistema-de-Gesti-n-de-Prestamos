@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import { movimientosApi } from '../../lib/api';
 import type { Movimiento } from '../../lib/types';
@@ -6,10 +6,12 @@ import { useNotification } from '../../components/ui/NotificationContext';
 import { notifyErrorPayload } from '../../lib/errors';
 
 const BADGE: Record<string, string> = {
-  ENTRADA:  'bg-green-900 text-green-300',
-  SALIDA:   'bg-red-900 text-red-300',
-  TRASLADO: 'bg-blue-900 text-blue-300',
-  PRESTAMO: 'bg-yellow-900 text-yellow-300',
+  ENTRADA:  'bg-[var(--surface-2)] text-emerald-500',
+  SALIDA:   'bg-[var(--surface-2)] text-red-500',
+  TRASLADO: 'bg-[var(--surface-2)] text-orange-500',
+  PRESTAMO: 'bg-[var(--surface-2)] text-amber-500',
+  DEVUELTO: 'bg-[var(--surface-2)] text-sky-500',
+  AJUSTE:   'bg-[var(--surface-2)] text-purple-500',
 };
 
 function fmt(fecha: string | null) {
@@ -38,7 +40,7 @@ export default function MovimientosPage() {
 
   useEffect(() => { cargar(); }, [cargar]);
 
-  const tipos = ['todos', 'ENTRADA', 'SALIDA', 'TRASLADO', 'PRESTAMO'];
+  const tipos = ['todos', 'ENTRADA', 'SALIDA', 'TRASLADO', 'PRESTAMO', 'DEVUELTO', 'AJUSTE'];
 
   const lista = filtro === 'todos' ? movimientos
     : movimientos.filter((m: Movimiento) => m.tipo === filtro);
@@ -79,7 +81,7 @@ export default function MovimientosPage() {
                 <th className="px-4 py-3 text-left">Herramienta</th>
                 <th className="px-4 py-3 text-left">Persona</th>
                 <th className="px-4 py-3 text-left">Cant.</th>
-                <th className="px-4 py-3 text-left">Origen → Destino</th>
+                <th className="px-4 py-3 text-left">Origen â†’ Destino</th>
                 <th className="px-4 py-3 text-left">Fecha</th>
                 <th className="px-4 py-3 text-left">Observaciones</th>
               </tr>

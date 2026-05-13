@@ -8,7 +8,7 @@
     ],
     "allowJs": true,
     "checkJs": true,
-    "skipLibCheck": false,
+    "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
     "esModuleInterop": true,
@@ -25,7 +25,7 @@
     ],
     "paths": {
       "@/*": [
-        "./*"
+        "./src/*"
       ]
     }
   },
@@ -35,7 +35,6 @@
     "**/*.tsx",
     "**/*.jsx",
     "**/*.js",
-    "src/globals.d.ts",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],

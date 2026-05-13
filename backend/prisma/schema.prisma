@@ -106,8 +106,8 @@ model Inventario {
   estado          String?               @db.VarChar(50)
   cantidad        Int                   @default(1)
   ubicacion_id    String?               @db.Uuid
-  cantidad_minima Int                   @default(1)
   imagen_ruta     String?
+  estado_anterior String?
   categoria       CategoriaHerramienta? @relation(fields: [categoria_id], references: [id], onDelete: Restrict)
   ubicacion       Ubicacion?            @relation(fields: [ubicacion_id], references: [id], onDelete: Restrict)
   movimientos     Movimiento[]

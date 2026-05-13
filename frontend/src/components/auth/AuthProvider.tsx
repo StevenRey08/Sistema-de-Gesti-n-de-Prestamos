@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import { AUTH_STORAGE_KEY, authenticate, type SessionUser, updateStoredCurrentUser } from '../../lib/auth';
+import { AUTH_STORAGE_KEY, authenticate, toSessionUser, type SessionUser, updateStoredCurrentUser } from '../../lib/auth';
 import api from '../../lib/api';
 
 interface AuthContextValue {
@@ -18,23 +18,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
-  // Al cargar, intentar restaurar sesión desde la cookie (httpOnly)
   useEffect(() => {
     const restore = async () => {
       try {
-        const stored = window.localStorage.getItem(AUTH_STORAGE_KEY);
+        const stored = typeof window !== 'undefined'
+          ? window.localStorage.getItem(AUTH_STORAGE_KEY)
+          : null;
         if (stored) {
           setUser(JSON.parse(stored) as SessionUser);
-        } else {
-          // Intentar restaurar desde cookie via /api/auth/me
-          const res = await api.get('/auth/me') as { status: string; usuario: SessionUser };
-          if (res.status === 'ok' && res.usuario) {
-            setUser(res.usuario);
-            window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(res.usuario));
-          }
+        }
+        const res = await api.get('/auth/me') as { status: string; usuario: Record<string, unknown> };
+        if (res.status === 'ok' && res.usuario) {
+          const sessionUser = toSessionUser(res.usuario);
+          setUser(sessionUser);
+          try {
+            window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(sessionUser));
+          } catch { /* ignorar */ }
         }
       } catch {
-        window.localStorage.removeItem(AUTH_STORAGE_KEY);
+        try { window.localStorage.removeItem(AUTH_STORAGE_KEY); } catch { /* ignorar */ }
+        setUser(null);
       } finally {
         setHydrated(true);
       }
@@ -48,7 +51,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Credenciales inválidas. Verifica tu usuario y contraseña.');
     }
 
-    window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(sessionUser));
+    if (typeof window !== 'undefined' && window.localStorage && typeof window.localStorage.setItem === 'function') {
+      window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(sessionUser));
+    }
     setUser(sessionUser);
     return sessionUser;
   }
@@ -58,8 +63,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await api.post('/auth/logout', {});
     } catch {
     }
-    window.localStorage.removeItem(AUTH_STORAGE_KEY);
-    window.localStorage.removeItem('token');
+    if (typeof window !== 'undefined' && window.localStorage) {
+      if (typeof window.localStorage.removeItem === 'function') {
+        window.localStorage.removeItem(AUTH_STORAGE_KEY);
+        window.localStorage.removeItem('token');
+      }
+    }
     setUser(null);
   }
 

@@ -8,6 +8,7 @@ import UsuarioForm from '../../components/seguridad/UsuarioForm';
 import FilterableSelect from '../../components/ui/FilterableSelect';
 import { useAuth } from '../../components/auth/AuthProvider';
 import { toSessionUser } from '../../lib/auth';
+import { usePermiso } from '../../lib/permissions';
 import { useNotification } from '../../components/ui/NotificationContext';
 import { notifyErrorPayload } from '../../lib/errors';
 
@@ -25,6 +26,7 @@ const EMPTY_PERMISSION: PermisoPayload = {
 export default function SeguridadPage() {
   const { user, updateCurrentUser } = useAuth();
   const { notify } = useNotification();
+  const { puedeIngresar, puedeActualizar, puedeEliminar } = usePermiso('USUARIOS');
   const [activeTab, setActiveTab] = useState<TabKey>('roles');
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permiso[]>([]);
@@ -276,15 +278,17 @@ export default function SeguridadPage() {
               placeholder="Buscar rol..."
               className="soft-input max-w-sm"
             />
-            <button
-              onClick={() => {
-                setEditingRole(null);
-                setShowRoleForm(true);
-              }}
-              className="soft-btn-primary"
-            >
-              + Nuevo rol
-            </button>
+            {puedeIngresar && (
+              <button
+                onClick={() => {
+                  setEditingRole(null);
+                  setShowRoleForm(true);
+                }}
+                className="soft-btn-primary"
+              >
+                + Nuevo rol
+              </button>
+            )}
           </div>
 
           <div className="table-shell">
@@ -307,18 +311,22 @@ export default function SeguridadPage() {
                       <td className="px-4 py-3 font-medium text-[var(--text-main)]">{role.nombre_rol}</td>
                       <td className="px-4 py-3 text-[var(--text-muted)]">{role.descripcion || '—'}</td>
                       <td className="px-4 py-3 text-right space-x-3">
-                        <button
-                          onClick={() => {
-                            setEditingRole(role);
-                            setShowRoleForm(true);
-                          }}
-                          className="text-sm font-medium text-[var(--accent)]"
-                        >
-                          Editar
-                        </button>
-                        <button onClick={() => void handleDeleteRole(role.id)} className="text-sm font-medium text-[var(--danger)]">
-                          Eliminar
-                        </button>
+                        {puedeActualizar && (
+                          <button
+                            onClick={() => {
+                              setEditingRole(role);
+                              setShowRoleForm(true);
+                            }}
+                            className="text-sm font-medium text-[var(--accent)]"
+                          >
+                            Editar
+                          </button>
+                        )}
+                        {puedeEliminar && (
+                          <button onClick={() => void handleDeleteRole(role.id)} className="text-sm font-medium text-[var(--danger)]">
+                            Eliminar
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -331,6 +339,7 @@ export default function SeguridadPage() {
 
       {activeTab === 'permisos' && (
         <section className="space-y-6">
+          {puedeIngresar && (
           <form onSubmit={handleCreatePermission} className="surface-card grid gap-4 p-6 lg:grid-cols-[1fr_1fr_auto]">
             <FilterableSelect
               label="Rol"
@@ -353,6 +362,7 @@ export default function SeguridadPage() {
             <label className="flex items-center gap-2 text-sm text-[var(--text-main)]"><input type="checkbox" checked={permissionForm.actualizar} onChange={() => setPermissionForm((prev) => ({ ...prev, actualizar: !prev.actualizar }))} /> Actualizar</label>
             <label className="flex items-center gap-2 text-sm text-[var(--text-main)]"><input type="checkbox" checked={permissionForm.eliminar} onChange={() => setPermissionForm((prev) => ({ ...prev, eliminar: !prev.eliminar }))} /> Eliminar</label>
           </form>
+          )}
 
           <input
             type="search"
@@ -395,12 +405,16 @@ export default function SeguridadPage() {
                         </td>
                       ))}
                       <td className="px-4 py-3 text-right space-x-3">
-                        <button onClick={() => void handleUpdatePermission(permission)} className="text-sm font-medium text-[var(--accent)]">
-                          {savingPermissionId === permission.id ? 'Guardando...' : 'Guardar'}
-                        </button>
-                        <button onClick={() => void handleDeletePermission(permission.id)} className="text-sm font-medium text-[var(--danger)]">
-                          Eliminar
-                        </button>
+                        {puedeActualizar && (
+                          <button onClick={() => void handleUpdatePermission(permission)} className="text-sm font-medium text-[var(--accent)]">
+                            {savingPermissionId === permission.id ? 'Guardando...' : 'Guardar'}
+                          </button>
+                        )}
+                        {puedeEliminar && (
+                          <button onClick={() => void handleDeletePermission(permission.id)} className="text-sm font-medium text-[var(--danger)]">
+                            Eliminar
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -421,15 +435,17 @@ export default function SeguridadPage() {
               placeholder="Buscar por nombre, usuario o rol..."
               className="soft-input max-w-sm"
             />
-            <button
-              onClick={() => {
-                setEditingUser(null);
-                setShowUserForm(true);
-              }}
-              className="soft-btn-primary"
-            >
-              + Nuevo usuario
-            </button>
+            {puedeIngresar && (
+              <button
+                onClick={() => {
+                  setEditingUser(null);
+                  setShowUserForm(true);
+                }}
+                className="soft-btn-primary"
+              >
+                + Nuevo usuario
+              </button>
+            )}
           </div>
 
           <div className="table-shell">
@@ -461,18 +477,22 @@ export default function SeguridadPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right space-x-3">
-                        <button
-                          onClick={() => {
-                            setEditingUser(managedUser);
-                            setShowUserForm(true);
-                          }}
-                          className="text-sm font-medium text-[var(--accent)]"
-                        >
-                          Editar
-                        </button>
-                        <button onClick={() => void handleToggleUser(managedUser)} className="text-sm font-medium text-[var(--accent-strong)]">
-                          {managedUser.activo ? 'Desactivar' : 'Activar'}
-                        </button>
+                        {puedeActualizar && (
+                          <button
+                            onClick={() => {
+                              setEditingUser(managedUser);
+                              setShowUserForm(true);
+                            }}
+                            className="text-sm font-medium text-[var(--accent)]"
+                          >
+                            Editar
+                          </button>
+                        )}
+                        {puedeActualizar && (
+                          <button onClick={() => void handleToggleUser(managedUser)} className="text-sm font-medium text-[var(--accent-strong)]">
+                            {managedUser.activo ? 'Desactivar' : 'Activar'}
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}

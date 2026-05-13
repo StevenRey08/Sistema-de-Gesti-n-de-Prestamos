@@ -3,18 +3,26 @@
 // Todas las sesiones se verifican contra la base de datos
 // ============================================================
 
+export interface ModuloPermiso {
+  leer: boolean;
+  ingresar: boolean;
+  actualizar: boolean;
+  eliminar: boolean;
+}
+
 export interface SessionUser {
   id: string;
   nombre: string;
   usuario: string;
   email: string;  // En este sistema es el campo "usuario" del backend
   rol: string;
+  permisos: Record<string, ModuloPermiso>;
   token?: string;
 }
 
 export const AUTH_STORAGE_KEY = 'sgp-session';
 
-declare const process: { env: { NEXT_PUBLIC_API_URL?: string } };
+
 
 /**
  * Convierte la respuesta del backend al formato de sesión del frontend.
@@ -27,10 +35,34 @@ export function toSessionUser(rawUser: unknown): SessionUser {
     apellido?: unknown;
     usuario?: unknown;
     email?: unknown;
-    rol?: { nombre_rol?: string } | string | null;
+    rol?: {
+      nombre_rol?: string;
+      permisos?: Array<{
+        leer?: boolean;
+        ingresar?: boolean;
+        actualizar?: boolean;
+        eliminar?: boolean;
+        modulo?: { nombre?: string };
+      }>;
+    } | string | null;
     token?: string;
   };
   const rol = user.rol;
+
+  const permisos: Record<string, ModuloPermiso> = {};
+  if (typeof rol === 'object' && rol !== null && Array.isArray(rol.permisos)) {
+    for (const p of rol.permisos) {
+      const nombreModulo = p.modulo?.nombre;
+      if (nombreModulo) {
+        permisos[nombreModulo] = {
+          leer: p.leer ?? false,
+          ingresar: p.ingresar ?? false,
+          actualizar: p.actualizar ?? false,
+          eliminar: p.eliminar ?? false,
+        };
+      }
+    }
+  }
 
   return {
     id:     String(user.id ?? ''),
@@ -40,6 +72,7 @@ export function toSessionUser(rawUser: unknown): SessionUser {
     rol:    typeof rol === 'object' && rol !== null
               ? (rol.nombre_rol ?? 'Sin rol')
               : String(rol ?? 'Sin rol'),
+    permisos,
     token:  user.token as string | undefined,
   };
 }
@@ -69,7 +102,7 @@ export async function authenticate(usuario: string, contrasena: string): Promise
 
   if (!response.ok) {
     const data = await response.json().catch(() => ({})) as Record<string, string>;
-    throw new Error(data?.error || 'Credenciales inválidas.');
+    throw new Error(data?.mensaje || data?.error || 'Credenciales inválidas.');
   }
 
   const data = await response.json() as { token: string; usuario: Record<string, unknown> };
@@ -80,6 +113,6 @@ export async function authenticate(usuario: string, contrasena: string): Promise
  * Persiste la sesión del usuario en localStorage.
  */
 export function updateStoredCurrentUser(user: SessionUser) {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined' || !window.localStorage || typeof window.localStorage.setItem !== 'function') return;
   window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
 }

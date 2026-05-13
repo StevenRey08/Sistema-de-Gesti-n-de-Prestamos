@@ -4,10 +4,12 @@ import { personasApi } from '../../../lib/api';
 import PersonaForm from '../../../components/catalogos/PersonaForm';
 import type { Persona, PersonaPayload } from '../../../lib/types';
 import { useNotification } from '../../../components/ui/NotificationContext';
+import { usePermiso } from '../../../lib/permissions';
 import { notifyErrorPayload } from '../../../lib/errors';
 
 export default function PersonasPage() {
   const { notify } = useNotification();
+  const { puedeIngresar, puedeActualizar, puedeEliminar } = usePermiso('PERSONAS');
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [search, setSearch] = useState('');
   const [cargando, setCargando] = useState(true);
@@ -53,12 +55,14 @@ export default function PersonasPage() {
           <h1 className="page-title">Personas</h1>
           <p className="page-subtitle">{personas.length} registros</p>
         </div>
-        <button
-          onClick={() => { setEditando(null); setShowForm(true); }}
-          className="soft-btn-primary"
-        >
-          + Nueva Persona
-        </button>
+        {puedeIngresar && (
+          <button
+            onClick={() => { setEditando(null); setShowForm(true); }}
+            className="soft-btn-primary"
+          >
+            + Nueva Persona
+          </button>
+        )}
       </div>
 
       <input
@@ -126,10 +130,14 @@ export default function PersonasPage() {
                   <td className="px-4 py-3 text-[var(--text-muted)]">{p.telefono || '—'}</td>
                   <td className="px-4 py-3 text-[var(--text-muted)]">{p.email || '—'}</td>
                   <td className="px-4 py-3 text-right space-x-2">
-                    <button onClick={() => abrirEditar(p)}
-                      className="text-blue-400 hover:text-blue-300 text-xs font-medium">Editar</button>
-                    <button onClick={() => setElim(p.id)}
-                      className="text-red-400 hover:text-red-300 text-xs font-medium">Eliminar</button>
+                    {puedeActualizar && (
+                      <button onClick={() => abrirEditar(p)}
+                        className="text-blue-400 hover:text-blue-300 text-xs font-medium">Editar</button>
+                    )}
+                    {puedeEliminar && (
+                      <button onClick={() => setElim(p.id)}
+                        className="text-red-400 hover:text-red-300 text-xs font-medium">Eliminar</button>
+                    )}
                   </td>
                 </tr>
               ))}

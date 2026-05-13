@@ -12,4 +12,7 @@ router.post('/logout', authController.logout);
 // Verificar sesión actual (restaurar desde cookie)
 router.get('/me', verificarToken, authController.me);
 
+// Actualizar perfil propio (sin requerir permiso USUARIOS)
+router.put('/me', verificarToken, authController.actualizarPerfil);
+
 module.exports = router;

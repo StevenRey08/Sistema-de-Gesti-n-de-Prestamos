@@ -18,7 +18,17 @@ const authController = {
         try {
             const user = await prisma.usuario.findUnique({
                 where: { usuario },
-                include: { rol: true }
+                include: {
+                    rol: {
+                        include: {
+                            permisos: {
+                                include: {
+                                    modulo: true
+                                }
+                            }
+                        }
+                    }
+                }
             });
 
             if (!user) {
@@ -65,7 +75,17 @@ const authController = {
         try {
             const user = await prisma.usuario.findUnique({
                 where: { id: req.usuario.id },
-                include: { rol: true }
+                include: {
+                    rol: {
+                        include: {
+                            permisos: {
+                                include: {
+                                    modulo: true
+                                }
+                            }
+                        }
+                    }
+                }
             });
             if (!user) {
                 return res.status(401).json({ status: "error", mensaje: "Usuario no encontrado" });
@@ -75,6 +95,57 @@ const authController = {
         } catch (error) {
             logger.error("Error en me", { error: error.message });
             res.status(500).json({ status: "error", mensaje: "Error al verificar sesión" });
+        }
+    },
+
+    actualizarPerfil: async (req, res) => {
+        const { nombre, apellido, usuario, contrasena } = req.body;
+
+        try {
+            const currentUser = await prisma.usuario.findUnique({
+                where: { id: req.usuario.id }
+            });
+
+            if (!currentUser) {
+                return res.status(401).json({ status: "error", mensaje: "Usuario no encontrado" });
+            }
+
+            if (usuario && usuario !== currentUser.usuario) {
+                const existe = await prisma.usuario.findUnique({ where: { usuario } });
+                if (existe) {
+                    return res.status(400).json({ status: "error", mensaje: "El nombre de usuario ya está en uso" });
+                }
+            }
+
+            const data = {};
+            if (nombre !== undefined) data.nombre = nombre;
+            if (apellido !== undefined) data.apellido = apellido;
+            if (usuario !== undefined) data.usuario = usuario;
+            if (contrasena) {
+                data.contrasena = await bcrypt.hash(contrasena, 10);
+            }
+
+            const updatedUser = await prisma.usuario.update({
+                where: { id: req.usuario.id },
+                data,
+                include: {
+                    rol: {
+                        include: {
+                            permisos: {
+                                include: {
+                                    modulo: true
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            const { contrasena: _, ...datosUsuario } = updatedUser;
+            res.json({ status: "ok", usuario: datosUsuario });
+        } catch (error) {
+            logger.error("Error al actualizar perfil", { error: error.message });
+            res.status(500).json({ status: "error", mensaje: "Error al actualizar perfil" });
         }
     }
 };

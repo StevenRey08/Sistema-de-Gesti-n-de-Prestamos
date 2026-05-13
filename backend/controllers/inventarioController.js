@@ -1,18 +1,18 @@
-const { prisma } = require('../db');
+﻿const { prisma } = require('../db');
 const logger = require('../utils/logger');
 const { generarCodigoAleatorio } = require('../utils/generadores');
 const { buildUniqueConstraintError } = require('../utils/prismaErrors');
 
 const inventarioController = {
-    // Listar artículos con búsqueda por nombre/código y filtros
     getAll: async (req, res) => {
-        const { search, categoria, ubicacion } = req.query;
+        const { search, categoria, ubicacion, estado } = req.query;
         try {
             const items = await prisma.inventario.findMany({
                 where: {
                     AND: [
                         categoria ? { categoria_id: categoria } : {},
                         ubicacion ? { ubicacion_id: ubicacion } : {},
+                        estado ? { estado: { equals: estado, mode: 'insensitive' } } : {},
                         search ? {
                             OR: [
                                 { nombre: { contains: search, mode: 'insensitive' } },
@@ -24,7 +24,7 @@ const inventarioController = {
                 include: {
                     categoria: true,
                     ubicacion: {
-                        include: { padre: true } // Para saber en qué estante está la caja, por ejemplo
+                        include: { padre: true }
                     }
                 },
                 orderBy: { nombre: 'asc' }
@@ -38,15 +38,12 @@ const inventarioController = {
 
     getAlertasStock: async (req, res) => {
         try {
-            // Buscamos productos donde la cantidad sea menor o igual al stock_minimo
-            // Nota: Prisma no permite comparar dos columnas directamente en 'where' de forma nativa 
-            // fácilmente sin 'queryRaw', por lo que usamos un filtro tras la consulta:
             const inventarioCompleto = await prisma.inventario.findMany({
                 include: { categoria: true, ubicacion: true }
             });
 
             const alertas = inventarioCompleto.filter(item =>
-                item.cantidad <= item.cantidad_minima
+                item.cantidad <= 2
             );
 
             res.json({
@@ -58,23 +55,19 @@ const inventarioController = {
             res.status(500).json({ status: "error", mensaje: "Error al generar reporte de alertas" });
         }
     },
-    // Crear artículo con generación de código automática
+
     create: async (req, res) => {
         try {
             let data = req.body;
-
-            // Manejar subida de imagen
             if (req.file) {
-                data.imagen_ruta = req.file.path.replace(/\\/g, '/'); // Normalizar ruta para web
+                data.imagen_ruta = `/uploads/inventario/${req.file.filename}`;
             }
 
-            // Generar código automático si no se proporciona
             if (!data.codigo || data.codigo.trim() === "") {
                 let codigoGenerado;
                 let existe = true;
 
                 while (existe) {
-                    // Usamos INV como prefijo por defecto para Inventario
                     codigoGenerado = generarCodigoAleatorio("INV");
                     const duplicado = await prisma.inventario.findUnique({
                         where: { codigo: codigoGenerado }
@@ -84,13 +77,20 @@ const inventarioController = {
                 data.codigo = codigoGenerado;
             }
 
-            // Asegurar que cantidad y cantidad_minima sean enteros
             data.cantidad = data.cantidad !== undefined && data.cantidad !== null && data.cantidad !== '' ? parseInt(data.cantidad) : 1;
-            data.cantidad_minima = data.cantidad_minima !== undefined && data.cantidad_minima !== null && data.cantidad_minima !== '' ? parseInt(data.cantidad_minima) : 1;
-
             const nuevo = await prisma.inventario.create({
                 data,
                 include: { ubicacion: true, categoria: true }
+            });
+
+            await prisma.movimiento.create({
+                data: {
+                    inventario_id: nuevo.id,
+                    tipo: 'ENTRADA',
+                    cantidad: data.cantidad,
+                    usuario_id: req.usuario?.id,
+                    observaciones: `Artículo creado con código ${nuevo.codigo}`
+                }
             });
 
             res.status(201).json(nuevo);
@@ -104,7 +104,6 @@ const inventarioController = {
         }
     },
 
-    // Obtener un artículo por ID con detalle de ubicación e historial reciente
     getById: async (req, res) => {
         try {
             const item = await prisma.inventario.findUnique({
@@ -116,7 +115,7 @@ const inventarioController = {
                     },
                     movimientos: {
                         take: 10,
-                        orderBy: { fecha: 'desc' } // Según tu modelo Movimiento: 'fecha'
+                        orderBy: { fecha: 'desc' }
                     }
                 }
             });
@@ -128,23 +127,35 @@ const inventarioController = {
         }
     },
 
-    // Actualizar artículo
     update: async (req, res) => {
         try {
-            const data = req.body;
+            const existente = await prisma.inventario.findUnique({ where: { id: req.params.id } });
+            if (!existente) return res.status(404).json({ status: "error", mensaje: "Artículo no encontrado" });
 
-            // Manejar subida de imagen
+            const data = req.body;
             if (req.file) {
-                data.imagen_ruta = req.file.path.replace(/\\/g, '/');
+                data.imagen_ruta = `/uploads/inventario/${req.file.filename}`;
             }
 
             if (data.cantidad !== undefined && data.cantidad !== null && data.cantidad !== '') data.cantidad = parseInt(data.cantidad);
-            if (data.cantidad_minima !== undefined && data.cantidad_minima !== null && data.cantidad_minima !== '') data.cantidad_minima = parseInt(data.cantidad_minima);
-
             const actualizado = await prisma.inventario.update({
                 where: { id: req.params.id },
                 data: data
             });
+
+            if (data.cantidad !== undefined && data.cantidad !== existente.cantidad) {
+                const diferencia = data.cantidad - existente.cantidad;
+                await prisma.movimiento.create({
+                    data: {
+                        inventario_id: actualizado.id,
+                        tipo: 'AJUSTE',
+                        cantidad: Math.abs(diferencia),
+                        usuario_id: req.usuario?.id,
+                        observaciones: `Stock ajustado de ${existente.cantidad} a ${data.cantidad} (${diferencia > 0 ? '+' : ''}${diferencia})`
+                    }
+                });
+            }
+
             res.json(actualizado);
         } catch (error) {
             logger.error("Error en inventario.update:", error);
@@ -156,14 +167,14 @@ const inventarioController = {
         }
     },
 
-    // Eliminar artículo
     delete: async (req, res) => {
         try {
+            const existente = await prisma.inventario.findUnique({ where: { id: req.params.id } });
+            if (!existente) return res.status(404).json({ status: "error", mensaje: "Artículo no encontrado" });
             await prisma.inventario.delete({ where: { id: req.params.id } });
             res.json({ message: "Artículo eliminado correctamente" });
         } catch (error) {
             logger.error("Error en inventario.delete:", error);
-            // Error de restricción de llave foránea (si tiene préstamos o movimientos)
             if (error.code === 'P2003') {
                 return res.status(400).json({
                     error: "No se puede eliminar: el artículo tiene historial de movimientos o préstamos asociados."

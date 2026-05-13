@@ -20,9 +20,6 @@ function AppFrame({ children }: { children: React.ReactNode }) {
       router.replace('/login');
     }
 
-    if (user && isLoginRoute) {
-      router.replace('/');
-    }
   }, [hydrated, isLoginRoute, router, user]);
 
   useEffect(() => {
@@ -44,11 +41,19 @@ function AppFrame({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user && !isLoginRoute) return null;
-  if (user && isLoginRoute) return null;
-
   if (isLoginRoute) {
     return <>{children}</>;
+  }
+
+  if (!user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[var(--bg-soft)]">
+        <div className="flex items-center gap-3 rounded-3xl border border-[var(--border)] bg-white px-6 py-4 shadow-[var(--shadow-soft)]">
+          <div className="h-3 w-3 animate-pulse rounded-full bg-[var(--accent-strong)]" />
+          <p className="text-sm font-medium text-[var(--text-main)]">Redirigiendo...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
