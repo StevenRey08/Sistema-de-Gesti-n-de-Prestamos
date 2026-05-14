@@ -1,5 +1,6 @@
 const { prisma } = require('../db');
 const PDFDocument = require('pdfkit');
+const path = require('path');
 
 function filtroFechaPrestamo(fechaInicio, fechaFin) {
   const f = {};
@@ -22,7 +23,7 @@ function formatoFechaCorta(d) {
   return new Date(d).toLocaleString('es-DO', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
-// ── PDF helper ────────────────────────────────────────────
+// ── PDF helper (portada + estilo profesional) ─────────────
 function generarPDF(res, titulo, fechaInicio, fechaFin, columnas, filas, color = '#10367d') {
   const doc = new PDFDocument({ margin: 40, size: 'A4' });
   res.setHeader('Content-Type', 'application/pdf');
@@ -30,75 +31,151 @@ function generarPDF(res, titulo, fechaInicio, fechaFin, columnas, filas, color =
   doc.pipe(res);
 
   const pageW = doc.page.width - 80;
-  let y = 40;
+  const marginX = 40;
+  const pageH = doc.page.height;
+  const colorClaro = '#e8edf5';
+  const logoPath = path.join(__dirname, '../uploads/logo.png');
 
-  doc.fontSize(22).font('Helvetica-Bold').fillColor(color).text('Sistema de Gestión de Préstamos', 40, y);
-  y += 30;
-  doc.fontSize(10).font('Helvetica').fillColor('#666').text(`Generado: ${formatoFecha(new Date())}`, 40, y);
-  y += 16;
+  // ── Portada (página 1) ──────────────────────────────────
+  function portada() {
+    // Fondo degradado simulado con barras verticales
+    const pasos = 80;
+    const altoPaso = pageH / pasos;
+    for (let i = 0; i < pasos; i++) {
+      const t = i / pasos;
+      const r = Math.round(16 + t * 9);
+      const g = Math.round(54 + t * 7);
+      const b = Math.round(125 + t * 72);
+      const c = `rgb(${r},${g},${b})`;
+      doc.rect(0, i * altoPaso, doc.page.width, altoPaso + 1).fill(c);
+    }
 
-  doc.moveTo(40, y).lineTo(40 + pageW, y).lineWidth(2).strokeColor(color).stroke();
-  y += 20;
+    // Logo grande y centrado
+    try {
+      const logoSize = 160;
+      doc.image(logoPath, (doc.page.width - logoSize) / 2, 100, { width: logoSize });
+    } catch {}
 
-  doc.fontSize(16).font('Helvetica-Bold').fillColor('#222').text(titulo, 40, y);
-  y += 20;
-  if (fechaInicio || fechaFin) {
-    doc.fontSize(9).font('Helvetica').fillColor('#666')
-      .text(`Período: ${fechaInicio ? formatoFechaCorta(fechaInicio) : '—'} al ${fechaFin ? formatoFechaCorta(fechaFin) : '—'}`, 40, y);
-    y += 18;
+    // Línea decorativa
+    const cx = doc.page.width / 2;
+    doc.moveTo(cx - 80, 300).lineTo(cx + 80, 300).lineWidth(2).strokeColor('rgba(255,255,255,0.45)').stroke();
+
+    // Título del reporte
+    doc.font('Helvetica-Bold').fontSize(30).fillColor('#fff')
+      .text(titulo, marginX, 330, { align: 'center', width: pageW });
+
+    // Subtítulo
+    doc.font('Helvetica').fontSize(14).fillColor('rgba(255,255,255,0.7)')
+      .text('Sistema de Gestión de Préstamos', marginX, 380, { align: 'center', width: pageW });
+
+    // Fecha de generación
+    doc.font('Helvetica').fontSize(10).fillColor('rgba(255,255,255,0.5)')
+      .text(`Generado: ${formatoFecha(new Date())}`, marginX, 430, { align: 'center', width: pageW });
+
+    if (fechaInicio || fechaFin) {
+      doc.font('Helvetica').fontSize(9).fillColor('rgba(255,255,255,0.45)')
+        .text(`Período: ${fechaInicio ? formatoFechaCorta(fechaInicio) : '—'} al ${fechaFin ? formatoFechaCorta(fechaFin) : '—'}`, marginX, 450, { align: 'center', width: pageW });
+    }
+
+    doc.addPage();
   }
 
-  y += 6;
+  // ── Encabezado de páginas de datos ──────────────────────
+  function encabezadoPagina() {
+    const yTop = 30;
+    doc.rect(marginX, yTop, pageW, 6).fill(color);
+    try {
+      doc.image(logoPath, marginX, yTop + 10, { height: 32 });
+    } catch {}
+    const textX = marginX + 46;
+    doc.fontSize(20).font('Helvetica-Bold').fillColor(color).text('Sistema de Gestión de Préstamos', textX, yTop + 14);
+    doc.fontSize(9).font('Helvetica').fillColor('#888').text(`Generado: ${formatoFecha(new Date())}`, textX, yTop + 38);
+    if (fechaInicio || fechaFin) {
+      doc.fontSize(8).font('Helvetica').fillColor('#888')
+        .text(`Período: ${fechaInicio ? formatoFechaCorta(fechaInicio) : '—'} al ${fechaFin ? formatoFechaCorta(fechaFin) : '—'}`, textX, yTop + 51);
+    }
+    let yy = yTop + (fechaInicio || fechaFin ? 66 : 56);
+    doc.moveTo(marginX, yy).lineTo(marginX + pageW, yy).lineWidth(1.5).strokeColor(color).stroke();
+    yy += 16;
+    doc.fontSize(15).font('Helvetica-Bold').fillColor('#333').text(titulo, marginX, yy);
+    yy += 24;
+    return yy;
+  }
 
+  function piePagina() {
+    const totalPages = doc.bufferedPageRange().count;
+    const contentPages = totalPages - 1;
+    for (let i = 0; i < totalPages; i++) {
+      if (i === 0) continue;
+      doc.switchToPage(i);
+      doc.fontSize(8).font('Helvetica').fillColor('#aaa')
+        .text(`Página ${i} de ${contentPages}`, marginX, doc.page.height - 35, { align: 'center', width: pageW });
+      doc.fontSize(7).font('Helvetica').fillColor('#ccc')
+        .text(titulo, marginX, doc.page.height - 25, { align: 'center', width: pageW });
+      doc.rect(marginX, doc.page.height - 42, pageW, 0.5).fill('#ddd');
+    }
+  }
+
+  // ── Render ───────────────────────────────────────────────
+  portada();
+
+  let y = encabezadoPagina();
   const colW = pageW / columnas.length;
-  const rowH = 22;
-  doc.fontSize(9).font('Helvetica-Bold').fillColor('#fff');
-  doc.roundedRect(40, y, pageW, rowH, 4).fill(color);
-  columnas.forEach((col, i) => {
-    doc.fillColor('#fff').text(col, 40 + colW * i + 8, y + 6, { width: colW - 12, align: 'left' });
-  });
-  y += rowH;
+  const rowH = 24;
+
+  function tablaHeader(yy) {
+    doc.roundedRect(marginX, yy, pageW, rowH, 3).fill(color);
+    columnas.forEach((col, i) => {
+      doc.fillColor('#fff').fontSize(9).font('Helvetica-Bold')
+        .text(col, marginX + colW * i + 8, yy + 7, { width: colW - 12, align: 'left' });
+    });
+    return yy + rowH;
+  }
+
+  y = tablaHeader(y);
 
   let turno = false;
   for (const fila of filas) {
-    if (y + rowH > doc.page.height - 60) {
+    if (y + rowH > doc.page.height - 55) {
+      piePagina();
       doc.addPage();
-      y = 40;
-      doc.fontSize(9).font('Helvetica-Bold').fillColor('#fff');
-      doc.roundedRect(40, y, pageW, rowH, 4).fill(color);
-      columnas.forEach((col, i) => {
-        doc.fillColor('#fff').text(col, 40 + colW * i + 8, y + 6, { width: colW - 12, align: 'left' });
-      });
-      y += rowH;
+      y = encabezadoPagina();
+      y = tablaHeader(y);
     }
-    doc.rect(40, y, pageW, rowH).fill(turno ? '#f5f7fa' : '#fff');
+    const bgColor = turno ? colorClaro : '#fff';
+    doc.rect(marginX, y, pageW, rowH).fill(bgColor);
     turno = !turno;
-    doc.fontSize(8.5).font('Helvetica').fillColor('#222');
     columnas.forEach((col, i) => {
       const val = fila[col] !== undefined && fila[col] !== null ? String(fila[col]) : '';
-      doc.text(val, 40 + colW * i + 8, y + 6, { width: colW - 12, align: 'left' });
+      doc.fillColor('#333').fontSize(8.5).font('Helvetica')
+        .text(val, marginX + colW * i + 8, y + 7, { width: colW - 12, align: 'left' });
     });
     y += rowH;
   }
 
-  y += 10;
-  doc.moveTo(40, y).lineTo(40 + pageW, y).lineWidth(1).strokeColor('#ddd').stroke();
+  y += 8;
+  doc.moveTo(marginX, y).lineTo(marginX + pageW, y).lineWidth(1).strokeColor('#ddd').stroke();
+  y += 6;
+  doc.fontSize(8).font('Helvetica-Oblique').fillColor('#999')
+    .text(`${filas.length} registro(s) encontrado(s)`, marginX, y, { align: 'right', width: pageW });
 
-  const paginas = doc.bufferedPageRange();
-  for (let i = 0; i < paginas.count; i++) {
-    doc.switchToPage(i);
-    doc.fontSize(8).font('Helvetica').fillColor('#999')
-      .text(`Página ${i + 1} de ${paginas.count}`, 40, doc.page.height - 40, { align: 'center', width: pageW });
-  }
-
+  piePagina();
   doc.end();
 }
 
 const reportesController = {
   bajoStock: async (req, res) => {
     try {
+      const { fechaInicio, fechaFin } = req.query;
+      const whereFecha = filtroFechaPrestamo(fechaInicio, fechaFin);
+      const where = { cantidad: { lte: 2 } };
+
+      if (Object.keys(whereFecha).length > 0) {
+        where.prestamos = { some: whereFecha };
+      }
+
       const items = await prisma.inventario.findMany({
-        where: { cantidad: { lte: 2 } },
+        where,
         include: { categoria: true, ubicacion: true },
         orderBy: { cantidad: 'asc' }
       });
@@ -180,8 +257,12 @@ const reportesController = {
       const whereFecha = filtroFechaPrestamo(fechaInicio, fechaFin);
 
       if (tipo === 'bajo-stock') {
+        const where = { cantidad: { lte: 2 } };
+        if (Object.keys(whereFecha).length > 0) {
+          where.prestamos = { some: whereFecha };
+        }
         const items = await prisma.inventario.findMany({
-          where: { cantidad: { lte: 2 } },
+          where,
           include: { categoria: true, ubicacion: true },
           orderBy: { cantidad: 'asc' }
         });

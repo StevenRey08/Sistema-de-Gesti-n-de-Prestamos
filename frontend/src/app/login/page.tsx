@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../components/auth/AuthProvider';
 import { useNotification } from '../../components/ui/NotificationContext';
@@ -46,17 +47,13 @@ export default function LoginPage() {
       <div className="relative mx-auto grid min-h-[calc(100vh-4rem)] max-w-7xl items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
         {/* Panel izquierdo */}
         <section className="rounded-[36px] bg-[linear-gradient(145deg,#10367d_0%,#1548a4_72%,#1f61c5_100%)] p-10 text-white shadow-[0_40px_90px_rgba(16,54,125,0.24)] md:p-14">
-          <div className="mb-12 flex h-16 w-16 items-center justify-center rounded-[22px] border border-white/20 bg-white/10 text-3xl">
-            ⌁
-          </div>
 
-          <div className="max-w-xl space-y-6">
-            <span className="inline-flex rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.24em] text-white/80">
-              Sistema de Gestión
-            </span>
-            <h1 className="text-4xl font-semibold leading-tight md:text-5xl">
-              Controla préstamos, inventario y ubicaciones desde un solo lugar.
-            </h1>
+
+          <div className="max-w-xl space-y-2">
+
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/images/logo.png" alt="Logo" className="h-110 w-auto" />
+
             <p className="max-w-lg text-base leading-8 text-white/78 md:text-lg">
               Una plataforma administrativa segura, rápida y enfocada para gestionar herramientas,
               existencias y movimientos diarios.
@@ -65,9 +62,7 @@ export default function LoginPage() {
 
           <div className="mt-12 grid gap-4 text-sm text-white/92">
             {[
-              'Acceso seguro con autenticación JWT',
-              'Inventario, préstamos y movimientos en un flujo simple',
-              'Control de permisos por roles',
+              'Mejor Organizacion de Objetos y herramientas dentro de un almacen',
             ].map((item) => (
               <div key={item} className="flex items-center gap-3 rounded-2xl border border-white/14 bg-white/8 px-4 py-3">
                 <span className="text-lg">✓</span>

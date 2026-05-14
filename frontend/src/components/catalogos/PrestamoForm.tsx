@@ -7,7 +7,7 @@ import type { Prestamo, PrestamoPayload, EstadoPrestamo, ItemInventario, Persona
 import { notifyErrorPayload } from '../../lib/errors';
 import { useNotification } from '../ui/NotificationContext';
 
-const ESTADOS: EstadoPrestamo[] = ['ACTIVO', 'DEVUELTO', 'VENCIDO'];
+const ESTADOS: EstadoPrestamo[] = ['ACTIVO', 'DEVUELTO', 'VENCIDO', 'PENDIENTE'];
 
 interface PrestamoFormProps {
   prestamo?: Prestamo | null;
@@ -32,7 +32,7 @@ export default function PrestamoForm({ prestamo = null, onGuardar, onCancelar }:
     inventario_id: prestamo?.inventario_id ? String(prestamo.inventario_id) : '',
     persona_id: prestamo?.persona_id ? String(prestamo.persona_id) : '',
     cantidad: prestamo?.cantidad || 1,
-    fecha_devolucion: prestamo?.fecha_devolucion ? prestamo.fecha_devolucion.split('T')[0] : '',
+    fecha_devolucion: prestamo?.fecha_devolucion ? prestamo.fecha_devolucion.slice(0, 16) : '',
     estado: prestamo?.estado || 'ACTIVO',
     observaciones: prestamo?.observaciones || '',
   });
@@ -58,6 +58,11 @@ export default function PrestamoForm({ prestamo = null, onGuardar, onCancelar }:
     if (!form.inventario_id) e.inventario_id = 'Selecciona el artículo';
     if (!form.persona_id) e.persona_id = 'Selecciona el responsable';
     if (!form.cantidad || Number(form.cantidad) < 1) e.cantidad = 'Mínimo 1';
+    if (form.fecha_devolucion) {
+      const fechaDev = new Date(form.fecha_devolucion);
+      const ahora = new Date();
+      if (fechaDev <= ahora) e.fecha_devolucion = 'Debe ser posterior a la hora actual';
+    }
     setErrores(e);
     const detalles = Object.entries(e).map(([campo, mensaje]) => `${campo}: ${mensaje}`);
     if (detalles.length > 0) notify('error', 'Revisa los datos del préstamo', detalles);
@@ -125,7 +130,7 @@ export default function PrestamoForm({ prestamo = null, onGuardar, onCancelar }:
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Fecha devolución</label>
-          <input type="date" name="fecha_devolucion" value={form.fecha_devolucion} onChange={handleChange} className="soft-input" />
+          <input type="datetime-local" name="fecha_devolucion" value={form.fecha_devolucion} onChange={handleChange} className="soft-input" />
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Estado</label>

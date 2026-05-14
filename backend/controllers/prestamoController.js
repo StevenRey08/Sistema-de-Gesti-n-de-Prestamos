@@ -1,8 +1,24 @@
-﻿const { prisma } = require('../db');
+const { prisma } = require('../db');
+const logger = require('../utils/logger');
+
+async function marcarVencidos() {
+    try {
+        await prisma.prestamo.updateMany({
+            where: {
+                estado: 'ACTIVO',
+                fecha_devolucion: { lt: new Date() },
+            },
+            data: { estado: 'PENDIENTE' }
+        });
+    } catch (error) {
+        logger.error('Error al marcar préstamos vencidos:', error);
+    }
+}
 
 const prestamoController = {
     // Listar y filtrar por estado o búsqueda general
     getAll: async (req, res) => {
+        await marcarVencidos();
         const { search, estado } = req.query;
         try {
             const prestamos = await prisma.prestamo.findMany({
@@ -35,6 +51,7 @@ const prestamoController = {
     // Obtener solo préstamos ACTIVO (Buscador rÃ¡pido para devoluciones)
     getPendientes: async (req, res) => {
         try {
+            await marcarVencidos();
             const pendientes = await prisma.prestamo.findMany({
                 where: { estado: 'ACTIVO' },
                 include: {
@@ -148,7 +165,7 @@ const prestamoController = {
                 // 2. Devolver stock al inventario y restaurar estado anterior si no hay más préstamos activos
                 const articuloDev = await tx.inventario.findUnique({ where: { id: prestamo.inventario_id } });
                 const activosRestantes = await tx.prestamo.count({
-                    where: { inventario_id: prestamo.inventario_id, estado: 'ACTIVO', id: { not: prestamo.id } }
+                    where: { inventario_id: prestamo.inventario_id, estado: { in: ['ACTIVO', 'PENDIENTE'] }, id: { not: prestamo.id } }
                 });
                 const estadoRestaurado = activosRestantes === 0
                     ? (estado_fisico || articuloDev?.estado_anterior || 'Nuevo')
@@ -186,17 +203,39 @@ const prestamoController = {
     // Actualizar préstamo (solo campos no críticos para stock)
     update: async (req, res) => {
         try {
-            const { observaciones, fecha_devolucion } = req.body;
+            const { observaciones, fecha_devolucion, estado, persona_id, usuario_id } = req.body;
+            const payload = {};
+            
+            if (observaciones !== undefined) payload.observaciones = observaciones;
+            if (estado !== undefined) payload.estado = estado;
+            if (persona_id !== undefined) payload.persona_id = persona_id;
+            if (usuario_id !== undefined) payload.usuario_id = usuario_id;
+            
+            if (fecha_devolucion !== undefined) {
+                payload.fecha_devolucion = fecha_devolucion ? new Date(fecha_devolucion) : null;
+            }
+
+            if (Object.keys(payload).length === 0) {
+                return res.status(400).json({ status: "error", mensaje: "No hay campos para actualizar" });
+            }
+
             const actualizado = await prisma.prestamo.update({
                 where: { id: req.params.id },
-                data: {
-                    ...(observaciones !== undefined && { observaciones }),
-                    ...(fecha_devolucion !== undefined && { fecha_devolucion }),
-                }
+                data: payload
             });
             res.json(actualizado);
         } catch (error) {
-            res.status(500).json({ status: "error", mensaje: "Error al actualizar el préstamo" });
+            logger.error("Error al actualizar préstamo:", { 
+                error: error.message, 
+                stack: error.stack,
+                id: req.params.id, 
+                body: req.body 
+            });
+            res.status(500).json({ 
+                status: "error", 
+                mensaje: "Error al actualizar el préstamo",
+                detalles: [error.message] 
+            });
         }
     },
 
@@ -229,7 +268,7 @@ const prestamoController = {
                 if (prestamo.estado === 'ACTIVO') {
                     const articulo = await tx.inventario.findUnique({ where: { id: prestamo.inventario_id } });
                     const activosRestantes = await tx.prestamo.count({
-                        where: { inventario_id: prestamo.inventario_id, estado: 'ACTIVO', id: { not: prestamo.id } }
+                        where: { inventario_id: prestamo.inventario_id, estado: { in: ['ACTIVO', 'PENDIENTE'] }, id: { not: prestamo.id } }
                     });
                     const estadoRestaurado = activosRestantes === 0
                         ? (articulo?.estado_anterior || 'Nuevo')

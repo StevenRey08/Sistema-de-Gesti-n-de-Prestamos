@@ -8,14 +8,15 @@ import { usePermiso } from '../../lib/permissions';
 import { notifyErrorPayload } from '../../lib/errors';
 
 const BADGE: Record<string, string> = {
-  ACTIVO:   'bg-yellow-900 text-yellow-300',
+  ACTIVO:   'bg-white text-green-600',
   DEVUELTO: 'bg-[var(--surface-2)] text-sky-500',
   VENCIDO:  'bg-red-900 text-red-300',
+  PENDIENTE:'text-orange-400',
 };
 
 function fmt(fecha: string | null) {
   if (!fecha) return '—';
-  return new Date(fecha).toLocaleDateString('es-DO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return new Date(fecha).toLocaleString('es-DO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 export default function PrestamosPage() {
@@ -85,7 +86,7 @@ export default function PrestamosPage() {
 
       {/* Filtros rápidos */}
       <div className="flex gap-2">
-        {['todos', 'ACTIVO', 'DEVUELTO'].map(f => (
+        {['todos', 'ACTIVO', 'PENDIENTE', 'DEVUELTO'].map(f => (
           <button key={f} onClick={() => setFiltro(f)}
             className={`filter-pill capitalize ${filtro === f ? 'active' : ''}`}>
             {f}
@@ -133,7 +134,7 @@ export default function PrestamosPage() {
                   <td className="px-4 py-3 text-[var(--text-muted)]">{fmt(p.fecha_prestamo)}</td>
                   <td className="px-4 py-3 text-[var(--text-muted)]">{fmt(p.fecha_devolucion)}</td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-1 rounded-full ${BADGE[p.estado] || 'bg-gray-700 text-gray-300'}`}>
+                    <span className={`text-xs px-2 py-1 rounded-full font-bold ${BADGE[p.estado] || 'bg-gray-700 text-gray-300'}`}>
                       {p.estado}
                     </span>
                   </td>
@@ -144,7 +145,7 @@ export default function PrestamosPage() {
                     )}
                     {puedeActualizar && p.estado === 'ACTIVO' && (
                       <button onClick={() => marcarDevuelto(p.id)}
-                        className="text-green-400 hover:text-green-300 text-xs font-medium">DEVOLVER</button>
+                        className="text-red-400 hover:text-red-300 text-xs font-medium">DEVOLVER</button>
                     )}
                   </td>
                 </tr>

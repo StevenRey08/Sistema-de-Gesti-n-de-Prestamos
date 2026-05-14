@@ -129,7 +129,7 @@ model Prestamo {
   estado           String?      @db.VarChar(50)
   observaciones    String?
   movimientos      Movimiento[]
-  inventario       Inventario?  @relation(fields: [inventario_id], references: [id], onDelete: Cascade)
+  inventario       Inventario?  @relation(fields: [inventario_id], references: [id], onDelete: Restrict)
   persona          Persona?     @relation(fields: [persona_id], references: [id], onDelete: Restrict)
   usuario          Usuario?     @relation(fields: [usuario_id], references: [id], onDelete: Restrict)
 

@@ -62,7 +62,7 @@ export interface ItemInventario {
 
 // ── Préstamos ─────────────────────────────────────────────
 
-export type EstadoPrestamo = 'ACTIVO' | 'DEVUELTO' | 'VENCIDO' | string;
+export type EstadoPrestamo = 'ACTIVO' | 'DEVUELTO' | 'VENCIDO' | 'PENDIENTE' | string;
 
 export interface Prestamo {
   id: string;

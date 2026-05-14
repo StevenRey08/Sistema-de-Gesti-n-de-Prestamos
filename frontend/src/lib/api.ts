@@ -1,4 +1,4 @@
-const BASE_URL: string =
+export const BASE_URL: string =
   (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_API_URL) ||
   'http://localhost:4000/api';
 
@@ -90,7 +90,7 @@ export default api;
 
 // Determinamos el origen del backend para las imágenes
 // Si BASE_URL es 'http://localhost:4000/api', BACKEND_ORIGIN será 'http://localhost:4000'
-const BACKEND_ORIGIN = BASE_URL.endsWith('/api') 
+export const BACKEND_ORIGIN = BASE_URL.endsWith('/api') 
   ? BASE_URL.slice(0, -4) 
   : BASE_URL.endsWith('/api/') 
     ? BASE_URL.slice(0, -5)

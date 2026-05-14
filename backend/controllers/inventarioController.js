@@ -171,6 +171,16 @@ const inventarioController = {
         try {
             const existente = await prisma.inventario.findUnique({ where: { id: req.params.id } });
             if (!existente) return res.status(404).json({ status: "error", mensaje: "Artículo no encontrado" });
+
+            const prestamosActivos = await prisma.prestamo.count({
+                where: { inventario_id: req.params.id, estado: 'ACTIVO' }
+            });
+            if (prestamosActivos > 0) {
+                return res.status(400).json({
+                    error: "No se puede eliminar: el artículo tiene préstamos activos."
+                });
+            }
+
             await prisma.inventario.delete({ where: { id: req.params.id } });
             res.json({ message: "Artículo eliminado correctamente" });
         } catch (error) {

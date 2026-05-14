@@ -90,7 +90,7 @@ export default function MovimientosPage() {
               {lista.map((m: Movimiento) => (
                 <tr key={m.id}>
                   <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${BADGE[m.tipo] || 'bg-gray-700 text-gray-300'}`}>
+                    <span className={`text-xs px-2 py-1 rounded-full font-bold ${BADGE[m.tipo] || 'bg-gray-700 text-gray-300'}`}>
                       {m.tipo}
                     </span>
                   </td>

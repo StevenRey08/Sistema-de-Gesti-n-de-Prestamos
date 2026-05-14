@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import api from '../../lib/api';
+import api, { BACKEND_ORIGIN } from '../../lib/api';
 import type { ItemInventario } from '../../lib/types';
 import { useNotification } from '../../components/ui/NotificationContext';
 import { notifyErrorPayload } from '../../lib/errors';
@@ -16,15 +16,10 @@ const TIPOS = [
   { id: 'menos-prestados', label: 'Menos Prestados' },
 ];
 
-function hoy() {
-  const d = new Date();
-  return d.toISOString().slice(0, 10);
-}
-
 export default function ReportesPage() {
   const { notify } = useNotification();
   const [tipo, setTipo] = useState('bajo-stock');
-  const [fechaInicio, setFechaInicio] = useState(hoy);
+  const [fechaInicio, setFechaInicio] = useState('');
   const [fechaFin, setFechaFin] = useState('');
   const [data, setData] = useState<ReporteItem[]>([]);
   const [cargando, setCargando] = useState(false);
@@ -65,7 +60,7 @@ export default function ReportesPage() {
       } catch { return ''; }
     })();
 
-    const url = `http://localhost:4000/api/reportes/pdf?${params.toString()}`;
+    const url = `${BACKEND_ORIGIN}/api/reportes/pdf?${params.toString()}`;
     fetch(url, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.blob())
       .then(blob => {
