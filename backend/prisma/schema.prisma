@@ -53,6 +53,7 @@ model Usuario {
   apellido         String       @db.VarChar(50)
   usuario          String       @unique @db.VarChar(50)
   contrasena       String       @db.VarChar(255)
+  email            String?      @db.VarChar(100)
   rol_id           String?      @db.Uuid
   activo           Boolean      @default(true)
   movimientos      Movimiento[]
@@ -70,14 +71,12 @@ model Usuario {
 
 model Persona {
   id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tipo_documento   String?      @db.VarChar(20)
-  numero_documento String?      @unique @db.VarChar(50)
+  matricula        String?      @unique @db.VarChar(50)
   nombres          String?      @db.VarChar(100)
   apellidos        String?      @db.VarChar(100)
   tipo             String?      @db.VarChar(50) // Estudiante, Profesor, etc.
   curso            String?      @db.VarChar(100) // <--- Nuevo campo para el curso
   telefono         String?      @db.VarChar(20)
-  email            String?      @db.VarChar(100)
   movimientos      Movimiento[]
   prestamos        Prestamo[]
 
@@ -112,24 +111,23 @@ model Ubicacion {
 }
 
 model Inventario {
-  id              String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  codigo          String                @unique @db.VarChar(50)
-  nombre          String                @db.VarChar(150)
-  categoria_id    String?               @db.Uuid
+  id                  String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo              String                @unique @db.VarChar(50)
+  nombre              String                @db.VarChar(150)
+  categoria_id        String?               @db.Uuid
   
-  // --- Gestión de Cantidades por Estado ---
-  cantidad_total       Int      @default(0) // Suma de todos los estados (para auditoría)
-  cantidad_disponible  Int      @default(0) // Stock real para préstamos
-  cantidad_danada      Int      @default(0) // Herramientas que requieren reparación
+  cantidad_total       Int                  @default(0) 
+  cantidad_disponible  Int                  @default(0) 
+  cantidad_danada      Int                  @default(0) 
   
-  stock_minimo    Int                   @default(1) 
-  imagen_ruta     String?
+  stock_minimo        Int                   @default(1) 
+  imagen_ruta         String?
   
-  // Relaciones
-  categoria       CategoriaHerramienta? @relation(fields: [categoria_id], references: [id], onDelete: Restrict)
-  movimientos     Movimiento[]
-  prestamos       Prestamo[]
-  pedidos         Pedido[]
+  categoria           CategoriaHerramienta? @relation(fields: [categoria_id], references: [id], onDelete: Restrict)
+  movimientos         Movimiento[]
+  prestamos           Prestamo[]
+  // Cambiado: Ahora la relación es con los detalles
+  detalles_pedidos    DetallePedido[] 
 
   @@index([categoria_id])
   @@map("inventario")
@@ -140,20 +138,34 @@ model Inventario {
 // =========================================
 
 model Pedido {
-  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  inventario_id String?     @db.Uuid
-  usuario_id    String?     @db.Uuid
-  cantidad      Int
-  fecha_pedido  DateTime    @default(now()) @db.Timestamp(6)
-  fecha_entrega DateTime?   @db.Timestamp(6)
-  estado        String      @default("PENDIENTE") @db.VarChar(50) // PENDIENTE, COMPLETADO, CANCELADO
-  prioridad     String?     @db.VarChar(20) // ALTA, MEDIA, BAJA
-  observaciones String?     @db.Text
+  id            String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuario_id    String?         @db.Uuid
+  numero_orden  String?         @unique @db.VarChar(50) // Ej: COMPRA-2024-001
+  fecha_pedido  DateTime        @default(now()) @db.Timestamp(6)
+  fecha_entrega DateTime?       @db.Timestamp(6)
+  estado        String          @default("PENDIENTE") @db.VarChar(50)
+  prioridad     String?         @db.VarChar(20)
+  proveedor     String?         @db.VarChar(150) // Para saber a quién se le compró
+  observaciones String?         @db.Text
   
-  inventario    Inventario? @relation(fields: [inventario_id], references: [id])
-  usuario       Usuario?    @relation(fields: [usuario_id], references: [id])
+  // Relaciones
+  detalles      DetallePedido[] // Un pedido tiene muchas herramientas
+  usuario       Usuario?        @relation(fields: [usuario_id], references: [id])
 
   @@map("pedidos")
+}
+
+model DetallePedido {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pedido_id     String      @db.Uuid
+  inventario_id String      @db.Uuid
+  cantidad      Int         // Cuántas se pidieron
+  precio_unit   Decimal?    @db.Decimal(10, 2) // Opcional: para control de costos
+  
+  pedido        Pedido      @relation(fields: [pedido_id], references: [id], onDelete: Cascade)
+  inventario    Inventario  @relation(fields: [inventario_id], references: [id])
+
+  @@map("detalles_pedidos")
 }
 
 // =========================================
