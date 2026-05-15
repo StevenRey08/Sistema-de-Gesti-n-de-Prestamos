@@ -78,8 +78,8 @@ export default function InventarioPage() {
       const texto = [
         item.nombre,
         item.codigo,
-        item.ubicacion?.codigo,
-        item.ubicacion?.nombre,
+        item.ubicaciones?.codigo,
+        item.ubicaciones?.nombre,
       ]
         .filter(Boolean)
         .join(' ')
@@ -138,7 +138,7 @@ export default function InventarioPage() {
         cantidad: trasladando.cantidad,
         ubicacion_origen_id: trasladando.ubicacion_id,
         ubicacion_destino_id: destinoId,
-        observaciones: `Traslado desde ${trasladando.ubicacion?.codigo || 'ubicación anterior'}`
+        observaciones: `Traslado desde ${trasladando.ubicaciones?.codigo || 'ubicacion anterior'}`
       });
       notify('success', 'Traslado registrado correctamente.');
       setTrasladando(null);
@@ -245,7 +245,7 @@ export default function InventarioPage() {
                       <span className="font-bold text-sm text-[var(--accent-strong)]">×{item.cantidad}</span>
                     </div>
                     <p className="text-[10px] text-[var(--text-muted)] truncate">
-                      {item.ubicacion ? `${item.ubicacion.tipo}: ${item.ubicacion.codigo}` : '—'}
+                      {item.ubicaciones ? `${item.ubicaciones.tipo}: ${item.ubicaciones.codigo}` : '—'}
                     </p>
                     <div className="flex items-center gap-2 border-t border-[var(--border)] pt-2">
                       {puedeActualizar && (
@@ -311,7 +311,7 @@ export default function InventarioPage() {
                 {trasladando.nombre} ({trasladando.codigo})
               </p>
               <p className="text-xs text-[var(--text-muted)]">
-                Ubicación actual: {trasladando.ubicacion ? `${trasladando.ubicacion.tipo}: ${trasladando.ubicacion.codigo}` : '—'}
+                Ubicación actual: {trasladando.ubicaciones ? `${trasladando.ubicaciones.tipo}: ${trasladando.ubicaciones.codigo}` : '—'}
               </p>
             </div>
 

@@ -4,7 +4,7 @@ Este es el backend del Sistema de Gestión de Préstamos construido con Node.js,
 # Requisitos Previos
 Antes de ejecutar el proyecto, asegúrate de tener instalado:
 
-Node.js (v18 o superior recomendado).
+Node.js (v18 o supnperior recomendado).
 
 PostgreSQL (Asegúrate de tener activa la extensión pgcrypto).
 

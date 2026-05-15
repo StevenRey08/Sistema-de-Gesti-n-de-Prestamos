@@ -57,7 +57,7 @@ export interface ItemInventario {
   categoria_id?: string | null;
   ubicacion_id?: string | null;
   categoria?: Categoria | null;
-  ubicacion?: Ubicacion | null;
+  ubicaciones?: Ubicacion | null;
 }
 
 // ── Préstamos ─────────────────────────────────────────────

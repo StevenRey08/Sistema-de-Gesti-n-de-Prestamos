@@ -169,7 +169,7 @@ const reportesController = {
 
       const items = await prisma.inventario.findMany({
         where,
-        include: { categoria: true, ubicacion: true },
+        include: { categoria: true, ubicaciones: true },
         orderBy: { cantidad: 'asc' }
       });
       res.json(items);
@@ -262,7 +262,7 @@ const reportesController = {
         }
         const items = await prisma.inventario.findMany({
           where,
-          include: { categoria: true, ubicacion: true },
+          include: { categoria: true, ubicaciones: true },
           orderBy: { cantidad: 'asc' }
         });
         const filas = items.map(i => ({

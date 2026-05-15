@@ -7,10 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// =========================================
-// SEGURIDAD Y ROLES
-// =========================================
-
 model Role {
   id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   nombre_rol  String    @unique @db.VarChar(50)
@@ -53,155 +49,93 @@ model Usuario {
   apellido         String       @db.VarChar(50)
   usuario          String       @unique @db.VarChar(50)
   contrasena       String       @db.VarChar(255)
-  email            String?      @db.VarChar(100)
   rol_id           String?      @db.Uuid
   activo           Boolean      @default(true)
   movimientos      Movimiento[]
   prestamos        Prestamo[]
-  pedidos          Pedido[]     // Relación con los pedidos que realiza el usuario
   rol              Role?        @relation(fields: [rol_id], references: [id], onDelete: Restrict)
 
   @@index([rol_id])
   @@map("usuarios")
 }
 
-// =========================================
-// LOGÍSTICA E INVENTARIO
-// =========================================
-
 model Persona {
-  id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  matricula        String?      @unique @db.VarChar(50)
-  nombres          String?      @db.VarChar(100)
-  apellidos        String?      @db.VarChar(100)
-  tipo             String?      @db.VarChar(50) // Estudiante, Profesor, etc.
-  curso            String?      @db.VarChar(100) // <--- Nuevo campo para el curso
-  telefono         String?      @db.VarChar(20)
-  movimientos      Movimiento[]
-  prestamos        Prestamo[]
+  id                   String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tipo_documento       String?      @db.VarChar(20)
+  numero_documento     String?      @unique @db.VarChar(50)
+  nombres              String?      @db.VarChar(100)
+  apellidos            String?      @db.VarChar(100)
+  tipo                 String?      @db.VarChar(50)
+  telefono             String?      @db.VarChar(20)
+  email                String?      @db.VarChar(100)
+  movimientos          Movimiento[]
+  prestamos_estudiante Prestamo[]   @relation("EstudiantePrestamo")
 
   @@map("personas")
 }
 
 model CategoriaHerramienta {
-  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  nombre       String       @unique @db.VarChar(100)
-  descripcion  String?
-  ubicacion_id String?      @db.Uuid // La categoría ahora define la ubicación
-  ubicacion    Ubicacion?   @relation(fields: [ubicacion_id], references: [id])
-  inventarios  Inventario[]
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre      String       @unique @db.VarChar(100)
+  descripcion String?
+  inventarios Inventario[]
 
   @@map("categorias_herramientas")
 }
 
 model Ubicacion {
-  id                  String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  codigo              String                 @unique @db.VarChar(50)
-  nombre              String                 @db.VarChar(100)
-  tipo                String                 @db.VarChar(50)
+  id                  String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo              String       @unique @db.VarChar(50)
+  nombre              String       @db.VarChar(100)
+  tipo                String       @db.VarChar(50)
   descripcion         String?
-  ubicacion_padre_id  String?                @db.Uuid
-  categorias          CategoriaHerramienta[] // Relación con categorías
-  movimientos_destino Movimiento[]           @relation("UbicacionDestino")
-  movimientos_origen  Movimiento[]           @relation("UbicacionOrigen")
-  padre               Ubicacion?             @relation("JerarquiaUbicacion", fields: [ubicacion_padre_id], references: [id])
-  sub_ubicaciones     Ubicacion[]            @relation("JerarquiaUbicacion")
+  ubicacion_padre_id  String?      @db.Uuid
+  inventario          Inventario[]
+  movimientos_destino Movimiento[] @relation("UbicacionDestino")
+  movimientos_origen  Movimiento[] @relation("UbicacionOrigen")
+  padre               Ubicacion?   @relation("JerarquiaUbicacion", fields: [ubicacion_padre_id], references: [id])
+  sub_ubicaciones     Ubicacion[]  @relation("JerarquiaUbicacion")
 
   @@map("ubicaciones")
 }
 
 model Inventario {
-  id                  String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  codigo              String                @unique @db.VarChar(50)
-  nombre              String                @db.VarChar(150)
-  categoria_id        String?               @db.Uuid
-  
-  cantidad_total       Int                  @default(0) 
-  cantidad_disponible  Int                  @default(0) 
-  cantidad_danada      Int                  @default(0) 
-  
-  stock_minimo        Int                   @default(1) 
-  imagen_ruta         String?
-  
-  categoria           CategoriaHerramienta? @relation(fields: [categoria_id], references: [id], onDelete: Restrict)
-  movimientos         Movimiento[]
-  prestamos           Prestamo[]
-  // Cambiado: Ahora la relación es con los detalles
-  detalles_pedidos    DetallePedido[] 
+  id              String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo          String                @unique @db.VarChar(50)
+  nombre          String                @db.VarChar(150)
+  categoria_id    String?               @db.Uuid
+  estado          String?               @db.VarChar(50)
+  cantidad        Int                   @default(1)
+  ubicacion_id    String?               @db.Uuid
+  imagen_ruta     String?
+  estado_anterior String?
+  categoria       CategoriaHerramienta? @relation(fields: [categoria_id], references: [id], onDelete: Restrict)
+  ubicaciones     Ubicacion?            @relation(fields: [ubicacion_id], references: [id], onDelete: Restrict)
+  movimientos     Movimiento[]
+  prestamos       Prestamo[]
 
   @@index([categoria_id])
+  @@index([ubicacion_id])
   @@map("inventario")
 }
-
-// =========================================
-// NUEVA TABLA: PEDIDOS (ABASTECIMIENTO)
-// =========================================
-
-model Pedido {
-  id            String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  usuario_id    String?         @db.Uuid
-  numero_orden  String?         @unique @db.VarChar(50) // Ej: COMPRA-2024-001
-  fecha_pedido  DateTime        @default(now()) @db.Timestamp(6)
-  fecha_entrega DateTime?       @db.Timestamp(6)
-  estado        String          @default("PENDIENTE") @db.VarChar(50)
-  prioridad     String?         @db.VarChar(20)
-  proveedor     String?         @db.VarChar(150) // Para saber a quién se le compró
-  observaciones String?         @db.Text
-  
-  // Relaciones
-  detalles      DetallePedido[] // Un pedido tiene muchas herramientas
-  usuario       Usuario?        @relation(fields: [usuario_id], references: [id])
-
-  @@map("pedidos")
-}
-
-model DetallePedido {
-  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  pedido_id     String      @db.Uuid
-  inventario_id String      @db.Uuid
-  cantidad      Int         // Cuántas se pidieron
-  precio_unit   Decimal?    @db.Decimal(10, 2) // Opcional: para control de costos
-  
-  pedido        Pedido      @relation(fields: [pedido_id], references: [id], onDelete: Cascade)
-  inventario    Inventario  @relation(fields: [inventario_id], references: [id])
-
-  @@map("detalles_pedidos")
-}
-
-// =========================================
-// TRANSACCIONES
-// =========================================
 
 model Prestamo {
   id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   inventario_id    String?      @db.Uuid
-  
-  // 1. Quién recibe la herramienta (Estudiante)
   persona_id       String?      @db.Uuid
-  
-  // 2. Quién autoriza/manda (Instructor/Profesor)
-  instructor_id    String?      @db.Uuid
-  
   usuario_id       String?      @db.Uuid
   cantidad         Int
   fecha_prestamo   DateTime?    @default(now()) @db.Timestamp(6)
   fecha_devolucion DateTime?    @db.Timestamp(6)
   estado           String?      @db.VarChar(50)
   observaciones    String?
-  
   movimientos      Movimiento[]
-  
-  // Relaciones
   inventario       Inventario?  @relation(fields: [inventario_id], references: [id], onDelete: Restrict)
-  usuario          Usuario?     @relation(fields: [usuario_id], references: [id], onDelete: Restrict)
-  
-  // Relaciones duales con Persona (Se deben nombrar para diferenciarlas)
   persona          Persona?     @relation("EstudiantePrestamo", fields: [persona_id], references: [id], onDelete: Restrict)
-  instructor       Persona?     @relation("InstructorPrestamo", fields: [instructor_id], references: [id], onDelete: Restrict)
+  usuario          Usuario?     @relation(fields: [usuario_id], references: [id], onDelete: Restrict)
 
   @@index([inventario_id])
   @@index([persona_id])
-  @@index([instructor_id])
   @@index([estado])
   @@map("prestamos")
 }

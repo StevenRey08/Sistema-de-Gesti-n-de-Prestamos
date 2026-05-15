@@ -23,7 +23,7 @@ const inventarioController = {
                 },
                 include: {
                     categoria: true,
-                    ubicacion: {
+                    ubicaciones: {
                         include: { padre: true }
                     }
                 },
@@ -39,7 +39,7 @@ const inventarioController = {
     getAlertasStock: async (req, res) => {
         try {
             const inventarioCompleto = await prisma.inventario.findMany({
-                include: { categoria: true, ubicacion: true }
+                include: { categoria: true, ubicaciones: true }
             });
 
             const alertas = inventarioCompleto.filter(item =>
@@ -80,7 +80,7 @@ const inventarioController = {
             data.cantidad = data.cantidad !== undefined && data.cantidad !== null && data.cantidad !== '' ? parseInt(data.cantidad) : 1;
             const nuevo = await prisma.inventario.create({
                 data,
-                include: { ubicacion: true, categoria: true }
+                include: { ubicaciones: true, categoria: true }
             });
 
             await prisma.movimiento.create({
@@ -110,7 +110,7 @@ const inventarioController = {
                 where: { id: req.params.id },
                 include: {
                     categoria: true,
-                    ubicacion: {
+                    ubicaciones: {
                         include: { padre: true }
                     },
                     movimientos: {

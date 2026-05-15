@@ -41,6 +41,10 @@ const TITLES: Record<string, { title: string; subtitle: string }> = {
     title: 'Administrar perfil',
     subtitle: 'Actualiza tus datos de acceso y tu contraseña',
   },
+  '/reportes': {
+    title: 'Reportes',
+    subtitle: 'Indicadores y estadísticas del sistema',
+  },
 };
 
 
@@ -77,23 +81,25 @@ export default function Topbar() {
           <p className="mt-1 text-sm text-[var(--text-muted)]">{section.subtitle}</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2 text-sm text-[var(--text-muted)]">
-            Sesión activa como <span className="font-semibold text-[var(--text-main)]">{user?.rol}</span>
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:flex-wrap">
+          <div className="rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2 text-sm text-[var(--text-muted)] shrink-0">
+            <span className="hidden xs:inline">Sesión activa como </span>
+            <span className="font-semibold text-[var(--text-main)]">{user?.rol}</span>
           </div>
 
-          <div className="flex items-center gap-3 rounded-full border border-[var(--border)] bg-white px-3 py-2 shadow-[var(--shadow-soft)]">
-            <div className="app-logo-dot flex h-11 w-11 items-center justify-center rounded-full text-sm font-semibold text-white">
+          <div className="flex items-center gap-2 rounded-full border border-[var(--border)] bg-white pl-3 pr-2 py-2 shadow-[var(--shadow-soft)] shrink-0 max-w-full">
+            <div className="app-logo-dot flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white">
               {initials}
             </div>
-            <div className="hidden pr-2 sm:block">
-              <p className="text-sm font-semibold text-[var(--text-main)]">{user?.nombre}</p>
-              <p className="text-xs text-[var(--text-muted)]">{user?.usuario ?? user?.email}</p>
+            <div className="hidden min-w-0 md:block">
+              <p className="text-sm font-semibold text-[var(--text-main)] truncate">{user?.nombre}</p>
+              <p className="text-xs text-[var(--text-muted)]">{user?.usuario}</p>
             </div>
-            <button onClick={() => router.push('/mi-cuenta')} className="soft-btn-ghost px-4 py-2 text-sm text-[var(--accent-strong)]">
-              Administrar perfil
+            <span className="mx-1 hidden h-6 w-px bg-[var(--border)] md:block" />
+            <button onClick={() => router.push('/mi-cuenta')} className="soft-btn-ghost shrink-0 px-3 py-1.5 text-xs text-[var(--accent-strong)] whitespace-nowrap">
+              Perfil
             </button>
-            <button onClick={handleLogout} className="soft-btn-secondary px-4 py-2 text-sm">
+            <button onClick={handleLogout} className="soft-btn-secondary shrink-0 px-3 py-1.5 text-xs whitespace-nowrap">
               Salir
             </button>
           </div>
