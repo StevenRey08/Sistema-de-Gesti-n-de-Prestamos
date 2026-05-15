@@ -1,21 +1,38 @@
 const { prisma } = require('../db');
 const logger = require('../utils/logger');
 
+async function marcarVencidos() {
+    try {
+        await prisma.prestamo.updateMany({
+            where: {
+                estado: 'ACTIVO',
+                fecha_devolucion: { lt: new Date() },
+            },
+            data: { estado: 'PENDIENTE' }
+        });
+    } catch (error) {
+        logger.error('Error al marcar préstamos vencidos:', error);
+    }
+}
+
 const dashboardController = {
     getStats: async (req, res) => {
         try {
-            // Ejecutamos varias consultas en paralelo para velocidad
+            await marcarVencidos();
+
             const [
                 totalArticulos,
                 totalCategorias,
                 totalPersonas,
                 prestamosActivos,
+                prestamosPendientes,
                 movimientosRecientes
             ] = await Promise.all([
                 prisma.inventario.count(),
                 prisma.categoriaHerramienta.count(),
                 prisma.persona.count(),
                 prisma.prestamo.count({ where: { estado: 'ACTIVO' } }),
+                prisma.prestamo.count({ where: { estado: 'PENDIENTE' } }),
                 prisma.movimiento.findMany({
                     take: 5,
                     orderBy: { fecha: 'desc' },
@@ -26,19 +43,13 @@ const dashboardController = {
                 })
             ]);
 
-            // Obtener alertas de stock (cantidad <= 2)
-            const inventario = await prisma.inventario.findMany({
-                select: { cantidad: true }
-            });
-            const alertasStock = inventario.filter(i => i.cantidad <= 2).length;
-
             res.json({
                 counts: {
                     articulos: totalArticulos,
                     categorias: totalCategorias,
                     personas: totalPersonas,
                     prestamos_activos: prestamosActivos,
-                    alertas_stock: alertasStock
+                    prestamos_pendientes: prestamosPendientes
                 },
                 movimientos_recientes: movimientosRecientes
             });

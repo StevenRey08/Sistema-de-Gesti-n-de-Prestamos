@@ -23,143 +23,136 @@ function formatoFechaCorta(d) {
   return new Date(d).toLocaleString('es-DO', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
-// ── PDF helper (portada + estilo profesional) ─────────────
-function generarPDF(res, titulo, fechaInicio, fechaFin, columnas, filas, color = '#10367d') {
-  const doc = new PDFDocument({ margin: 40, size: 'A4' });
+// ── PDF helper ─────────────────────────────────────────────
+function generarPDF(res, titulo, fechaInicio, fechaFin, columnas, filas, color = '#10367d', autorNombre = 'Usuario del Sistema') {
+  const doc = new PDFDocument({ margin: 40, size: 'A4', bufferPages: true });
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `inline; filename="${titulo.toLowerCase().replace(/\s+/g, '_')}.pdf"`);
   doc.pipe(res);
 
   const pageW = doc.page.width - 80;
   const marginX = 40;
-  const pageH = doc.page.height;
-  const colorClaro = '#e8edf5';
-  const logoPath = path.join(__dirname, '../uploads/logo.png');
+  const colorClaro = '#f4f7fa';
+  const logoAzul = path.join(__dirname, '../uploads/logo_azul.png');
+  const logoBlanco = path.join(__dirname, '../uploads/logo.png');
+  const pw = doc.page.width;
+  const ph = doc.page.height;
+  const cx = pw / 2;
 
-  // ── Portada (página 1) ──────────────────────────────────
-  function portada() {
-    // Fondo degradado simulado con barras verticales
-    const pasos = 80;
-    const altoPaso = pageH / pasos;
-    for (let i = 0; i < pasos; i++) {
-      const t = i / pasos;
-      const r = Math.round(16 + t * 9);
-      const g = Math.round(54 + t * 7);
-      const b = Math.round(125 + t * 72);
-      const c = `rgb(${r},${g},${b})`;
-      doc.rect(0, i * altoPaso, doc.page.width, altoPaso + 1).fill(c);
-    }
+  // ── Encabezado de páginas de datos (Página 2+) ───────────
+  function encabezadoPagina() {
+    // Eliminada la barra azul y el título por solicitud del usuario
+    return 40; 
+  }
 
-    // Logo grande y centrado
+  // ── Portada (Página 1 - Diseño Minimalista) ──────────────
+  function renderPortada() {
+    // Logo Central
+    let yLogo = 120;
     try {
-      const logoSize = 160;
-      doc.image(logoPath, (doc.page.width - logoSize) / 2, 100, { width: logoSize });
+      doc.image(logoAzul, (pw - 250) / 2, yLogo, { width: 250 });
     } catch {}
 
-    // Línea decorativa
-    const cx = doc.page.width / 2;
-    doc.moveTo(cx - 80, 300).lineTo(cx + 80, 300).lineWidth(2).strokeColor('rgba(255,255,255,0.45)').stroke();
+    // Título Principal
+    const yTitle = yLogo + 200;
+    doc.font('Helvetica-Bold').fontSize(32).fillColor(color)
+      .text(titulo.toUpperCase(), marginX, yTitle, { align: 'center', width: pageW });
 
-    // Título del reporte
-    doc.font('Helvetica-Bold').fontSize(30).fillColor('#fff')
-      .text(titulo, marginX, 330, { align: 'center', width: pageW });
+    // Card de metadatos expandida
+    const yBox = yTitle + 80;
+    const mw = 460;
+    const mh = (fechaInicio || fechaFin) ? 170 : 135;
+    const mleft = cx - mw / 2;
+    
+    doc.save();
+    doc.roundedRect(mleft, yBox, mw, mh, 15).lineWidth(0.8).strokeColor('#cbd5e1').stroke();
+    doc.fillColor('#f8fafc').roundedRect(mleft + 0.8, yBox + 0.8, mw - 1.6, mh - 1.6, 15).fill();
+    doc.restore();
 
-    // Subtítulo
-    doc.font('Helvetica').fontSize(14).fillColor('rgba(255,255,255,0.7)')
-      .text('Sistema de Gestión de Préstamos', marginX, 380, { align: 'center', width: pageW });
-
-    // Fecha de generación
-    doc.font('Helvetica').fontSize(10).fillColor('rgba(255,255,255,0.5)')
-      .text(`Generado: ${formatoFecha(new Date())}`, marginX, 430, { align: 'center', width: pageW });
-
-    if (fechaInicio || fechaFin) {
-      doc.font('Helvetica').fontSize(9).fillColor('rgba(255,255,255,0.45)')
-        .text(`Período: ${fechaInicio ? formatoFechaCorta(fechaInicio) : '—'} al ${fechaFin ? formatoFechaCorta(fechaFin) : '—'}`, marginX, 450, { align: 'center', width: pageW });
+    function metaRow(label, value, yy) {
+      doc.font('Helvetica').fontSize(14).fillColor('#64748b').text(label, mleft + 45, yy, { width: 150 });
+      doc.font('Helvetica-Bold').fontSize(14).fillColor('#1e293b').text(value, mleft + 210, yy, { width: 240 });
+      return yy + 36;
     }
+
+    let ly = yBox + 30;
+    ly = metaRow('Elaborado por:', autorNombre, ly);
+    ly = metaRow('Fecha emisión:', formatoFecha(new Date()), ly);
+    if (fechaInicio || fechaFin) {
+      ly = metaRow('Período:', `${fechaInicio ? formatoFechaCorta(fechaInicio) : '—'} al ${fechaFin ? formatoFechaCorta(fechaFin) : '—'}`, ly);
+    }
+    ly = metaRow('Tipo reporte:', titulo, ly);
 
     doc.addPage();
   }
 
-  // ── Encabezado de páginas de datos ──────────────────────
-  function encabezadoPagina() {
-    const yTop = 30;
-    doc.rect(marginX, yTop, pageW, 6).fill(color);
-    try {
-      doc.image(logoPath, marginX, yTop + 10, { height: 32 });
-    } catch {}
-    const textX = marginX + 46;
-    doc.fontSize(20).font('Helvetica-Bold').fillColor(color).text('Sistema de Gestión de Préstamos', textX, yTop + 14);
-    doc.fontSize(9).font('Helvetica').fillColor('#888').text(`Generado: ${formatoFecha(new Date())}`, textX, yTop + 38);
-    if (fechaInicio || fechaFin) {
-      doc.fontSize(8).font('Helvetica').fillColor('#888')
-        .text(`Período: ${fechaInicio ? formatoFechaCorta(fechaInicio) : '—'} al ${fechaFin ? formatoFechaCorta(fechaFin) : '—'}`, textX, yTop + 51);
-    }
-    let yy = yTop + (fechaInicio || fechaFin ? 66 : 56);
-    doc.moveTo(marginX, yy).lineTo(marginX + pageW, yy).lineWidth(1.5).strokeColor(color).stroke();
-    yy += 16;
-    doc.fontSize(15).font('Helvetica-Bold').fillColor('#333').text(titulo, marginX, yy);
-    yy += 24;
-    return yy;
-  }
-
-  function piePagina() {
-    const totalPages = doc.bufferedPageRange().count;
-    const contentPages = totalPages - 1;
-    for (let i = 0; i < totalPages; i++) {
-      if (i === 0) continue;
+  function addFooter() {
+    const pages = doc.bufferedPageRange();
+    for (let i = 0; i < pages.count; i++) {
+      if (i === 0) continue; // No poner pie de página de datos en la portada
       doc.switchToPage(i);
-      doc.fontSize(8).font('Helvetica').fillColor('#aaa')
-        .text(`Página ${i} de ${contentPages}`, marginX, doc.page.height - 35, { align: 'center', width: pageW });
-      doc.fontSize(7).font('Helvetica').fillColor('#ccc')
-        .text(titulo, marginX, doc.page.height - 25, { align: 'center', width: pageW });
-      doc.rect(marginX, doc.page.height - 42, pageW, 0.5).fill('#ddd');
+      doc.rect(marginX, ph - 45, pageW, 0.5).fill('#e2e8f0');
+      doc.fontSize(8).font('Helvetica').fillColor('#94a3b8')
+        .text('INFO-ALMACEN | Sistema de Gestión de Préstamos', marginX, ph - 35, { align: 'left', width: pageW / 2 });
+      doc.fontSize(8).font('Helvetica-Bold').fillColor('#64748b')
+        .text(`Página ${i} de ${pages.count - 1}`, marginX + pageW / 2, ph - 35, { align: 'right', width: pageW / 2 });
     }
   }
 
-  // ── Render ───────────────────────────────────────────────
-  portada();
-
+  // ── Renderizado ──────────────────────────────────────────
+  renderPortada();
+  
   let y = encabezadoPagina();
   const colW = pageW / columnas.length;
   const rowH = 24;
 
   function tablaHeader(yy) {
-    doc.roundedRect(marginX, yy, pageW, rowH, 3).fill(color);
+    doc.save();
+    doc.roundedRect(marginX, yy, pageW, rowH, 4).fill(color);
     columnas.forEach((col, i) => {
       doc.fillColor('#fff').fontSize(9).font('Helvetica-Bold')
-        .text(col, marginX + colW * i + 8, yy + 7, { width: colW - 12, align: 'left' });
+        .text(col.toUpperCase(), marginX + colW * i + 10, yy + 7, { width: colW - 20, align: 'left' });
     });
+    doc.restore();
     return yy + rowH;
   }
 
   y = tablaHeader(y);
-
   let turno = false;
+
   for (const fila of filas) {
-    if (y + rowH > doc.page.height - 55) {
-      piePagina();
+    // Umbral de salto de página ajustado para aprovechar más espacio
+    if (y + rowH > ph - 50) { 
       doc.addPage();
       y = encabezadoPagina();
       y = tablaHeader(y);
     }
-    const bgColor = turno ? colorClaro : '#fff';
-    doc.rect(marginX, y, pageW, rowH).fill(bgColor);
+    
+    if (turno) {
+      doc.fillColor(colorClaro).rect(marginX, y, pageW, rowH).fill();
+    }
+    doc.moveTo(marginX, y + rowH).lineTo(marginX + pageW, y + rowH).lineWidth(0.2).strokeColor('#eee').stroke();
+    
     turno = !turno;
     columnas.forEach((col, i) => {
       const val = fila[col] !== undefined && fila[col] !== null ? String(fila[col]) : '';
-      doc.fillColor('#333').fontSize(8.5).font('Helvetica')
-        .text(val, marginX + colW * i + 8, y + 7, { width: colW - 12, align: 'left' });
+      doc.fillColor('#334155').fontSize(8.5).font('Helvetica')
+        .text(val, marginX + colW * i + 10, y + 7, { width: colW - 20, align: 'left', lineBreak: false });
     });
     y += rowH;
   }
 
-  y += 8;
-  doc.moveTo(marginX, y).lineTo(marginX + pageW, y).lineWidth(1).strokeColor('#ddd').stroke();
-  y += 6;
-  doc.fontSize(8).font('Helvetica-Oblique').fillColor('#999')
-    .text(`${filas.length} registro(s) encontrado(s)`, marginX, y, { align: 'right', width: pageW });
+  // Solo agregar página si el espacio para el resumen es crítico (menos de 30px)
+  if (y + 30 > ph - 50) {
+    doc.addPage();
+    y = encabezadoPagina();
+  }
+  
+  y += 10;
+  doc.fontSize(8).font('Helvetica-Oblique').fillColor('#94a3b8')
+    .text(`Fin del reporte. Total de registros: ${filas.length}`, marginX, y, { align: 'center', width: pageW });
 
-  piePagina();
+  addFooter();
   doc.end();
 }
 
@@ -256,6 +249,12 @@ const reportesController = {
       const { tipo, fechaInicio, fechaFin } = req.query;
       const whereFecha = filtroFechaPrestamo(fechaInicio, fechaFin);
 
+      const user = await prisma.usuario.findUnique({
+        where: { id: req.usuario.id },
+        select: { nombre: true, apellido: true }
+      });
+      const autorNombre = user ? `${user.nombre} ${user.apellido}` : req.usuario.usuario;
+
       if (tipo === 'bajo-stock') {
         const where = { cantidad: { lte: 2 } };
         if (Object.keys(whereFecha).length > 0) {
@@ -274,7 +273,7 @@ const reportesController = {
           Estado: i.estado || '—',
         }));
         generarPDF(res, 'Reporte de Bajo Stock', fechaInicio, fechaFin,
-          ['Código', 'Nombre', 'Categoría', 'Stock', 'Estado'], filas);
+          ['Código', 'Nombre', 'Categoría', 'Stock', 'Estado'], filas, '#10367d', autorNombre);
       } else if (tipo === 'mas-prestados') {
         const resultados = await prisma.prestamo.groupBy({
           by: ['inventario_id'],
@@ -298,7 +297,7 @@ const reportesController = {
           'Total unidades': String(r._sum.cantidad),
         }));
         generarPDF(res, 'Reporte de Más Prestados', fechaInicio, fechaFin,
-          ['Código', 'Nombre', 'Categoría', 'Veces prestado', 'Total unidades'], filas);
+          ['Código', 'Nombre', 'Categoría', 'Veces prestado', 'Total unidades'], filas, '#10367d', autorNombre);
       } else if (tipo === 'menos-prestados') {
         const resultados = await prisma.prestamo.groupBy({
           by: ['inventario_id'],
@@ -322,7 +321,7 @@ const reportesController = {
           'Total unidades': String(r._sum.cantidad),
         }));
         generarPDF(res, 'Reporte de Menos Prestados', fechaInicio, fechaFin,
-          ['Código', 'Nombre', 'Categoría', 'Veces prestado', 'Total unidades'], filas);
+          ['Código', 'Nombre', 'Categoría', 'Veces prestado', 'Total unidades'], filas, '#10367d', autorNombre);
       } else {
         res.status(400).json({ status: 'error', mensaje: 'Tipo de reporte inválido' });
       }

@@ -151,7 +151,7 @@ export interface DashboardCounts {
   categorias: number;
   personas: number;
   prestamos_activos: number;
-  alertas_stock: number;
+  prestamos_pendientes: number;
 }
 
 // ── Seguridad ─────────────────────────────────────────────

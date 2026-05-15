@@ -61,12 +61,18 @@ export default function ReportesPage() {
     })();
 
     const url = `${BACKEND_ORIGIN}/api/reportes/pdf?${params.toString()}`;
-    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.blob())
+    fetch(url, { headers: { Authorization: `Bearer ${token}` }, credentials: 'include' })
+      .then(async r => {
+        if (!r.ok) {
+          const err = await r.json().catch(() => ({ mensaje: 'Error al generar PDF' }));
+          throw new Error(err.mensaje || 'Error al generar PDF');
+        }
+        return r.blob();
+      })
       .then(blob => {
         window.open(URL.createObjectURL(blob), '_blank');
       })
-      .catch(() => notify('error', 'Error al generar PDF'));
+      .catch(e => notify('error', e.message));
   }
 
   return (
