@@ -49,6 +49,7 @@ model Usuario {
   apellido         String       @db.VarChar(50)
   usuario          String       @unique @db.VarChar(50)
   contrasena       String       @db.VarChar(255)
+  email            String?      @db.VarChar(100)
   rol_id           String?      @db.Uuid
   activo           Boolean      @default(true)
   movimientos      Movimiento[]
@@ -60,6 +61,7 @@ model Usuario {
 }
 
 model Persona {
+<<<<<<< HEAD
   id                   String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tipo_documento       String?      @db.VarChar(20)
   numero_documento     String?      @unique @db.VarChar(50)
@@ -70,6 +72,17 @@ model Persona {
   email                String?      @db.VarChar(100)
   movimientos          Movimiento[]
   prestamos_estudiante Prestamo[]   @relation("EstudiantePrestamo")
+=======
+  id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  matricula        String?      @unique @db.VarChar(50)
+  nombres          String?      @db.VarChar(100)
+  apellidos        String?      @db.VarChar(100)
+  tipo             String?      @db.VarChar(50) // Estudiante, Profesor, etc.
+  curso            String?      @db.VarChar(100) // <--- Nuevo campo para el curso
+  telefono         String?      @db.VarChar(20)
+  movimientos      Movimiento[]
+  prestamos        Prestamo[]
+>>>>>>> 462f7a4 (Actualizcion esquema prisam)
 
   @@map("personas")
 }
@@ -100,6 +113,7 @@ model Ubicacion {
 }
 
 model Inventario {
+<<<<<<< HEAD
   id              String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   codigo          String                @unique @db.VarChar(50)
   nombre          String                @db.VarChar(150)
@@ -113,12 +127,73 @@ model Inventario {
   ubicaciones     Ubicacion?            @relation(fields: [ubicacion_id], references: [id], onDelete: Restrict)
   movimientos     Movimiento[]
   prestamos       Prestamo[]
+=======
+  id                  String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo              String                @unique @db.VarChar(50)
+  nombre              String                @db.VarChar(150)
+  categoria_id        String?               @db.Uuid
+  
+  cantidad_total       Int                  @default(0) 
+  cantidad_disponible  Int                  @default(0) 
+  cantidad_danada      Int                  @default(0) 
+  
+  stock_minimo        Int                   @default(1) 
+  imagen_ruta         String?
+  
+  categoria           CategoriaHerramienta? @relation(fields: [categoria_id], references: [id], onDelete: Restrict)
+  movimientos         Movimiento[]
+  prestamos           Prestamo[]
+  // Cambiado: Ahora la relación es con los detalles
+  detalles_pedidos    DetallePedido[] 
+>>>>>>> 462f7a4 (Actualizcion esquema prisam)
 
   @@index([categoria_id])
   @@index([ubicacion_id])
   @@map("inventario")
 }
 
+<<<<<<< HEAD
+=======
+// =========================================
+// NUEVA TABLA: PEDIDOS (ABASTECIMIENTO)
+// =========================================
+
+model Pedido {
+  id            String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuario_id    String?         @db.Uuid
+  numero_orden  String?         @unique @db.VarChar(50) // Ej: COMPRA-2024-001
+  fecha_pedido  DateTime        @default(now()) @db.Timestamp(6)
+  fecha_entrega DateTime?       @db.Timestamp(6)
+  estado        String          @default("PENDIENTE") @db.VarChar(50)
+  prioridad     String?         @db.VarChar(20)
+  proveedor     String?         @db.VarChar(150) // Para saber a quién se le compró
+  observaciones String?         @db.Text
+  
+  // Relaciones
+  detalles      DetallePedido[] // Un pedido tiene muchas herramientas
+  usuario       Usuario?        @relation(fields: [usuario_id], references: [id])
+
+  @@map("pedidos")
+}
+
+model DetallePedido {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pedido_id     String      @db.Uuid
+  inventario_id String      @db.Uuid
+  cantidad      Int         // Cuántas se pidieron
+  precio_unit   Decimal?    @db.Decimal(10, 2) // Opcional: para control de costos
+  
+  pedido        Pedido      @relation(fields: [pedido_id], references: [id], onDelete: Cascade)
+  inventario    Inventario  @relation(fields: [inventario_id], references: [id])
+
+  @@map("detalles_pedidos")
+}
+
+// =========================================
+// TRANSACCIONES
+// =========================================
+
+>>>>>>> 462f7a4 (Actualizcion esquema prisam)
 model Prestamo {
   id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   inventario_id    String?      @db.Uuid
