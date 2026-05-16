@@ -2,6 +2,7 @@ const { prisma } = require('../db');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const logger = require('../utils/logger');
+const nodemailer = require('nodemailer');
 
 const COOKIE_OPTIONS = {
     httpOnly: true,
@@ -10,6 +11,18 @@ const COOKIE_OPTIONS = {
     maxAge: 8 * 60 * 60 * 1000,
     path: '/'
 };
+
+const resetCodes = new Map();
+
+const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT || '587'),
+    secure: process.env.SMTP_SECURE === 'true',
+    auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+    }
+});
 
 const authController = {
     login: async (req, res) => {
@@ -22,9 +35,7 @@ const authController = {
                     rol: {
                         include: {
                             permisos: {
-                                include: {
-                                    modulo: true
-                                }
+                                include: { modulo: true }
                             }
                         }
                     }
@@ -50,7 +61,6 @@ const authController = {
                 { expiresIn: '8h' }
             );
 
-            // Set httpOnly cookie (seguro contra XSS)
             res.cookie('sgp_token', token, COOKIE_OPTIONS);
 
             const { contrasena: _, ...datosUsuario } = user;
@@ -79,9 +89,7 @@ const authController = {
                     rol: {
                         include: {
                             permisos: {
-                                include: {
-                                    modulo: true
-                                }
+                                include: { modulo: true }
                             }
                         }
                     }
@@ -99,7 +107,7 @@ const authController = {
     },
 
     actualizarPerfil: async (req, res) => {
-        const { nombre, apellido, usuario, contrasena } = req.body;
+        const { nombre, apellido, usuario, contrasena, contrasena_actual, confirmar_contrasena } = req.body;
 
         try {
             const currentUser = await prisma.usuario.findUnique({
@@ -108,6 +116,22 @@ const authController = {
 
             if (!currentUser) {
                 return res.status(401).json({ status: "error", mensaje: "Usuario no encontrado" });
+            }
+
+            if (contrasena) {
+                if (!contrasena_actual) {
+                    return res.status(400).json({ status: "error", mensaje: "Debe ingresar su contraseña actual para cambiarla." });
+                }
+                const match = await bcrypt.compare(contrasena_actual, currentUser.contrasena);
+                if (!match) {
+                    return res.status(400).json({ status: "error", mensaje: "La contraseña actual no es correcta." });
+                }
+                if (contrasena_actual === contrasena && contrasena === confirmar_contrasena) {
+                    return res.status(400).json({ status: "error", mensaje: "La nueva contraseña no puede ser igual a la actual. Por seguridad, elige una contraseña diferente." });
+                }
+                if (contrasena !== confirmar_contrasena) {
+                    return res.status(400).json({ status: "error", mensaje: "Las contraseñas nuevas no coinciden." });
+                }
             }
 
             if (usuario && usuario !== currentUser.usuario) {
@@ -132,9 +156,7 @@ const authController = {
                     rol: {
                         include: {
                             permisos: {
-                                include: {
-                                    modulo: true
-                                }
+                                include: { modulo: true }
                             }
                         }
                     }
@@ -146,6 +168,97 @@ const authController = {
         } catch (error) {
             logger.error("Error al actualizar perfil", { error: error.message });
             res.status(500).json({ status: "error", mensaje: "Error al actualizar perfil" });
+        }
+    },
+
+    solicitarCodigoReset: async (req, res) => {
+        const { email } = req.body;
+
+        try {
+            const user = await prisma.usuario.findUnique({ where: { email } });
+            if (!user) {
+                return res.status(404).json({ status: "error", mensaje: "No existe una cuenta con ese correo electrónico." });
+            }
+
+            const codigo = Math.floor(100000 + Math.random() * 900000).toString();
+            resetCodes.set(email, { codigo, expiry: Date.now() + 15 * 60 * 1000 });
+
+            try {
+                await transporter.sendMail({
+                    from: `"Sistema Inventario" <${process.env.SMTP_USER}>`,
+                    to: email,
+                    subject: 'Código de recuperación de contraseña',
+                    html: `
+                        <h2>Recuperación de contraseña</h2>
+                        <p>Has solicitado restablecer tu contraseña.</p>
+                        <p>Tu código de verificación es:</p>
+                        <h1 style="color: #2563eb; font-size: 32px; letter-spacing: 5px;">${codigo}</h1>
+                        <p>Este código expira en 15 minutos.</p>
+                        <p>Si no solicitaste este cambio, ignora este mensaje.</p>
+                    `
+                });
+                res.json({ status: "ok", mensaje: "Código enviado al correo electrónico." });
+            } catch (mailError) {
+                resetCodes.delete(email);
+                logger.error("Error al enviar email:", mailError);
+                res.status(500).json({ status: "error", mensaje: "Error al enviar el correo. Verifique la configuración SMTP." });
+            }
+        } catch (error) {
+            logger.error("Error en solicitarCodigoReset:", error);
+            res.status(500).json({ status: "error", mensaje: "Error al procesar la solicitud." });
+        }
+    },
+
+    verificarCodigoReset: async (req, res) => {
+        const { email, codigo } = req.body;
+
+        try {
+            const stored = resetCodes.get(email);
+            if (!stored) {
+                return res.status(400).json({ status: "error", mensaje: "No se ha solicitado un código para este correo." });
+            }
+            if (Date.now() > stored.expiry) {
+                resetCodes.delete(email);
+                return res.status(400).json({ status: "error", mensaje: "El código ha expirado. Solicite uno nuevo." });
+            }
+            if (stored.codigo !== codigo) {
+                return res.status(400).json({ status: "error", mensaje: "El código ingresado no es correcto." });
+            }
+
+            res.json({ status: "ok", mensaje: "Código verificado correctamente.", email });
+        } catch (error) {
+            logger.error("Error en verificarCodigoReset:", error);
+            res.status(500).json({ status: "error", mensaje: "Error al verificar el código." });
+        }
+    },
+
+    resetPassword: async (req, res) => {
+        const { email, codigo, nueva_contrasena } = req.body;
+
+        try {
+            const stored = resetCodes.get(email);
+            if (!stored) {
+                return res.status(400).json({ status: "error", mensaje: "No se ha solicitado un código para este correo." });
+            }
+            if (Date.now() > stored.expiry) {
+                resetCodes.delete(email);
+                return res.status(400).json({ status: "error", mensaje: "El código ha expirado." });
+            }
+            if (stored.codigo !== codigo) {
+                return res.status(400).json({ status: "error", mensaje: "El código ingresado no es correcto." });
+            }
+
+            const hashedPassword = await bcrypt.hash(nueva_contrasena, 10);
+            await prisma.usuario.update({
+                where: { email },
+                data: { contrasena: hashedPassword }
+            });
+
+            resetCodes.delete(email);
+            res.json({ status: "ok", mensaje: "Contraseña actualizada correctamente." });
+        } catch (error) {
+            logger.error("Error en resetPassword:", error);
+            res.status(500).json({ status: "error", mensaje: "Error al restablecer la contraseña." });
         }
     }
 };

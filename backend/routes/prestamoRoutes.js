@@ -8,8 +8,9 @@ const { checkPermiso } = require('../middlewares/permisoMiddleware');
 router.use(verificarToken);
 
 router.get('/', checkPermiso('PRESTAMOS', 'leer'), prestamoController.getAll);
-router.get('/pendientes', checkPermiso('PRESTAMOS', 'leer'), prestamoController.getPendientes);
+router.get('/vencidos', checkPermiso('PRESTAMOS', 'leer'), prestamoController.getVencidos);
 router.get('/:id', checkPermiso('PRESTAMOS', 'leer'), prestamoController.getById);
+router.get('/:id/pdf', checkPermiso('PRESTAMOS', 'leer'), prestamoController.generarPDF);
 
 router.post('/', checkPermiso('PRESTAMOS', 'ingresar'), validarPrestamo, prestamoController.create);
 router.put('/:id', checkPermiso('PRESTAMOS', 'actualizar'), prestamoController.update);

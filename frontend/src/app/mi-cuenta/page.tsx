@@ -13,6 +13,7 @@ export default function MiCuentaPage() {
   const [nombre, setNombre] = useState('');
   const [apellido, setApellido] = useState('');
   const [usuario, setUsuario] = useState('');
+  const [passwordActual, setPasswordActual] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -45,8 +46,14 @@ export default function MiCuentaPage() {
       detalles.push('Completa el nombre, el apellido y el usuario.');
     }
 
-    if (password && password.length < 6) {
-      detalles.push('La nueva contraseña debe tener al menos 6 caracteres.');
+    if (password) {
+      if (!passwordActual) {
+        detalles.push('Debes ingresar tu contraseña actual para cambiarla.');
+      } else if (password.length < 6) {
+        detalles.push('La nueva contraseña debe tener al menos 6 caracteres.');
+      } else if (passwordActual === password && password === confirmPassword) {
+        detalles.push('La nueva contraseña no puede ser igual a la actual. Por seguridad, elige una contraseña diferente.');
+      }
     }
 
     if (password !== confirmPassword) {
@@ -67,12 +74,15 @@ export default function MiCuentaPage() {
       };
       if (password) {
         payload.contrasena = password;
+        payload.contrasena_actual = passwordActual;
+        payload.confirmar_contrasena = confirmPassword;
       }
 
       const res = await api.put('/auth/me', payload) as { status: string; usuario: Record<string, unknown> };
       if (res.status === 'ok' && res.usuario) {
         updateCurrentUser(toSessionUser(res.usuario));
       }
+      setPasswordActual('');
       setPassword('');
       setConfirmPassword('');
       notify('success', 'Tus datos fueron actualizados correctamente.');
@@ -121,6 +131,10 @@ export default function MiCuentaPage() {
           <div>
             <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Usuario</label>
             <input className="soft-input" value={usuario} onChange={(e) => setUsuario(e.target.value)} />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Contraseña actual</label>
+            <input type="password" className="soft-input" value={passwordActual} onChange={(e) => setPasswordActual(e.target.value)} placeholder="Necesaria para cambiar la contraseña" />
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Nueva contraseña</label>

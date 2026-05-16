@@ -1,44 +1,45 @@
 const { esUUID } = require('../utils/validadores');
 
 const validarInventario = (req, res, next) => {
-    const { nombre, codigo, categoria_id, ubicacion_id, estado, cantidad } = req.body;
+    const { nombre, codigo, categoria_id, cantidad_disponible, cantidad_total, cantidad_danada, stock_minimo } = req.body;
     const errores = [];
+    const esCreacion = !req.params || !req.params.id;
 
-    // 1. Validar Nombre (Obligatorio)
-    if (!nombre || nombre.trim() === "") {
+    if (esCreacion && (!nombre || nombre.trim() === "")) {
         errores.push("El nombre del artículo es obligatorio.");
-    } else if (nombre.length > 150) {
+    } else if (nombre && nombre.length > 150) {
         errores.push("El nombre no puede exceder los 150 caracteres.");
     }
 
-    // 2. Validar Código (Opcional en el body porque tu controller lo genera, pero si viene, se valida)
     if (codigo && codigo.length > 50) {
         errores.push("El código no puede exceder los 50 caracteres.");
     }
 
-    // 3. Validar Categoría ID (Debe ser UUID si se proporciona)
     if (categoria_id && !esUUID(categoria_id)) {
         errores.push("El ID de categoría no es un UUID válido.");
     }
 
-    // 4. Validar Ubicación ID (Debe ser UUID si se proporciona)
-    if (ubicacion_id && !esUUID(ubicacion_id)) {
-        errores.push("El ID de ubicación no es un UUID válido.");
+    if (cantidad_total !== undefined && cantidad_total !== null) {
+        if (!Number.isInteger(Number(cantidad_total)) || Number(cantidad_total) < 0) {
+            errores.push("La cantidad total debe ser un número entero mayor o igual a 0.");
+        }
     }
-
-    // 5. Validar Estado
-    if (estado && estado.length > 50) {
-        errores.push("El estado no puede exceder los 50 caracteres.");
+    if (cantidad_disponible !== undefined && cantidad_disponible !== null) {
+        if (!Number.isInteger(Number(cantidad_disponible)) || Number(cantidad_disponible) < 0) {
+            errores.push("La cantidad disponible debe ser un número entero mayor o igual a 0.");
+        }
     }
-
-    // 6. Validar Cantidad Actual
-    if (cantidad !== undefined && cantidad !== null) {
-        if (!Number.isInteger(Number(cantidad)) || Number(cantidad) < 0) {
-            errores.push("La cantidad debe ser un número entero mayor o igual a 0.");
+    if (cantidad_danada !== undefined && cantidad_danada !== null) {
+        if (!Number.isInteger(Number(cantidad_danada)) || Number(cantidad_danada) < 0) {
+            errores.push("La cantidad dañada debe ser un número entero mayor o igual a 0.");
+        }
+    }
+    if (stock_minimo !== undefined && stock_minimo !== null) {
+        if (!Number.isInteger(Number(stock_minimo)) || Number(stock_minimo) < 0) {
+            errores.push("El stock mínimo debe ser un número entero mayor o igual a 0.");
         }
     }
 
-    // --- RESPUESTA ---
     if (errores.length > 0) {
         return res.status(400).json({
             status: "error",

@@ -5,26 +5,37 @@ const { buildUniqueConstraintError } = require('../utils/prismaErrors');
 
 const inventarioController = {
     getAll: async (req, res) => {
-        const { search, categoria, ubicacion, estado } = req.query;
+        const { search, categoria, estado } = req.query;
         try {
-            const items = await prisma.inventario.findMany({
-                where: {
-                    AND: [
-                        categoria ? { categoria_id: categoria } : {},
-                        ubicacion ? { ubicacion_id: ubicacion } : {},
-                        estado ? { estado: { equals: estado, mode: 'insensitive' } } : {},
-                        search ? {
-                            OR: [
-                                { nombre: { contains: search, mode: 'insensitive' } },
-                                { codigo: { contains: search, mode: 'insensitive' } }
-                            ]
-                        } : {}
+            const where = { AND: [] };
+            if (categoria) where.AND.push({ categoria_id: categoria });
+            if (estado) {
+                if (estado === 'DISPONIBLE') {
+                    where.AND.push({ cantidad_disponible: { gt: 0 } });
+                } else if (estado === 'DANADO') {
+                    where.AND.push({ cantidad_danada: { gt: 0 } });
+                } else if (estado === 'SIN_STOCK') {
+                    where.AND.push({ cantidad_disponible: { equals: 0 } });
+                }
+            }
+            if (search) {
+                where.AND.push({
+                    OR: [
+                        { nombre: { contains: search, mode: 'insensitive' } },
+                        { codigo: { contains: search, mode: 'insensitive' } }
                     ]
-                },
+                });
+            }
+            if (where.AND.length === 0) delete where.AND;
+
+            const items = await prisma.inventario.findMany({
+                where,
                 include: {
                     categoria: true,
-                    ubicaciones: {
-                        include: { padre: true }
+                    detalles_pedidos: {
+                        include: {
+                            pedido: { select: { id: true, numero_orden: true, fecha_pedido: true, proveedor: true } }
+                        }
                     }
                 },
                 orderBy: { nombre: 'asc' }
@@ -39,13 +50,11 @@ const inventarioController = {
     getAlertasStock: async (req, res) => {
         try {
             const inventarioCompleto = await prisma.inventario.findMany({
-                include: { categoria: true, ubicaciones: true }
+                include: { categoria: true }
             });
-
             const alertas = inventarioCompleto.filter(item =>
-                item.cantidad <= 2
+                item.cantidad_disponible <= item.stock_minimo
             );
-
             res.json({
                 total_alertas: alertas.length,
                 articulos: alertas
@@ -62,11 +71,9 @@ const inventarioController = {
             if (req.file) {
                 data.imagen_ruta = `/uploads/inventario/${req.file.filename}`;
             }
-
             if (!data.codigo || data.codigo.trim() === "") {
                 let codigoGenerado;
                 let existe = true;
-
                 while (existe) {
                     codigoGenerado = generarCodigoAleatorio("INV");
                     const duplicado = await prisma.inventario.findUnique({
@@ -76,18 +83,25 @@ const inventarioController = {
                 }
                 data.codigo = codigoGenerado;
             }
+            const cantTotal = data.cantidad_total !== undefined && data.cantidad_total !== null && data.cantidad_total !== ''
+                ? parseInt(data.cantidad_total) : 0;
+            const cantDisponible = data.cantidad_disponible !== undefined && data.cantidad_disponible !== null && data.cantidad_disponible !== ''
+                ? parseInt(data.cantidad_disponible) : cantTotal;
+            data.cantidad_total = cantTotal;
+            data.cantidad_disponible = cantDisponible;
+            data.cantidad_danada = data.cantidad_danada ? parseInt(data.cantidad_danada) : 0;
+            data.stock_minimo = data.stock_minimo ? parseInt(data.stock_minimo) : 1;
 
-            data.cantidad = data.cantidad !== undefined && data.cantidad !== null && data.cantidad !== '' ? parseInt(data.cantidad) : 1;
             const nuevo = await prisma.inventario.create({
                 data,
-                include: { ubicaciones: true, categoria: true }
+                include: { categoria: true }
             });
 
             await prisma.movimiento.create({
                 data: {
                     inventario_id: nuevo.id,
                     tipo: 'ENTRADA',
-                    cantidad: data.cantidad,
+                    cantidad: cantDisponible,
                     usuario_id: req.usuario?.id,
                     observaciones: `Artículo creado con código ${nuevo.codigo}`
                 }
@@ -110,12 +124,14 @@ const inventarioController = {
                 where: { id: req.params.id },
                 include: {
                     categoria: true,
-                    ubicaciones: {
-                        include: { padre: true }
-                    },
                     movimientos: {
                         take: 10,
                         orderBy: { fecha: 'desc' }
+                    },
+                    detalles_pedidos: {
+                        include: {
+                            pedido: { select: { id: true, numero_orden: true, fecha_pedido: true, proveedor: true, estado: true } }
+                        }
                     }
                 }
             });
@@ -136,25 +152,15 @@ const inventarioController = {
             if (req.file) {
                 data.imagen_ruta = `/uploads/inventario/${req.file.filename}`;
             }
+            if (data.cantidad_total !== undefined) data.cantidad_total = parseInt(data.cantidad_total);
+            if (data.cantidad_disponible !== undefined) data.cantidad_disponible = parseInt(data.cantidad_disponible);
+            if (data.cantidad_danada !== undefined) data.cantidad_danada = parseInt(data.cantidad_danada);
+            if (data.stock_minimo !== undefined) data.stock_minimo = parseInt(data.stock_minimo);
 
-            if (data.cantidad !== undefined && data.cantidad !== null && data.cantidad !== '') data.cantidad = parseInt(data.cantidad);
             const actualizado = await prisma.inventario.update({
                 where: { id: req.params.id },
                 data: data
             });
-
-            if (data.cantidad !== undefined && data.cantidad !== existente.cantidad) {
-                const diferencia = data.cantidad - existente.cantidad;
-                await prisma.movimiento.create({
-                    data: {
-                        inventario_id: actualizado.id,
-                        tipo: 'AJUSTE',
-                        cantidad: Math.abs(diferencia),
-                        usuario_id: req.usuario?.id,
-                        observaciones: `Stock ajustado de ${existente.cantidad} a ${data.cantidad} (${diferencia > 0 ? '+' : ''}${diferencia})`
-                    }
-                });
-            }
 
             res.json(actualizado);
         } catch (error) {

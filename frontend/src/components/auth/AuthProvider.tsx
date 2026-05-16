@@ -61,6 +61,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     restore();
   }, []);
 
+
+
   async function signIn(email: string, password: string) {
     const sessionUser = await authenticate(email, password);
     if (!sessionUser) {

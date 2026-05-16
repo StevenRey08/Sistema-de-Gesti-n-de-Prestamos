@@ -39,6 +39,8 @@ export default function SeguridadPage() {
   const [editingUser, setEditingUser] = useState<Usuario | null>(null);
   const [permissionForm, setPermissionForm] = useState<PermisoPayload>(EMPTY_PERMISSION);
   const [savingPermissionId, setSavingPermissionId] = useState<string | null>(null);
+  const [confirmDeleteRole, setConfirmDeleteRole] = useState<string | null>(null);
+  const [confirmDeletePermiso, setConfirmDeletePermiso] = useState<string | null>(null);
   const [roleSearch, setRoleSearch] = useState('');
   const [userSearch, setUserSearch] = useState('');
   const [permissionSearch, setPermissionSearch] = useState('');
@@ -57,7 +59,7 @@ export default function SeguridadPage() {
       setUsers(usersData);
       setPermissionForm((prev) => ({
         ...prev,
-        rol_id: prev.rol_id || rolesData[0]?.id || '',
+        rol_id: prev.rol_id || '',
       }));
     } catch (err) {
       const { message, details } = notifyErrorPayload(err, 'No se pudo cargar el módulo de seguridad.');
@@ -133,6 +135,7 @@ export default function SeguridadPage() {
   async function handleDeleteRole(id: string) {
     try {
       await rolesApi.delete(id);
+      setConfirmDeleteRole(null);
       await loadData();
     } catch (err) {
       const { message, details } = notifyErrorPayload(err, 'No se pudo eliminar el rol.');
@@ -183,6 +186,7 @@ export default function SeguridadPage() {
   async function handleDeletePermission(id: string) {
     try {
       await permisosApi.delete(id);
+      setConfirmDeletePermiso(null);
       await loadData();
     } catch (err) {
       const { message, details } = notifyErrorPayload(err, 'No se pudo eliminar el permiso.');
@@ -323,7 +327,7 @@ export default function SeguridadPage() {
                           </button>
                         )}
                         {puedeEliminar && (
-                          <button onClick={() => void handleDeleteRole(role.id)} className="text-sm font-medium text-[var(--danger)]">
+                          <button onClick={() => setConfirmDeleteRole(role.id)} className="text-sm font-medium text-[var(--danger)]">
                             Eliminar
                           </button>
                         )}
@@ -411,7 +415,7 @@ export default function SeguridadPage() {
                           </button>
                         )}
                         {puedeEliminar && (
-                          <button onClick={() => void handleDeletePermission(permission.id)} className="text-sm font-medium text-[var(--danger)]">
+                          <button onClick={() => setConfirmDeletePermiso(permission.id)} className="text-sm font-medium text-[var(--danger)]">
                             Eliminar
                           </button>
                         )}
@@ -530,6 +534,32 @@ export default function SeguridadPage() {
                 setEditingUser(null);
               }}
             />
+          </div>
+        </div>
+      )}
+
+      {confirmDeleteRole && (
+        <div className="modal-backdrop">
+          <div className="modal-panel max-w-sm space-y-4 p-6 text-center">
+            <p className="font-medium text-[var(--text-main)]">¿Eliminar este rol?</p>
+            <p className="text-sm text-[var(--text-muted)]">Esta acción no se puede deshacer.</p>
+            <div className="flex justify-center gap-3">
+              <button onClick={() => setConfirmDeleteRole(null)} className="soft-btn-secondary px-4 py-2 text-sm">Cancelar</button>
+              <button onClick={() => void handleDeleteRole(confirmDeleteRole)} className="rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">Sí, eliminar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmDeletePermiso && (
+        <div className="modal-backdrop">
+          <div className="modal-panel max-w-sm space-y-4 p-6 text-center">
+            <p className="font-medium text-[var(--text-main)]">¿Eliminar este permiso?</p>
+            <p className="text-sm text-[var(--text-muted)]">Esta acción no se puede deshacer.</p>
+            <div className="flex justify-center gap-3">
+              <button onClick={() => setConfirmDeletePermiso(null)} className="soft-btn-secondary px-4 py-2 text-sm">Cancelar</button>
+              <button onClick={() => void handleDeletePermission(confirmDeletePermiso)} className="rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">Sí, eliminar</button>
+            </div>
           </div>
         </div>
       )}

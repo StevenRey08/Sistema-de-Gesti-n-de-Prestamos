@@ -81,7 +81,7 @@ export default function MovimientosPage() {
                 <th className="px-4 py-3 text-left">Herramienta</th>
                 <th className="px-4 py-3 text-left">Persona</th>
                 <th className="px-4 py-3 text-left">Cant.</th>
-                <th className="px-4 py-3 text-left">Origen â†’ Destino</th>
+                <th className="px-4 py-3 text-left">Origen / Destino</th>
                 <th className="px-4 py-3 text-left">Fecha</th>
                 <th className="px-4 py-3 text-left">Observaciones</th>
               </tr>
@@ -102,9 +102,9 @@ export default function MovimientosPage() {
                   </td>
                   <td className="px-4 py-3 font-bold text-[var(--accent-strong)]">{m.cantidad}</td>
                   <td className="px-4 py-3 text-xs text-[var(--text-muted)]">
-                    {m.ubicacion_origen?.codigo || '—'}
-                    {' → '}
-                    {m.ubicacion_destino?.codigo || '—'}
+                    {m.ubicacion_origen
+                      ? `${m.ubicacion_origen.nombre} → ${m.ubicacion_destino?.nombre || '—'}`
+                      : m.ubicacion_destino?.nombre || '—'}
                   </td>
                   <td className="px-4 py-3 text-xs text-[var(--text-muted)]">{fmt(m.fecha)}</td>
                   <td className="px-4 py-3 text-xs text-[var(--text-muted)]">{m.observaciones || '—'}</td>

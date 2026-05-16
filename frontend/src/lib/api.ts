@@ -21,29 +21,24 @@ function getLocalStorageToken(): string | null {
       return directToken;
     }
   } catch {
-    // Ignorar errores (SSR, incógnito, etc.)
   }
   return null;
 }
 
 async function request<T = unknown>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const token = getLocalStorageToken();
-
   const headers: Record<string, string> = { ...(options.headers as Record<string, string>) };
   if (!isFormData(options.body)) {
     headers['Content-Type'] = 'application/json';
   }
-
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
-
   const res = await fetch(`${BASE_URL}${endpoint}`, {
     ...options,
     headers,
     credentials: 'include',
   });
-
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const error = new Error(data?.mensaje || data?.error || data?.message || 'Error en la solicitud');
@@ -66,17 +61,35 @@ function buildCrud(resource: string) {
 
 export const categoriasApi  = buildCrud('categorias');
 export const personasApi    = buildCrud('personas');
-
 export const ubicacionesApi = buildCrud('ubicaciones');
-
 export const herramientasApi = buildCrud('inventario');
 export const inventarioApi   = buildCrud('inventario');
 export const prestamosApi    = buildCrud('prestamos');
 export const movimientosApi  = { ...buildCrud('movimientos') };
-
 export const rolesApi    = buildCrud('roles');
 export const usuariosApi = buildCrud('usuarios');
 export const permisosApi = buildCrud('permisos');
+export const pedidosApi  = buildCrud('pedidos');
+
+export function descargarPDFPrestamo(id: string): void {
+  const token = getLocalStorageToken();
+  const url = `${BASE_URL}/prestamos/${id}/pdf`;
+  const xhr = new XMLHttpRequest();
+  xhr.open('GET', url, true);
+  xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+  xhr.responseType = 'blob';
+  xhr.onload = () => {
+    if (xhr.status === 200) {
+      const blob = xhr.response;
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.download = `prestamo-${id}.pdf`;
+      link.click();
+      window.URL.revokeObjectURL(link.href);
+    }
+  };
+  xhr.send();
+}
 
 const api = {
   get:    (endpoint: string)                 => request(endpoint),
@@ -88,37 +101,24 @@ const api = {
 
 export default api;
 
-// Determinamos el origen del backend para las imágenes
-// Si BASE_URL es 'http://localhost:4000/api', BACKEND_ORIGIN será 'http://localhost:4000'
-export const BACKEND_ORIGIN = BASE_URL.endsWith('/api') 
-  ? BASE_URL.slice(0, -4) 
-  : BASE_URL.endsWith('/api/') 
+export const BACKEND_ORIGIN = BASE_URL.endsWith('/api')
+  ? BASE_URL.slice(0, -4)
+  : BASE_URL.endsWith('/api/')
     ? BASE_URL.slice(0, -5)
     : BASE_URL;
 
 export function imagenUrl(path: string | null | undefined): string | undefined {
   if (!path) return undefined;
-  
-  // Si ya es una URL absoluta, la devolvemos tal cual
   if (path.startsWith('http://') || path.startsWith('https://')) return path;
-
-  // Si detectamos que es una ruta local de Windows (empieza por C:, D:, etc. o tiene barras invertidas)
-  // no podemos servirla directamente, así que retornamos undefined para que se use el placeholder
   if (/^[a-zA-Z]:/.test(path) || path.includes('\\')) {
     console.warn('Ruta de imagen local detectada e ignorada:', path);
     return undefined;
   }
-  
-  // Aseguramos que el path empiece con /
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
-  
-  // Si BACKEND_ORIGIN es relativo (ej: /api), intentamos usar el puerto 4000 por defecto si estamos en localhost
   if (BACKEND_ORIGIN === '/api' || BACKEND_ORIGIN === '') {
     if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
       return `http://localhost:4000${cleanPath}`;
     }
   }
-
   return `${BACKEND_ORIGIN}${cleanPath}`;
 }
-

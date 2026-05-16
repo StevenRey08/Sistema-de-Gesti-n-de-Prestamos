@@ -6,14 +6,26 @@ import { useNotification } from '../../components/ui/NotificationContext';
 import { notifyErrorPayload } from '../../lib/errors';
 
 interface ReporteItem extends ItemInventario {
+  estado?: string;
   total_prestamos?: number;
   total_prestado?: number;
+  persona?: { nombres: string; apellidos: string };
+  instructor?: { nombres: string; apellidos: string };
+  usuario?: { nombre: string; apellido: string };
+  fecha_prestamo?: string;
+  fecha_devolucion?: string;
+}
+
+function fmt(fecha: string | null | undefined) {
+  if (!fecha) return '—';
+  return new Date(fecha).toLocaleString('es-DO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 const TIPOS = [
   { id: 'bajo-stock', label: 'Bajo Stock' },
   { id: 'mas-prestados', label: 'Más Prestados' },
   { id: 'menos-prestados', label: 'Menos Prestados' },
+  { id: 'prestamos-vencidos', label: 'Préstamos Vencidos' },
 ];
 
 export default function ReportesPage() {
@@ -118,28 +130,54 @@ export default function ReportesPage() {
                 <th className="px-4 py-3 text-left">Código</th>
                 <th className="px-4 py-3 text-left">Nombre</th>
                 {tipo === 'bajo-stock' && <th className="px-4 py-3 text-left">Categoría</th>}
-                {tipo === 'bajo-stock' && <th className="px-4 py-3 text-left">Stock</th>}
+                {tipo === 'bajo-stock' && <th className="px-4 py-3 text-left">Disponible</th>}
                 {tipo === 'bajo-stock' && <th className="px-4 py-3 text-left">Estado</th>}
-                {tipo !== 'bajo-stock' && <th className="px-4 py-3 text-left">Veces prestado</th>}
-                {tipo !== 'bajo-stock' && <th className="px-4 py-3 text-left">Total unidades</th>}
+                {tipo === 'prestamos-vencidos' && <th className="px-4 py-3 text-left">Estudiante</th>}
+                {tipo === 'prestamos-vencidos' && <th className="px-4 py-3 text-left">Instructor</th>}
+                {tipo === 'prestamos-vencidos' && <th className="px-4 py-3 text-left">Fecha Préstamo</th>}
+                {tipo === 'prestamos-vencidos' && <th className="px-4 py-3 text-left">Fecha Devolución</th>}
+                {tipo === 'prestamos-vencidos' && <th className="px-4 py-3 text-left">Registrado por</th>}
+                {tipo !== 'bajo-stock' && tipo !== 'prestamos-vencidos' && <th className="px-4 py-3 text-left">Veces prestado</th>}
+                {tipo !== 'bajo-stock' && tipo !== 'prestamos-vencidos' && <th className="px-4 py-3 text-left">Total unidades</th>}
               </tr>
             </thead>
             <tbody>
-              {data.map((item) => (
-                <tr key={item.id} className="border-t border-[var(--border)]">
+              {data.map((item, index) => (
+                <tr key={(item as unknown as { id: string }).id || String(index)} className="border-t border-[var(--border)]">
                   <td className="px-4 py-3 text-[var(--text-muted)]">{item.codigo}</td>
                   <td className="px-4 py-3 font-medium text-[var(--text-main)]">{item.nombre}</td>
                   {tipo === 'bajo-stock' && <td className="px-4 py-3">{item.categoria?.nombre || '—'}</td>}
                   {tipo === 'bajo-stock' && (
                     <td className="px-4 py-3">
-                      <span className={`font-bold ${item.cantidad <= 2 ? 'text-red-500' : 'text-[var(--text-main)]'}`}>
-                        {item.cantidad}
+                      <span className={`font-bold ${item.cantidad_disponible <= (item.stock_minimo || 2) ? 'text-red-500' : 'text-[var(--text-main)]'}`}>
+                        {item.cantidad_disponible}
                       </span>
                     </td>
                   )}
                   {tipo === 'bajo-stock' && <td className="px-4 py-3">{item.estado || '—'}</td>}
-                  {tipo !== 'bajo-stock' && <td className="px-4 py-3 font-bold">{item.total_prestamos}</td>}
-                  {tipo !== 'bajo-stock' && <td className="px-4 py-3">{item.total_prestado}</td>}
+                  {tipo === 'prestamos-vencidos' && (
+                    <td className="px-4 py-3 text-[var(--text-main)]">
+                      {item.persona ? `${item.persona.nombres} ${item.persona.apellidos}` : '—'}
+                    </td>
+                  )}
+                  {tipo === 'prestamos-vencidos' && (
+                    <td className="px-4 py-3 text-[var(--text-muted)]">
+                      {item.instructor ? `${item.instructor.nombres} ${item.instructor.apellidos}` : '—'}
+                    </td>
+                  )}
+                  {tipo === 'prestamos-vencidos' && (
+                    <td className="px-4 py-3 text-[var(--text-muted)]">{fmt(item.fecha_prestamo)}</td>
+                  )}
+                  {tipo === 'prestamos-vencidos' && (
+                    <td className="px-4 py-3 font-bold text-red-500">{fmt(item.fecha_devolucion)}</td>
+                  )}
+                  {tipo === 'prestamos-vencidos' && (
+                    <td className="px-4 py-3 text-[var(--text-muted)]">
+                      {item.usuario ? `${item.usuario.nombre} ${item.usuario.apellido}` : '—'}
+                    </td>
+                  )}
+                  {tipo !== 'bajo-stock' && tipo !== 'prestamos-vencidos' && <td className="px-4 py-3 font-bold">{item.total_prestamos}</td>}
+                  {tipo !== 'bajo-stock' && tipo !== 'prestamos-vencidos' && <td className="px-4 py-3">{item.total_prestado}</td>}
                 </tr>
               ))}
             </tbody>

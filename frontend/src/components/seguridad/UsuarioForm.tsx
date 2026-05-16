@@ -28,7 +28,7 @@ export default function UsuarioForm({ initialData = null, roles, onSuccess, onCa
     apellido:         initialData?.apellido         ?? '',
     usuario:          initialData?.usuario          ?? '',
     contrasena:       '',
-    rol_id:           initialData?.rol_id           ?? (roles[0]?.id ?? ''),
+    rol_id:           initialData?.rol_id           ?? '',
     tipo_documento:   tipoDocumentoInicial,
     numero_documento: tipoDocumentoInicial ? formatDocumento(initialData?.numero_documento ?? '', tipoDocumentoInicial) : '',
     activo:           initialData?.activo           ?? true,

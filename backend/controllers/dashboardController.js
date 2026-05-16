@@ -8,7 +8,7 @@ async function marcarVencidos() {
                 estado: 'ACTIVO',
                 fecha_devolucion: { lt: new Date() },
             },
-            data: { estado: 'PENDIENTE' }
+            data: { estado: 'VENCIDO' }
         });
     } catch (error) {
         logger.error('Error al marcar préstamos vencidos:', error);

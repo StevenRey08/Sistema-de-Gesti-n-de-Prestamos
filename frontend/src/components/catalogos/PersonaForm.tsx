@@ -1,24 +1,11 @@
 'use client';
 import { useState } from 'react';
 import type { Persona, PersonaPayload, FormErrors } from '../../lib/types';
-import {
-  CEDULA_RE,
-  MATRICULA_RE,
-  TELEFONO_RE,
-  formatDocumento,
-  formatTelefono,
-  normalizeTipoDocumento,
-  type TipoDocumentoFormato,
-} from '../../lib/formatters';
+
 import { notifyErrorPayload } from '../../lib/errors';
 import { useNotification } from '../ui/NotificationContext';
 
-type TipoDocumento = TipoDocumentoFormato;
-type TipoPersona = 'Estudiante' | 'Profesor' | 'Técnico' | 'Administrativo';
-
-const TIPOS_DOC: TipoDocumento[] = ['Cédula', 'Matrícula'];
-const TIPOS_PERS: TipoPersona[] = ['Estudiante', 'Profesor', 'Técnico', 'Administrativo'];
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const TIPOS_PERS = ['ESTUDIANTE', 'PROFESOR', 'TECNICO', 'ADMINISTRATIVO'];
 
 interface PersonaFormProps {
   persona?: Persona | null;
@@ -27,70 +14,42 @@ interface PersonaFormProps {
 }
 
 interface PersonaFormState {
-  tipo_documento: TipoDocumento;
-  numero_documento: string;
+  matricula: string;
   nombres: string;
   apellidos: string;
-  tipo: TipoPersona;
-  telefono: string;
-  email: string;
+  tipo: string;
+  curso: string;
 }
 
 export default function PersonaForm({ persona = null, onGuardar, onCancelar }: PersonaFormProps) {
   const { notify } = useNotification();
-  const tipoDocumentoInicial = normalizeTipoDocumento(persona?.tipo_documento);
 
   const [form, setForm] = useState<PersonaFormState>({
-    tipo_documento: tipoDocumentoInicial,
-    numero_documento: formatDocumento(persona?.numero_documento ?? '', tipoDocumentoInicial),
+    matricula: persona?.matricula ?? '',
     nombres: persona?.nombres ?? '',
     apellidos: persona?.apellidos ?? '',
-    tipo: (persona?.tipo as TipoPersona) ?? 'Estudiante',
-    telefono: formatTelefono(persona?.telefono ?? ''),
-    email: persona?.email ?? '',
+    tipo: persona?.tipo ?? 'ESTUDIANTE',
+    curso: persona?.curso ?? '',
   });
   const [errores, setErrores] = useState<FormErrors<PersonaFormState>>({});
   const [cargando, setCargando] = useState(false);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = e.target;
-    setForm((prev) => {
-      if (name === 'tipo_documento') {
-        const nextTipo = value as TipoDocumento;
-        return {
-          ...prev,
-          tipo_documento: nextTipo,
-          numero_documento: formatDocumento(prev.numero_documento, nextTipo),
-        };
-      }
-
-      if (name === 'numero_documento') {
-        return { ...prev, numero_documento: formatDocumento(value, prev.tipo_documento) };
-      }
-
-      if (name === 'telefono') {
-        return { ...prev, telefono: formatTelefono(value) };
-      }
-
-      return { ...prev, [name]: value };
-    });
+    setForm((prev) => ({ ...prev, [name]: value }));
     if (errores[name as keyof PersonaFormState]) setErrores((prev) => ({ ...prev, [name]: '' }));
   }
 
   function validar() {
     const e: FormErrors<PersonaFormState> = {};
-    if (!form.numero_documento.trim()) e.numero_documento = 'Obligatorio';
-    else if (form.tipo_documento === 'Cédula' && !CEDULA_RE.test(form.numero_documento)) e.numero_documento = 'Formato: 000-0000000-0';
-    else if (form.tipo_documento === 'Matrícula' && !MATRICULA_RE.test(form.numero_documento)) e.numero_documento = 'Formato: 0000-0000';
+    if (!form.matricula.trim()) e.matricula = 'Obligatorio';
+    else if (!/^\d{4}-\d{4}$/.test(form.matricula)) e.matricula = 'Formato: 0000-0000';
     if (!form.nombres.trim()) e.nombres = 'Obligatorio';
     if (!form.apellidos.trim()) e.apellidos = 'Obligatorio';
-    if (form.telefono && !TELEFONO_RE.test(form.telefono)) e.telefono = 'Formato: 000-000-0000';
-    if (form.email && !EMAIL_RE.test(form.email)) e.email = 'Email no válido';
+    if (!form.tipo) e.tipo = 'Seleccione un tipo';
     setErrores(e);
     const detalles = Object.entries(e).map(([campo, mensaje]) => `${campo}: ${mensaje}`);
-    if (detalles.length > 0) {
-      notify('error', 'Revisa los datos de la persona', detalles);
-    }
+    if (detalles.length > 0) notify('error', 'Revisa los datos de la persona', detalles);
     return detalles.length === 0;
   }
 
@@ -100,13 +59,11 @@ export default function PersonaForm({ persona = null, onGuardar, onCancelar }: P
     setCargando(true);
     try {
       await onGuardar({
-        tipo_documento: form.tipo_documento,
-        numero_documento: form.numero_documento.trim(),
+        matricula: form.matricula.trim(),
         nombres: form.nombres.trim(),
         apellidos: form.apellidos.trim(),
         tipo: form.tipo,
-        telefono: form.telefono.trim() || undefined,
-        email: form.email.trim() || undefined,
+        curso: form.curso.trim() || undefined,
       });
     } catch (err: unknown) {
       const { message, details } = notifyErrorPayload(err, 'Error al guardar');
@@ -115,35 +72,6 @@ export default function PersonaForm({ persona = null, onGuardar, onCancelar }: P
       setCargando(false);
     }
   }
-
-  const campo = (
-    name: keyof PersonaFormState,
-    label: string,
-    placeholder: string,
-    tipo: React.HTMLInputTypeAttribute = 'text',
-    requerido = false,
-    maxLength?: number,
-    inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'],
-  ) => (
-    <div className="flex flex-col gap-1.5">
-      <label className="ml-1 text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
-        {label}{requerido && ' *'}
-      </label>
-      <input
-        name={name}
-        value={form[name]}
-        onChange={handleChange}
-        placeholder={placeholder}
-        type={tipo}
-        maxLength={maxLength}
-        inputMode={inputMode}
-        className="soft-input"
-      />
-    </div>
-  );
-
-  const documentoPlaceholder = form.tipo_documento === 'Cédula' ? '000-0000000-0' : '0000-0000';
-  const documentoMaxLength = form.tipo_documento === 'Cédula' ? 13 : 9;
 
   return (
     <div className="w-full max-w-2xl overflow-hidden rounded-[28px] border border-[var(--border)] bg-white shadow-[var(--shadow-soft)]">
@@ -155,28 +83,33 @@ export default function PersonaForm({ persona = null, onGuardar, onCancelar }: P
       <form onSubmit={handleSubmit} className="space-y-5 p-6">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="flex flex-col gap-1.5">
-            <label className="ml-1 text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Tipo de documento</label>
-            <select name="tipo_documento" value={form.tipo_documento} onChange={handleChange} className="soft-select cursor-pointer">
-              {TIPOS_DOC.map((t) => <option key={t} value={t}>{t}</option>)}
-            </select>
+            <label className="ml-1 text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Matrícula *</label>
+            <input name="matricula" value={form.matricula} onChange={handleChange} placeholder="0000-0000" className="soft-input" maxLength={9} />
           </div>
-          {campo('numero_documento', 'Número de documento', documentoPlaceholder, 'text', true, documentoMaxLength, 'numeric')}
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {campo('nombres', 'Nombres', 'Ej: Juan Carlos', 'text', true)}
-          {campo('apellidos', 'Apellidos', 'Ej: Pérez García', 'text', true)}
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="flex flex-col gap-1.5">
             <label className="ml-1 text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Tipo de Persona</label>
             <select name="tipo" value={form.tipo} onChange={handleChange} className="soft-select cursor-pointer">
               {TIPOS_PERS.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
-          {campo('telefono', 'Teléfono', '809-000-0000', 'text', false, 12, 'numeric')}
-          {campo('email', 'Email', 'correo@ejemplo.com', 'email')}
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="flex flex-col gap-1.5">
+            <label className="ml-1 text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Nombres *</label>
+            <input name="nombres" value={form.nombres} onChange={handleChange} placeholder="Ej: Juan Carlos" className="soft-input" />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="ml-1 text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Apellidos *</label>
+            <input name="apellidos" value={form.apellidos} onChange={handleChange} placeholder="Ej: Pérez García" className="soft-input" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="flex flex-col gap-1.5">
+            <label className="ml-1 text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Curso / Sección</label>
+            <input name="curso" value={form.curso} onChange={handleChange} placeholder="Ej: 4to B - Técnico" className="soft-input" />
+          </div>
         </div>
 
         <div className="mt-2 flex justify-end gap-3 border-t border-[var(--border)] pt-4">

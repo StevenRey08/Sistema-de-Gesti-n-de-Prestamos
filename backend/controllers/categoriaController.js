@@ -21,6 +21,15 @@ const categoriaController = {
     // Crear categoría
     create: async (req, res) => {
         try {
+            const { nombre } = req.body;
+            if (nombre) {
+                const existe = await prisma.categoriaHerramienta.findFirst({
+                    where: { nombre: { equals: nombre, mode: 'insensitive' } }
+                });
+                if (existe) {
+                    return res.status(400).json({ status: "error", mensaje: "Ya existe una categoría con ese nombre (sin diferenciar mayúsculas/minúsculas)." });
+                }
+            }
             const nueva = await prisma.categoriaHerramienta.create({ data: req.body });
             res.status(201).json(nueva);
         } catch (error) {
@@ -48,6 +57,18 @@ const categoriaController = {
     // Actualizar
     update: async (req, res) => {
         try {
+            const { nombre } = req.body;
+            if (nombre) {
+                const existe = await prisma.categoriaHerramienta.findFirst({
+                    where: {
+                        nombre: { equals: nombre, mode: 'insensitive' },
+                        id: { not: req.params.id }
+                    }
+                });
+                if (existe) {
+                    return res.status(400).json({ status: "error", mensaje: "Ya existe una categoría con ese nombre (sin diferenciar mayúsculas/minúsculas)." });
+                }
+            }
             const actualizada = await prisma.categoriaHerramienta.update({
                 where: { id: req.params.id },
                 data: req.body

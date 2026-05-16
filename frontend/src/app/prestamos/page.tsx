@@ -1,22 +1,27 @@
 ﻿'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import api, { prestamosApi } from '../../lib/api';
+import api, { prestamosApi, descargarPDFPrestamo } from '../../lib/api';
 import PrestamoForm from '../../components/catalogos/PrestamoForm';
 import type { Prestamo, PrestamoPayload } from '../../lib/types';
 import { useNotification } from '../../components/ui/NotificationContext';
 import { usePermiso } from '../../lib/permissions';
 import { notifyErrorPayload } from '../../lib/errors';
 
-const BADGE: Record<string, string> = {
-  ACTIVO:   'bg-white text-green-600',
-  DEVUELTO: 'bg-[var(--surface-2)] text-sky-500',
-  VENCIDO:  'bg-red-900 text-red-300',
-  PENDIENTE:'text-orange-400',
+const ORDEN_ESTADO: Record<string, number> = {
+  VENCIDO: 0,
+  ACTIVO: 1,
+  PENDIENTE: 2,
+  DEVUELTO: 3,
 };
 
 function fmt(fecha: string | null) {
   if (!fecha) return '—';
   return new Date(fecha).toLocaleString('es-DO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function fmtCorta(fecha: string | null) {
+  if (!fecha) return '—';
+  return new Date(fecha).toLocaleString('es-DO', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
 export default function PrestamosPage() {
@@ -30,15 +35,13 @@ export default function PrestamosPage() {
 
   const cargar = useCallback(async () => {
     setCargando(true);
-    try { 
+    try {
       const data = await prestamosApi.getAll() as Prestamo[];
       setPrestamos(data);
-    }
-    catch (e: unknown) {
+    } catch (e: unknown) {
       const { message, details } = notifyErrorPayload(e, 'Error al cargar préstamos');
       notify('error', message, details);
-    }
-    finally { setCargando(false); }
+    } finally { setCargando(false); }
   }, [notify]);
 
   useEffect(() => { cargar(); }, [cargar]);
@@ -47,6 +50,7 @@ export default function PrestamosPage() {
     if (editando) await prestamosApi.update(editando.id, form);
     else          await prestamosApi.create(form);
     setShowForm(false); setEditando(null); cargar();
+    window.dispatchEvent(new CustomEvent('refresh-alertas'));
   }
 
   async function marcarDevuelto(id: string) {
@@ -55,16 +59,19 @@ export default function PrestamosPage() {
         observaciones_dev: 'Devuelto voluntariamente'
       });
       cargar();
+      window.dispatchEvent(new CustomEvent('refresh-alertas'));
     } catch (e: unknown) {
       const { message, details } = notifyErrorPayload(e, 'Error al actualizar préstamo');
       notify('error', message, details);
     }
   }
 
-  const lista = filtro === 'todos' ? prestamos
-    : prestamos.filter((p: Prestamo) => p.estado === filtro);
+  const lista = (filtro === 'todos' ? prestamos
+    : prestamos.filter((p: Prestamo) => p.estado === filtro))
+    .sort((a, b) => (ORDEN_ESTADO[a.estado] ?? 99) - (ORDEN_ESTADO[b.estado] ?? 99) || new Date(b.fecha_prestamo ?? 0).getTime() - new Date(a.fecha_prestamo ?? 0).getTime());
 
   const activos = prestamos.filter((p: Prestamo) => p.estado === 'ACTIVO').length;
+  const vencidos = prestamos.filter((p: Prestamo) => p.estado === 'VENCIDO').length;
 
   return (
     <div className="page-shell">
@@ -74,23 +81,20 @@ export default function PrestamosPage() {
           <p className="page-subtitle">
             {prestamos.length} total —
             <span className="ml-1 font-semibold text-[var(--warning)]">{activos} activos</span>
+            {vencidos > 0 && <span className="ml-2 font-semibold text-red-500">{vencidos} vencidos</span>}
           </p>
         </div>
         {puedeIngresar && (
-          <button onClick={() => { setEditando(null); setShowForm(true); }}
-            className="soft-btn-primary">
+          <button onClick={() => { setEditando(null); setShowForm(true); }} className="soft-btn-primary">
             + Nuevo Préstamo
           </button>
         )}
       </div>
 
-      {/* Filtros rápidos */}
-      <div className="flex gap-2">
-        {['todos', 'ACTIVO', 'PENDIENTE', 'DEVUELTO'].map(f => (
+      <div className="flex gap-2 flex-wrap">
+        {['todos', 'ACTIVO', 'VENCIDO', 'PENDIENTE', 'DEVUELTO'].map(f => (
           <button key={f} onClick={() => setFiltro(f)}
-            className={`filter-pill capitalize ${filtro === f ? 'active' : ''}`}>
-            {f}
-          </button>
+            className={`filter-pill capitalize ${filtro === f ? 'active' : ''}`}>{f}</button>
         ))}
       </div>
 
@@ -107,46 +111,50 @@ export default function PrestamosPage() {
         {cargando ? (
           <p className="py-12 text-center text-[var(--text-muted)]">Cargando...</p>
         ) : lista.length === 0 ? (
-          <p className="py-12 text-center text-[var(--text-muted)]">No hay préstamos registrados.</p>
+          <p className="py-12 text-center text-[var(--text-muted)]">No hay préstamos.</p>
         ) : (
           <table className="w-full text-sm">
             <thead>
               <tr>
                 <th className="px-4 py-3 text-left">Herramienta</th>
-                <th className="px-4 py-3 text-left">Persona</th>
+                <th className="px-4 py-3 text-left">Estudiante</th>
+                <th className="px-4 py-3 text-left">Instructor</th>
                 <th className="px-4 py-3 text-left">Cant.</th>
+                <th className="px-4 py-3 text-left">Registrado por</th>
                 <th className="px-4 py-3 text-left">Préstamo</th>
                 <th className="px-4 py-3 text-left">Devolución</th>
-                <th className="px-4 py-3 text-left">Estado</th>
                 <th className="px-4 py-3 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {lista.map((p: Prestamo) => (
-                <tr key={p.id}>
-                  <td className="px-4 py-3 font-medium text-[var(--text-main)]">
-                    {p.inventario?.nombre || '—'}
-                  </td>
+                <tr key={p.id} className={p.estado === 'VENCIDO' ? 'bg-red-50' : ''}>
+                  <td className="px-4 py-3 font-medium text-[var(--text-main)]">{p.inventario?.nombre || '—'}</td>
                   <td className="px-4 py-3 text-[var(--text-main)]">
                     {p.persona ? `${p.persona.nombres} ${p.persona.apellidos}` : '—'}
                   </td>
+                  <td className="px-4 py-3 text-[var(--text-muted)]">
+                    {p.instructor ? `${p.instructor.nombres} ${p.instructor.apellidos}` : '—'}
+                  </td>
                   <td className="px-4 py-3 font-bold text-[var(--accent-strong)]">{p.cantidad}</td>
+                  <td className="px-4 py-3 text-[var(--text-muted)]">
+                    {p.usuario ? `${p.usuario.nombre} ${p.usuario.apellido}` : '—'}
+                  </td>
                   <td className="px-4 py-3 text-[var(--text-muted)]">{fmt(p.fecha_prestamo)}</td>
-                  <td className="px-4 py-3 text-[var(--text-muted)]">{fmt(p.fecha_devolucion)}</td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-1 rounded-full font-bold ${BADGE[p.estado] || 'bg-gray-700 text-gray-300'}`}>
-                      {p.estado}
-                    </span>
+                    <span className="font-bold text-[var(--text-main)]">{fmtCorta(p.fecha_devolucion)}</span>
                   </td>
                   <td className="px-4 py-3 text-right space-x-2">
                     {puedeActualizar && (
                       <button onClick={() => { setEditando(p); setShowForm(true); }}
                         className="text-blue-400 hover:text-blue-300 text-xs font-medium">Editar</button>
                     )}
-                    {puedeActualizar && p.estado === 'ACTIVO' && (
+                    {puedeActualizar && p.estado !== 'DEVUELTO' && (
                       <button onClick={() => marcarDevuelto(p.id)}
-                        className="text-red-400 hover:text-red-300 text-xs font-medium">DEVOLVER</button>
+                        className="text-red-400 hover:text-red-300 text-xs font-medium">DEVUELTO</button>
                     )}
+                    <button onClick={() => descargarPDFPrestamo(p.id)}
+                      className="text-orange-400 hover:text-orange-300 text-xs font-medium">PDF</button>
                   </td>
                 </tr>
               ))}

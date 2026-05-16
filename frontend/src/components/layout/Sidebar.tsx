@@ -19,8 +19,10 @@ const menuItems: MenuItem[] = [
   { label: 'Inventario', icon: '◫', href: '/inventario', modulo: 'INVENTARIO' },
   { label: 'Préstamos', icon: '↗', href: '/prestamos', modulo: 'PRESTAMOS' },
   { label: 'Movimientos', icon: '↺', href: '/movimientos', modulo: 'MOVIMIENTOS' },
+  { label: 'Pedidos', icon: '☰', href: '/pedidos', modulo: 'INVENTARIO' },
   { label: 'Reportes', icon: '▣', href: '/reportes' },
   { label: 'Seguridad', icon: '◈', href: '/seguridad', modulo: 'USUARIOS' },
+  { label: 'Admin', icon: '⚙', href: '/admin' },
 ];
 
 
@@ -34,9 +36,10 @@ export default function Sidebar() {
 
   return (
     <aside
-      className="sticky top-0 hidden min-h-screen w-72 shrink-0 border-r border-white/14 bg-[linear-gradient(180deg,#10367d_0%,#123c8d_45%,#174ba6_100%)] text-white shadow-[18px_0_45px_rgba(16,54,125,0.12)] lg:flex lg:flex-col"
+      className="fixed left-0 top-0 hidden h-screen w-72 shrink-0 border-r border-white/14 bg-[linear-gradient(180deg,#10367d_0%,#123c8d_45%,#174ba6_100%)] text-white shadow-[18px_0_45px_rgba(16,54,125,0.12)] lg:flex lg:flex-col"
     >
-      <div className="px-5 py-6">
+      <div className="flex h-full flex-col px-5 py-6">
+        <div className="shrink-0">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
             <div className="app-logo-dot flex h-12 w-12 items-center justify-center rounded-[18px] border border-white/16 bg-white/12 text-lg font-semibold text-white shadow-[0_10px_30px_rgba(255,255,255,0.08)]">
@@ -80,6 +83,7 @@ export default function Sidebar() {
             })}
           </nav>
         </div>
+      </div>
       </div>
     </aside>
   );

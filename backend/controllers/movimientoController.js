@@ -2,7 +2,6 @@ const { prisma } = require('../db');
 const logger = require('../utils/logger');
 
 const movimientoController = {
-    // ... (getAll se mantiene igual)
     getAll: async (req, res) => {
         const { tipo, inventario_id, persona_id } = req.query;
         try {
@@ -19,7 +18,7 @@ const movimientoController = {
                     ubicacion_origen: true,
                     ubicacion_destino: true,
                     persona: true,
-                    usuario: { select: { usuario: true } }
+                    usuario: { select: { id: true, usuario: true, nombre: true, apellido: true } }
                 },
                 orderBy: { fecha: 'desc' }
             });
@@ -31,49 +30,44 @@ const movimientoController = {
 
     create: async (req, res) => {
         const {
-            inventario_id,
-            tipo,
-            cantidad,
-            ubicacion_destino_id,
-            ubicacion_origen_id,
-            persona_id,
-            usuario_id,
-            observaciones
+            inventario_id, tipo, cantidad,
+            ubicacion_destino_id, ubicacion_origen_id,
+            persona_id, observaciones
         } = req.body;
 
+        const usuario_id = req.usuario?.id || req.body.usuario_id;
         const cantMovimiento = parseInt(cantidad);
         const tipoUpper = tipo.toUpperCase();
 
         try {
             const resultado = await prisma.$transaction(async (tx) => {
-                // 1. Obtener el artículo actual para validar stock
-                const articulo = await tx.inventario.findUnique({
-                    where: { id: inventario_id }
-                });
-
+                const articulo = await tx.inventario.findUnique({ where: { id: inventario_id } });
                 if (!articulo) throw new Error("El producto no existe en el inventario.");
 
-                // 2. Lógica de cálculo de stock
-                let nuevaCantidad = articulo.cantidad;
+                let nuevaDisponible = articulo.cantidad_disponible;
+                let nuevaDanada = articulo.cantidad_danada;
 
                 if (tipoUpper === 'ENTRADA') {
-                    nuevaCantidad += cantMovimiento;
-                }
-                else if (tipoUpper === 'SALIDA' || tipoUpper === 'PRESTAMO') {
-                    if (articulo.cantidad < cantMovimiento) {
-                        throw new Error(`Stock insuficiente. Disponible: ${articulo.cantidad}`);
+                    nuevaDisponible += cantMovimiento;
+                } else if (tipoUpper === 'SALIDA') {
+                    if (articulo.cantidad_disponible < cantMovimiento) {
+                        throw new Error(`Stock insuficiente. Disponible: ${articulo.cantidad_disponible}`);
                     }
-                    nuevaCantidad -= cantMovimiento;
+                    nuevaDisponible -= cantMovimiento;
+                } else if (tipoUpper === 'DAÑADO') {
+                    if (articulo.cantidad_disponible < cantMovimiento) {
+                        throw new Error(`Stock insuficiente para marcar como dañado. Disponible: ${articulo.cantidad_disponible}`);
+                    }
+                    nuevaDisponible -= cantMovimiento;
+                    nuevaDanada += cantMovimiento;
                 }
-                // Nota: En TRASLADO la cantidad total no cambia, solo la ubicación.
 
-                // 3. Crear el registro del movimiento
                 const nuevoMovimiento = await tx.movimiento.create({
                     data: {
                         inventario_id,
                         tipo: tipoUpper,
                         cantidad: cantMovimiento,
-                        ubicacion_origen_id: ubicacion_origen_id || articulo.ubicacion_id,
+                        ubicacion_origen_id,
                         ubicacion_destino_id,
                         persona_id,
                         usuario_id,
@@ -81,12 +75,8 @@ const movimientoController = {
                     }
                 });
 
-                // 4. Actualizar el Inventario (Stock y Ubicación si aplica)
-                const updateData = { cantidad: nuevaCantidad };
-
-                // Si es traslado o entrada con destino, actualizamos ubicación
+                const updateData = { cantidad_disponible: nuevaDisponible, cantidad_danada: nuevaDanada };
                 if ((tipoUpper === 'TRASLADO' || tipoUpper === 'ENTRADA') && ubicacion_destino_id) {
-                    updateData.ubicacion_id = ubicacion_destino_id;
                 }
 
                 await tx.inventario.update({
@@ -104,7 +94,6 @@ const movimientoController = {
         }
     },
 
-    // ... (getById y delete se mantienen igual)
     getById: async (req, res) => {
         try {
             const movimiento = await prisma.movimiento.findUnique({
@@ -113,7 +102,8 @@ const movimientoController = {
                     inventario: true,
                     ubicacion_origen: true,
                     ubicacion_destino: true,
-                    persona: true
+                    persona: true,
+                    usuario: { select: { id: true, usuario: true, nombre: true, apellido: true } }
                 }
             });
             if (!movimiento) return res.status(404).json({ status: "error", mensaje: "No encontrado" });

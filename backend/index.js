@@ -31,6 +31,8 @@ const ubicacionRoutes = require('./routes/ubicacionRoutes');
 const authRoutes = require('./routes/authRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const reportesRoutes = require('./routes/reportesRoutes');
+const pedidoRoutes = require('./routes/pedidoRoutes');
+const seedRoutes = require('./routes/seedRoutes');
 
 // Middlewares
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
@@ -60,8 +62,8 @@ app.use('/api/movimientos', movimientoRoutes);
 app.use('/api/ubicaciones', ubicacionRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reportes', reportesRoutes);
-
-
+app.use('/api/pedidos', pedidoRoutes);
+app.use('/api/seed', seedRoutes);
 
 // Manejo de errores global (incluyendo JSON malformado)
 app.use((err, req, res, next) => {

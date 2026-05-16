@@ -1,66 +1,56 @@
-// ============================================================
-// types.ts — Interfaces de dominio para todo el frontend
-// Sincronizado con el esquema del backend (PostgreSQL + Prisma)
-// ============================================================
-
-// ── Catálogos ─────────────────────────────────────────────
-
 export interface Categoria {
   id: string;
   nombre: string;
   descripcion?: string | null;
 }
 
+export interface CategoriaPayload {
+  nombre: string;
+  descripcion?: string | null;
+}
+
 export interface Persona {
   id: string;
-  tipo_documento: string;
-  numero_documento: string;
+  matricula: string;
   nombres: string;
   apellidos: string;
   tipo: string;
+  curso?: string | null;
   telefono?: string | null;
-  email?: string | null;
 }
-
-// ── Almacenamiento (Unificado) ─────────────────────────────
 
 export interface Ubicacion {
   id: string;
   codigo: string;
   nombre: string;
-  tipo: string; // 'ESTANTE', 'CAJA', 'ESTUCHE'
+  tipo: string;
   descripcion?: string | null;
   ubicacion_padre_id?: string | null;
   padre?: Ubicacion | null;
 }
-
-// ── Inventario y herramientas ─────────────────────────────
 
 export interface Herramienta {
   id: string;
   codigo: string;
   nombre: string;
   categoria_id?: string | null;
-  valor_estimado?: number | string | null;
   categoria?: Categoria | null;
+  valor_estimado?: number | null;
 }
-
-export type EstadoInventario = 'Nuevo' | 'Usado' | 'Dañado' | string;
 
 export interface ItemInventario {
   id: string;
   codigo: string;
   nombre: string;
-  estado?: string | null;
-  cantidad: number;
+  cantidad_total: number;
+  cantidad_disponible: number;
+  cantidad_danada: number;
+  stock_minimo: number;
   imagen_ruta?: string | null;
   categoria_id?: string | null;
-  ubicacion_id?: string | null;
   categoria?: Categoria | null;
-  ubicaciones?: Ubicacion | null;
+  detalles_pedidos?: DetallePedido[];
 }
-
-// ── Préstamos ─────────────────────────────────────────────
 
 export type EstadoPrestamo = 'ACTIVO' | 'DEVUELTO' | 'VENCIDO' | 'PENDIENTE' | string;
 
@@ -68,6 +58,7 @@ export interface Prestamo {
   id: string;
   inventario_id: string;
   persona_id: string;
+  instructor_id?: string | null;
   usuario_id: string;
   cantidad: number;
   fecha_prestamo: string | null;
@@ -76,14 +67,13 @@ export interface Prestamo {
   observaciones?: string | null;
   inventario?: ItemInventario | null;
   persona?: Persona | null;
+  instructor?: Persona | null;
   usuario?: Usuario | null;
 }
 
-// ── Movimientos ───────────────────────────────────────────
-
 export interface Movimiento {
   id: string;
-  tipo: string; // 'ENTRADA', 'SALIDA', 'TRASLADO', 'PRESTAMO'
+  tipo: string;
   inventario_id: string;
   ubicacion_origen_id?: string | null;
   ubicacion_destino_id?: string | null;
@@ -100,21 +90,37 @@ export interface Movimiento {
   usuario?: Usuario | null;
 }
 
-// ── Formularios (payloads enviados al backend) ────────────
+export interface Pedido {
+  id: string;
+  numero_orden: string;
+  usuario_id: string;
+  proveedor?: string | null;
+  fecha_pedido: string;
+  fecha_entrega?: string | null;
+  estado: string;
+  prioridad?: string | null;
+  observaciones?: string | null;
+  usuario?: Usuario | null;
+  detalles?: DetallePedido[];
+}
 
-export interface CategoriaPayload {
-  nombre: string;
-  descripcion?: string;
+export interface DetallePedido {
+  id: string;
+  pedido_id: string;
+  inventario_id: string;
+  cantidad: number;
+  precio_unit?: number | null;
+  inventario?: ItemInventario | null;
+  pedido?: Pedido | null;
 }
 
 export interface PersonaPayload {
-  tipo_documento: string;
-  numero_documento: string;
+  matricula: string;
   nombres: string;
   apellidos: string;
   tipo: string;
+  curso?: string;
   telefono?: string;
-  email?: string;
 }
 
 export interface HerramientaPayload {
@@ -128,23 +134,40 @@ export interface InventarioPayload {
   codigo?: string;
   nombre: string;
   categoria_id?: string | null;
-  ubicacion_id?: string | null;
-  estado?: string;
-  cantidad: number;
+  cantidad_total: number;
+  cantidad_disponible: number;
+  cantidad_danada: number;
+  stock_minimo?: number;
   imagen_ruta?: string | null;
 }
 
 export interface PrestamoPayload {
   inventario_id: string;
   persona_id: string;
+  instructor_id: string;
   usuario_id: string;
   cantidad: number;
-  fecha_devolucion?: string | null;
+  fecha_devolucion?: string;
   estado: EstadoPrestamo;
   observaciones?: string;
 }
 
-// ── Dashboard ─────────────────────────────────────────────
+export interface PedidoPayload {
+  proveedor?: string;
+  prioridad?: string;
+  observaciones?: string;
+  detalles?: ({
+    inventario_id: string;
+    cantidad: number;
+    precio_unit?: number;
+  } | {
+    nuevo_item: true;
+    nuevo_nombre: string;
+    nuevo_codigo?: string;
+    cantidad: number;
+    precio_unit?: number;
+  })[];
+}
 
 export interface DashboardCounts {
   articulos: number;
@@ -153,8 +176,6 @@ export interface DashboardCounts {
   prestamos_activos: number;
   prestamos_pendientes: number;
 }
-
-// ── Seguridad ─────────────────────────────────────────────
 
 export interface Role {
   id: string;
@@ -199,6 +220,7 @@ export interface Usuario {
   nombre: string;
   apellido: string;
   usuario: string;
+  email?: string | null;
   rol_id?: string | null;
   tipo_documento?: string | null;
   numero_documento?: string | null;
@@ -211,12 +233,11 @@ export interface UsuarioPayload {
   apellido: string;
   usuario: string;
   contrasena?: string;
+  email?: string;
   rol_id?: string | null;
   tipo_documento?: string | null;
   numero_documento?: string | null;
   activo: boolean;
 }
-
-// ── Errores de validación de formulario ───────────────────
 
 export type FormErrors<T> = Partial<Record<keyof T, string>>;

@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../components/auth/AuthProvider';
 import { useNotification } from '../../components/ui/NotificationContext';
@@ -120,6 +119,9 @@ export default function LoginPage() {
               >
                 {loading ? 'Verificando...' : 'Entrar al sistema'}
               </button>
+              <a href="/recuperar" className="block text-center text-sm text-blue-600 hover:underline mt-2">
+                ¿Olvidaste tu contraseña?
+              </a>
             </form>
           </div>
         </section>

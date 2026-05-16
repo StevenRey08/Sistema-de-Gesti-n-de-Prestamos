@@ -228,7 +228,7 @@ body {
 }
 
 .table-shell {
-  overflow: hidden;
+  overflow-x: auto;
   border-radius: 28px;
   border: 1px solid var(--border);
   background: white;

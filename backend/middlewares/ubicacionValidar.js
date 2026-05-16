@@ -11,10 +11,14 @@ const validarUbicacion = (req, res, next) => {
         errores.push("El nombre es demasiado largo (máximo 100 caracteres).");
     }
 
-    // 2. Validar tipo (Obligatorio y debe ser uno de los permitidos)
+    const esCreacion = !req.params || !req.params.id;
+
+    // 2. Validar tipo (Obligatorio solo en creación)
     const tiposPermitidos = ['ESTANTE', 'CAJA', 'ESTUCHE'];
     if (!tipo || tipo.trim() === "") {
-        errores.push("El tipo de ubicación es obligatorio (ESTANTE, CAJA, ESTUCHE).");
+        if (esCreacion) {
+            errores.push("El tipo de ubicación es obligatorio (ESTANTE, CAJA, ESTUCHE).");
+        }
     } else if (!tiposPermitidos.includes(tipo.toUpperCase())) {
         errores.push(`Tipo no válido. Debe ser uno de los siguientes: ${tiposPermitidos.join(', ')}.`);
     }

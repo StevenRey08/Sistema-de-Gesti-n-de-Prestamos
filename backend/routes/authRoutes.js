@@ -3,16 +3,13 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 const { verificarToken } = require('../middlewares/authMiddleware');
 
-// Ruta para el inicio de sesión
 router.post('/login', authController.login);
-
-// Cerrar sesión (limpiar cookie)
 router.post('/logout', authController.logout);
-
-// Verificar sesión actual (restaurar desde cookie)
 router.get('/me', verificarToken, authController.me);
-
-// Actualizar perfil propio (sin requerir permiso USUARIOS)
 router.put('/me', verificarToken, authController.actualizarPerfil);
+
+router.post('/solicitar-codigo', authController.solicitarCodigoReset);
+router.post('/verificar-codigo', authController.verificarCodigoReset);
+router.post('/reset-password', authController.resetPassword);
 
 module.exports = router;

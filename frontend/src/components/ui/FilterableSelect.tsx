@@ -35,8 +35,12 @@ export default function FilterableSelect({
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    setQuery(selectedOption?.label ?? '');
-  }, [selectedOption]);
+    if (!value) {
+      setQuery('');
+    } else {
+      setQuery(selectedOption?.label ?? '');
+    }
+  }, [selectedOption, value]);
 
   const filteredOptions = useMemo(() => {
     const term = query.trim().toLowerCase();

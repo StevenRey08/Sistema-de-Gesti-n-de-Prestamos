@@ -1,5 +1,6 @@
 const { prisma } = require('../db');
 const logger = require('../utils/logger');
+const PDFDocument = require('pdfkit');
 
 async function marcarVencidos() {
     try {
@@ -8,7 +9,7 @@ async function marcarVencidos() {
                 estado: 'ACTIVO',
                 fecha_devolucion: { lt: new Date() },
             },
-            data: { estado: 'PENDIENTE' }
+            data: { estado: 'VENCIDO' }
         });
     } catch (error) {
         logger.error('Error al marcar préstamos vencidos:', error);
@@ -16,7 +17,6 @@ async function marcarVencidos() {
 }
 
 const prestamoController = {
-    // Listar y filtrar por estado o búsqueda general
     getAll: async (req, res) => {
         await marcarVencidos();
         const { search, estado } = req.query;
@@ -38,7 +38,8 @@ const prestamoController = {
                 include: {
                     inventario: true,
                     persona: true,
-                    usuario: { select: { usuario: true } }
+                    instructor: { select: { id: true, nombres: true, apellidos: true, matricula: true } },
+                    usuario: { select: { id: true, usuario: true, nombre: true, apellido: true } }
                 },
                 orderBy: { fecha_prestamo: 'desc' }
             });
@@ -48,66 +49,62 @@ const prestamoController = {
         }
     },
 
-    // Obtener solo préstamos ACTIVO (Buscador rÃ¡pido para devoluciones)
-    getPendientes: async (req, res) => {
+    getVencidos: async (req, res) => {
         try {
             await marcarVencidos();
-            const pendientes = await prisma.prestamo.findMany({
-                where: { estado: 'ACTIVO' },
+            const vencidos = await prisma.prestamo.findMany({
+                where: { estado: 'VENCIDO' },
                 include: {
                     inventario: { select: { nombre: true, codigo: true } },
-                    persona: { select: { nombres: true, apellidos: true } }
+                    persona: { select: { nombres: true, apellidos: true, matricula: true } },
+                    instructor: { select: { id: true, nombres: true, apellidos: true } }
                 },
                 orderBy: { fecha_prestamo: 'asc' }
             });
-            res.json(pendientes);
+            res.json(vencidos);
         } catch (error) {
             res.status(500).json({ status: "error", mensaje: "Error al obtener préstamos pendientes" });
         }
     },
 
-    // Crear un nuevo préstamo (Con validaciÃ³n de reserva mínima y alertas)
     create: async (req, res) => {
-        const { inventario_id, persona_id, cantidad, observaciones } = req.body;
-        const usuario_id = req.usuario.id; // Tomamos el ID del token por seguridad
+        const { inventario_id, persona_id, instructor_id, cantidad, fecha_devolucion, observaciones } = req.body;
+        const usuario_id = req.usuario.id;
         const cantSolicitada = parseInt(cantidad);
+
+        if (!inventario_id) return res.status(400).json({ status: "error", mensaje: "Debes seleccionar un artículo." });
+        if (!persona_id) return res.status(400).json({ status: "error", mensaje: "Debes seleccionar un estudiante." });
+        if (!instructor_id) return res.status(400).json({ status: "error", mensaje: "Debes seleccionar un instructor." });
+        if (!fecha_devolucion) return res.status(400).json({ status: "error", mensaje: "Debes ingresar una fecha de devolución." });
 
         try {
             const resultado = await prisma.$transaction(async (tx) => {
-                // 1. Obtener artículo y validar stock mÃ­nimo
                 const articulo = await tx.inventario.findUnique({ where: { id: inventario_id } });
-
                 if (!articulo) throw new Error("El artículo no existe.");
 
-                const cantidadResultante = articulo.cantidad - cantSolicitada;
-
-                // Bloqueo si no hay suficiente stock
+                const cantidadResultante = articulo.cantidad_disponible - cantSolicitada;
                 if (cantidadResultante < 0) {
-                    throw new Error(`Stock insuficiente. Disponible: ${articulo.cantidad}, solicitado: ${cantSolicitada}.`);
+                    throw new Error(`Stock insuficiente. Disponible: ${articulo.cantidad_disponible}, solicitado: ${cantSolicitada}.`);
                 }
 
-                // 2. Crear el préstamo
                 const nuevoPrestamo = await tx.prestamo.create({
                     data: {
                         inventario_id,
                         persona_id,
+                        instructor_id,
                         usuario_id,
                         cantidad: cantSolicitada,
+                        fecha_devolucion: new Date(fecha_devolucion),
                         observaciones,
                         estado: 'ACTIVO'
                     }
                 });
 
-                // 3. Restar del inventario y marcar como Prestado (solo si no lo estaba ya)
-                const prestadoData = articulo.estado === 'Prestado'
-                    ? { cantidad: { decrement: cantSolicitada } }
-                    : { cantidad: { decrement: cantSolicitada }, estado_anterior: articulo.estado, estado: 'Prestado' };
-                const articuloActualizado = await tx.inventario.update({
+                await tx.inventario.update({
                     where: { id: inventario_id },
-                    data: prestadoData
+                    data: { cantidad_disponible: { decrement: cantSolicitada } }
                 });
 
-                // 4. Registrar movimiento de SALIDA
                 await tx.movimiento.create({
                     data: {
                         inventario_id,
@@ -115,13 +112,13 @@ const prestamoController = {
                         cantidad: cantSolicitada,
                         persona_id,
                         usuario_id,
+                        prestamo_id: nuevoPrestamo.id,
                         observaciones: `Préstamo registrado. ID: ${nuevoPrestamo.id}`
                     }
                 });
 
-                // 5. Preparar objeto de alerta si el stock llegó a 0
-                const alerta = articuloActualizado.cantidad <= 2
-                    ? { mensaje: `¡Alerta! ${articuloActualizado.nombre} se ha quedado sin stock.`, nivel: 'CRITICO' }
+                const alerta = articulo.cantidad_disponible - cantSolicitada <= articulo.stock_minimo
+                    ? { mensaje: `¡Alerta! ${articulo.nombre} está por debajo del stock mínimo.`, nivel: 'CRITICO' }
                     : null;
 
                 return { nuevoPrestamo, alerta };
@@ -137,20 +134,17 @@ const prestamoController = {
         }
     },
 
-    // Registrar Devolución (Suma stock automÃ¡ticamente)
     registrarDevolucion: async (req, res) => {
         const { id } = req.params;
         const { observaciones_dev, estado_fisico } = req.body;
-        const usuario_id = req.usuario.id; // Tomamos el ID del token por seguridad
+        const usuario_id = req.usuario.id;
 
         try {
             const resultado = await prisma.$transaction(async (tx) => {
                 const prestamo = await tx.prestamo.findUnique({ where: { id } });
-
                 if (!prestamo) throw new Error("Préstamo no encontrado.");
                 if (prestamo.estado === 'DEVUELTO') throw new Error("Ya fue devuelto.");
 
-                // 1. Marcar préstamo como devuelto
                 const actualizado = await tx.prestamo.update({
                     where: { id },
                     data: {
@@ -162,24 +156,23 @@ const prestamoController = {
                     }
                 });
 
-                // 2. Devolver stock al inventario y restaurar estado anterior si no hay más préstamos activos
-                const articuloDev = await tx.inventario.findUnique({ where: { id: prestamo.inventario_id } });
-                const activosRestantes = await tx.prestamo.count({
-                    where: { inventario_id: prestamo.inventario_id, estado: { in: ['ACTIVO', 'PENDIENTE'] }, id: { not: prestamo.id } }
-                });
-                const estadoRestaurado = activosRestantes === 0
-                    ? (estado_fisico || articuloDev?.estado_anterior || 'Nuevo')
-                    : undefined;
-                await tx.inventario.update({
-                    where: { id: prestamo.inventario_id },
-                    data: {
-                        cantidad: { increment: prestamo.cantidad },
-                        estado: estadoRestaurado,
-                        ...(activosRestantes === 0 ? { estado_anterior: null } : {}),
-                    }
-                });
+                const cantDevolver = prestamo.cantidad;
+                if (estado_fisico === 'DAÑADO') {
+                    await tx.inventario.update({
+                        where: { id: prestamo.inventario_id },
+                        data: {
+                            cantidad_danada: { increment: cantDevolver }
+                        }
+                    });
+                } else {
+                    await tx.inventario.update({
+                        where: { id: prestamo.inventario_id },
+                        data: {
+                            cantidad_disponible: { increment: cantDevolver }
+                        }
+                    });
+                }
 
-                // 3. Registrar movimiento de ENTRADA
                 await tx.movimiento.create({
                     data: {
                         inventario_id: prestamo.inventario_id,
@@ -187,7 +180,8 @@ const prestamoController = {
                         cantidad: prestamo.cantidad,
                         persona_id: prestamo.persona_id,
                         usuario_id,
-                        observaciones: `Devolución de préstamo ID: ${id}`
+                        prestamo_id: prestamo.id,
+                        observaciones: `Devolución de préstamo ID: ${id}${estado_fisico ? ` - Estado: ${estado_fisico}` : ''}`
                     }
                 });
 
@@ -200,21 +194,18 @@ const prestamoController = {
         }
     },
 
-    // Actualizar préstamo (solo campos no críticos para stock)
     update: async (req, res) => {
         try {
-            const { observaciones, fecha_devolucion, estado, persona_id, usuario_id } = req.body;
+            const { observaciones, fecha_devolucion, estado, persona_id, instructor_id, usuario_id } = req.body;
             const payload = {};
-            
             if (observaciones !== undefined) payload.observaciones = observaciones;
             if (estado !== undefined) payload.estado = estado;
             if (persona_id !== undefined) payload.persona_id = persona_id;
+            if (instructor_id !== undefined) payload.instructor_id = instructor_id;
             if (usuario_id !== undefined) payload.usuario_id = usuario_id;
-            
             if (fecha_devolucion !== undefined) {
                 payload.fecha_devolucion = fecha_devolucion ? new Date(fecha_devolucion) : null;
             }
-
             if (Object.keys(payload).length === 0) {
                 return res.status(400).json({ status: "error", mensaje: "No hay campos para actualizar" });
             }
@@ -225,17 +216,8 @@ const prestamoController = {
             });
             res.json(actualizado);
         } catch (error) {
-            logger.error("Error al actualizar préstamo:", { 
-                error: error.message, 
-                stack: error.stack,
-                id: req.params.id, 
-                body: req.body 
-            });
-            res.status(500).json({ 
-                status: "error", 
-                mensaje: "Error al actualizar el préstamo",
-                detalles: [error.message] 
-            });
+            logger.error("Error al actualizar préstamo:", { error: error.message, stack: error.stack, id: req.params.id, body: req.body });
+            res.status(500).json({ status: "error", mensaje: "Error al actualizar el préstamo", detalles: [error.message] });
         }
     },
 
@@ -243,7 +225,12 @@ const prestamoController = {
         try {
             const prestamo = await prisma.prestamo.findUnique({
                 where: { id: req.params.id },
-                include: { inventario: true, persona: true, usuario: true }
+                include: {
+                    inventario: true,
+                    persona: true,
+                    instructor: { select: { id: true, nombres: true, apellidos: true } },
+                    usuario: { select: { id: true, usuario: true, nombre: true, apellido: true } }
+                }
             });
             if (!prestamo) return res.status(404).json({ status: "error", mensaje: "Préstamo no encontrado" });
             res.json(prestamo);
@@ -258,44 +245,126 @@ const prestamoController = {
                 where: { id: req.params.id },
                 include: { movimientos: true }
             });
-
-            if (!prestamo) {
-                return res.status(404).json({ status: "error", mensaje: "Préstamo no encontrado" });
-            }
+            if (!prestamo) return res.status(404).json({ status: "error", mensaje: "Préstamo no encontrado" });
 
             await prisma.$transaction(async (tx) => {
-                // Si estÃ¡ ACTIVO, restaurar el stock y el estado anterior antes de eliminar
                 if (prestamo.estado === 'ACTIVO') {
-                    const articulo = await tx.inventario.findUnique({ where: { id: prestamo.inventario_id } });
-                    const activosRestantes = await tx.prestamo.count({
-                        where: { inventario_id: prestamo.inventario_id, estado: { in: ['ACTIVO', 'PENDIENTE'] }, id: { not: prestamo.id } }
-                    });
-                    const estadoRestaurado = activosRestantes === 0
-                        ? (articulo?.estado_anterior || 'Nuevo')
-                        : undefined;
                     await tx.inventario.update({
                         where: { id: prestamo.inventario_id },
-                        data: {
-                            cantidad: { increment: prestamo.cantidad },
-                            estado: estadoRestaurado,
-                            ...(activosRestantes === 0 ? { estado_anterior: null } : {}),
-                        }
+                        data: { cantidad_disponible: { increment: prestamo.cantidad } }
                     });
                 }
-
-                // Eliminar movimientos asociados
                 if (prestamo.movimientos?.length > 0) {
-                    await tx.movimiento.deleteMany({
-                        where: { prestamo_id: prestamo.id }
-                    });
+                    await tx.movimiento.deleteMany({ where: { prestamo_id: prestamo.id } });
                 }
-
                 await tx.prestamo.delete({ where: { id: prestamo.id } });
             });
-
             res.json({ message: "Préstamo eliminado correctamente. Stock restaurado." });
         } catch (error) {
             res.status(500).json({ status: "error", mensaje: "Error al eliminar el préstamo" });
+        }
+    },
+
+    generarPDF: async (req, res) => {
+        try {
+            const prestamo = await prisma.prestamo.findUnique({
+                where: { id: req.params.id },
+                include: {
+                    inventario: { include: { categoria: true } },
+                    persona: true,
+                    instructor: { select: { id: true, nombres: true, apellidos: true } },
+                    usuario: { select: { id: true, usuario: true, nombre: true, apellido: true } }
+                }
+            });
+            if (!prestamo) return res.status(404).json({ status: "error", mensaje: "Préstamo no encontrado" });
+
+            const doc = new PDFDocument({ size: 'A4', margin: 50 });
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `inline; filename=prestamo-${prestamo.id}.pdf`);
+            doc.pipe(res);
+
+            doc.fontSize(22).font('Helvetica-Bold').text('COMPROBANTE DE PRÉSTAMO', { align: 'center' });
+            doc.moveDown();
+            doc.fontSize(10).font('Helvetica').fillColor('#666').text(`Fecha: ${new Date().toLocaleDateString('es-DO')}`, { align: 'right' });
+            doc.text(`ID: ${prestamo.id}`, { align: 'right' });
+            doc.moveDown(2);
+
+            doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#ccc').stroke();
+            doc.moveDown();
+
+            doc.fontSize(14).font('Helvetica-Bold').fillColor('#333').text('DATOS DEL PRÉSTAMO');
+            doc.moveDown(0.5);
+            const startX = 50;
+            let currentY = doc.y;
+
+            doc.fontSize(10).font('Helvetica').fillColor('#555');
+            doc.text('Estado:', startX, currentY, { continued: true });
+            doc.fillColor('#333').text(` ${prestamo.estado}`, { continued: false });
+
+            currentY = doc.y;
+            doc.fillColor('#555').text('Fecha de préstamo:', startX, currentY, { continued: true });
+            doc.fillColor('#333').text(` ${prestamo.fecha_prestamo ? new Date(prestamo.fecha_prestamo).toLocaleDateString('es-DO') : 'N/A'}`, { continued: false });
+
+            if (prestamo.fecha_devolucion) {
+                currentY = doc.y;
+                doc.fillColor('#555').text('Fecha de devolución:', startX, currentY, { continued: true });
+                doc.fillColor('#333').text(` ${new Date(prestamo.fecha_devolucion).toLocaleDateString('es-DO')}`, { continued: false });
+            }
+
+            doc.moveDown(2);
+            doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#ccc').stroke();
+            doc.moveDown();
+
+            doc.fontSize(14).font('Helvetica-Bold').fillColor('#333').text('ESTUDIANTE');
+            doc.moveDown(0.5);
+            doc.fontSize(10).font('Helvetica').fillColor('#555').text(`Nombre: `, { continued: true });
+            doc.fillColor('#333').text(`${prestamo.persona?.nombres || ''} ${prestamo.persona?.apellidos || ''}`);
+            doc.fillColor('#555').text(`Matrícula: `, { continued: true });
+            doc.fillColor('#333').text(`${prestamo.persona?.matricula || 'N/A'}`);
+            doc.fillColor('#555').text(`Curso: `, { continued: true });
+            doc.fillColor('#333').text(`${prestamo.persona?.curso || 'N/A'}`);
+
+            if (prestamo.instructor) {
+                doc.moveDown();
+                doc.fontSize(14).font('Helvetica-Bold').fillColor('#333').text('INSTRUCTOR / PROFESOR');
+                doc.moveDown(0.5);
+                doc.fontSize(10).font('Helvetica').fillColor('#555').text(`Nombre: `, { continued: true });
+                doc.fillColor('#333').text(`${prestamo.instructor.nombres} ${prestamo.instructor.apellidos}`);
+            }
+
+            doc.moveDown(2);
+            doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#ccc').stroke();
+            doc.moveDown();
+
+            doc.fontSize(14).font('Helvetica-Bold').fillColor('#333').text('HERRAMIENTA');
+            doc.moveDown(0.5);
+            doc.fontSize(10).font('Helvetica').fillColor('#555').text(`Artículo: `, { continued: true });
+            doc.fillColor('#333').text(`${prestamo.inventario?.nombre || ''}`);
+            doc.fillColor('#555').text(`Código: `, { continued: true });
+            doc.fillColor('#333').text(`${prestamo.inventario?.codigo || ''}`);
+            doc.fillColor('#555').text(`Categoría: `, { continued: true });
+            doc.fillColor('#333').text(`${prestamo.inventario?.categoria?.nombre || 'N/A'}`);
+            doc.fillColor('#555').text(`Cantidad: `, { continued: true });
+            doc.fillColor('#333').text(`${prestamo.cantidad}`);
+
+            if (prestamo.observaciones) {
+                doc.moveDown();
+                doc.fontSize(10).font('Helvetica').fillColor('#555').text('Observaciones:', { continued: true });
+                doc.fillColor('#333').text(` ${prestamo.observaciones}`);
+            }
+
+            doc.moveDown(3);
+            doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#ccc').stroke();
+            doc.moveDown(1.5);
+
+            doc.fontSize(8).font('Helvetica').fillColor('#999').text('Este documento es un comprobante de préstamo de herramientas.', { align: 'center' });
+            doc.text('Debe presentarse al momento de la devolución.', { align: 'center' });
+            doc.text(`Generado por: ${prestamo.usuario?.nombre || prestamo.usuario?.usuario || 'Sistema'}`, { align: 'center' });
+
+            doc.end();
+        } catch (error) {
+            logger.error("Error al generar PDF:", error);
+            res.status(500).json({ status: "error", mensaje: "Error al generar el PDF" });
         }
     }
 };

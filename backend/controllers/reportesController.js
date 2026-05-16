@@ -161,18 +161,21 @@ const reportesController = {
     try {
       const { fechaInicio, fechaFin } = req.query;
       const whereFecha = filtroFechaPrestamo(fechaInicio, fechaFin);
-      const where = { cantidad: { lte: 2 } };
-
-      if (Object.keys(whereFecha).length > 0) {
-        where.prestamos = { some: whereFecha };
-      }
-
       const items = await prisma.inventario.findMany({
-        where,
-        include: { categoria: true, ubicaciones: true },
-        orderBy: { cantidad: 'asc' }
+        include: { categoria: true },
+        orderBy: { cantidad_disponible: 'asc' }
       });
-      res.json(items);
+      const filtrados = items.filter(item => item.cantidad_disponible <= item.stock_minimo);
+      if (Object.keys(whereFecha).length > 0) {
+        const idsConPrestamos = await prisma.prestamo.findMany({
+          where: whereFecha,
+          select: { inventario_id: true }
+        });
+        const idsValidos = new Set(idsConPrestamos.map(p => p.inventario_id));
+        res.json(filtrados.filter(i => idsValidos.has(i.id)));
+      } else {
+        res.json(filtrados);
+      }
     } catch (error) {
       res.status(500).json({ status: 'error', mensaje: 'Error al obtener reporte de bajo stock' });
     }
@@ -244,6 +247,29 @@ const reportesController = {
     }
   },
 
+  prestamosVencidos: async (req, res) => {
+    try {
+      const { fechaInicio, fechaFin } = req.query;
+      const whereFecha = filtroFechaPrestamo(fechaInicio, fechaFin);
+      const prestamos = await prisma.prestamo.findMany({
+        where: {
+          estado: 'VENCIDO',
+          ...whereFecha
+        },
+        include: {
+          inventario: { select: { nombre: true, codigo: true } },
+          persona: { select: { nombres: true, apellidos: true, matricula: true } },
+          instructor: { select: { nombres: true, apellidos: true } },
+          usuario: { select: { nombre: true, apellido: true } }
+        },
+        orderBy: { fecha_prestamo: 'desc' }
+      });
+      res.json(prestamos);
+    } catch (error) {
+      res.status(500).json({ status: 'error', mensaje: 'Error al obtener préstamos vencidos' });
+    }
+  },
+
   pdf: async (req, res) => {
     try {
       const { tipo, fechaInicio, fechaFin } = req.query;
@@ -256,24 +282,30 @@ const reportesController = {
       const autorNombre = user ? `${user.nombre} ${user.apellido}` : req.usuario.usuario;
 
       if (tipo === 'bajo-stock') {
-        const where = { cantidad: { lte: 2 } };
-        if (Object.keys(whereFecha).length > 0) {
-          where.prestamos = { some: whereFecha };
-        }
         const items = await prisma.inventario.findMany({
-          where,
-          include: { categoria: true, ubicaciones: true },
-          orderBy: { cantidad: 'asc' }
+          include: { categoria: true },
+          orderBy: { cantidad_disponible: 'asc' }
         });
-        const filas = items.map(i => ({
+        const filtrados = items.filter(item => item.cantidad_disponible <= item.stock_minimo);
+        let itemsFinal = filtrados;
+        if (Object.keys(whereFecha).length > 0) {
+          const idsConPrestamos = await prisma.prestamo.findMany({
+            where: whereFecha,
+            select: { inventario_id: true }
+          });
+          const idsValidos = new Set(idsConPrestamos.map(p => p.inventario_id));
+          itemsFinal = filtrados.filter(i => idsValidos.has(i.id));
+        }
+        const filas = itemsFinal.map(i => ({
           Código: i.codigo,
           Nombre: i.nombre,
           Categoría: i.categoria?.nombre || '—',
-          Stock: String(i.cantidad),
-          Estado: i.estado || '—',
+          Disponible: String(i.cantidad_disponible),
+          'Stock Mín.': String(i.stock_minimo),
+          Dañado: String(i.cantidad_danada),
         }));
         generarPDF(res, 'Reporte de Bajo Stock', fechaInicio, fechaFin,
-          ['Código', 'Nombre', 'Categoría', 'Stock', 'Estado'], filas, '#10367d', autorNombre);
+          ['Código', 'Nombre', 'Categoría', 'Disponible', 'Stock Mín.', 'Dañado'], filas, '#10367d', autorNombre);
       } else if (tipo === 'mas-prestados') {
         const resultados = await prisma.prestamo.groupBy({
           by: ['inventario_id'],
@@ -298,6 +330,30 @@ const reportesController = {
         }));
         generarPDF(res, 'Reporte de Más Prestados', fechaInicio, fechaFin,
           ['Código', 'Nombre', 'Categoría', 'Veces prestado', 'Total unidades'], filas, '#10367d', autorNombre);
+      } else if (tipo === 'prestamos-vencidos') {
+        const where = { estado: 'VENCIDO' };
+        if (Object.keys(whereFecha).length > 0) {
+          where.fecha_prestamo = whereFecha.fecha_prestamo;
+        }
+        const prestamos = await prisma.prestamo.findMany({
+          where,
+          include: {
+            inventario: { select: { nombre: true, codigo: true } },
+            persona: { select: { nombres: true, apellidos: true, matricula: true } },
+            usuario: { select: { nombre: true, apellido: true } }
+          },
+          orderBy: { fecha_prestamo: 'desc' }
+        });
+        const filas = prestamos.map(p => ({
+          Código: p.inventario?.codigo || '—',
+          'Herramienta': p.inventario?.nombre || '—',
+          Estudiante: `${p.persona?.nombres || ''} ${p.persona?.apellidos || ''}`,
+          'Fecha Préstamo': formatoFechaCorta(p.fecha_prestamo),
+          'Fecha Devolución': formatoFechaCorta(p.fecha_devolucion),
+          'Registrado por': `${p.usuario?.nombre || ''} ${p.usuario?.apellido || ''}`,
+        }));
+        generarPDF(res, 'Reporte de Préstamos Vencidos', fechaInicio, fechaFin,
+          ['Código', 'Herramienta', 'Estudiante', 'Fecha Préstamo', 'Fecha Devolución', 'Registrado por'], filas, '#c63939', autorNombre);
       } else if (tipo === 'menos-prestados') {
         const resultados = await prisma.prestamo.groupBy({
           by: ['inventario_id'],
