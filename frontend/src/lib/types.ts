@@ -20,6 +20,7 @@ export interface Persona {
   tipo: string;
   curso?: string | null;
   telefono?: string | null;
+  prestamosActivos?: number;
 }
 
 export interface Ubicacion {

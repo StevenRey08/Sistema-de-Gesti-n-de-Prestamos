@@ -31,9 +31,9 @@ export default function PedidosPage() {
   const [recibiendo, setRecibiendo] = useState<string | null>(null);
 
   const [form, setForm] = useState<{
-    proveedor: string; prioridad: string; observaciones: string;
+    prioridad: string; observaciones: string;
     detalles: DetalleForm[];
-  }>({ proveedor: '', prioridad: 'NORMAL', observaciones: '', detalles: [{ inventario_id: '', cantidad: 1, precio_unit: '', nuevo_item: false, nuevo_nombre: '', nuevo_codigo: '' }] });
+  }>({ prioridad: 'NORMAL', observaciones: '', detalles: [{ inventario_id: '', cantidad: 1, precio_unit: '', nuevo_item: false, nuevo_nombre: '', nuevo_codigo: '' }] });
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -66,7 +66,6 @@ export default function PedidosPage() {
     }
     try {
       const payload: PedidoPayload = {
-        proveedor: form.proveedor || undefined,
         prioridad: form.prioridad,
         observaciones: form.observaciones || undefined,
         detalles: form.detalles.filter(d => d.inventario_id || d.nuevo_item).map(d => d.nuevo_item ? {
@@ -83,7 +82,7 @@ export default function PedidosPage() {
       };
       await pedidosApi.create(payload);
       setShowForm(false);
-      setForm({ proveedor: '', prioridad: 'NORMAL', observaciones: '', detalles: [{ inventario_id: '', cantidad: 1, precio_unit: '', nuevo_item: false, nuevo_nombre: '', nuevo_codigo: '' }] });
+      setForm({ prioridad: 'NORMAL', observaciones: '', detalles: [{ inventario_id: '', cantidad: 1, precio_unit: '', nuevo_item: false, nuevo_nombre: '', nuevo_codigo: '' }] });
       cargar();
     } catch (e: unknown) {
       const { message, details } = notifyErrorPayload(e, 'Error al crear pedido');
@@ -120,20 +119,14 @@ export default function PedidosPage() {
           <div className="modal-panel w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg font-semibold mb-4">Nuevo Pedido</h2>
             <form onSubmit={handleCrear} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium">Proveedor</label>
-                  <input value={form.proveedor} onChange={e => setForm(p => ({ ...p, proveedor: e.target.value }))} className="soft-input" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium">Prioridad</label>
-                  <select value={form.prioridad} onChange={e => setForm(p => ({ ...p, prioridad: e.target.value }))} className="soft-select">
-                    <option value="BAJA">Baja</option>
-                    <option value="NORMAL">Normal</option>
-                    <option value="ALTA">Alta</option>
-                    <option value="URGENTE">Urgente</option>
-                  </select>
-                </div>
+              <div>
+                <label className="block text-sm font-medium">Prioridad</label>
+                <select value={form.prioridad} onChange={e => setForm(p => ({ ...p, prioridad: e.target.value }))} className="soft-select">
+                  <option value="BAJA">Baja</option>
+                  <option value="NORMAL">Normal</option>
+                  <option value="ALTA">Alta</option>
+                  <option value="URGENTE">Urgente</option>
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium">Observaciones</label>
@@ -229,7 +222,6 @@ export default function PedidosPage() {
             <thead>
               <tr>
                 <th className="px-4 py-3 text-left">Orden</th>
-                <th className="px-4 py-3 text-left">Proveedor</th>
                 <th className="px-4 py-3 text-left">Artículos</th>
                 <th className="px-4 py-3 text-left">Fecha</th>
                 <th className="px-4 py-3 text-left">Estado</th>
@@ -241,7 +233,6 @@ export default function PedidosPage() {
               {pedidos.map((p: Pedido) => (
                 <tr key={p.id}>
                   <td className="px-4 py-3 font-mono text-xs">{p.numero_orden}</td>
-                  <td className="px-4 py-3">{p.proveedor || '—'}</td>
                   <td className="px-4 py-3">{p.detalles?.length || 0} items</td>
                   <td className="px-4 py-3 text-[var(--text-muted)]">{fmt(p.fecha_pedido)}</td>
                   <td className="px-4 py-3">

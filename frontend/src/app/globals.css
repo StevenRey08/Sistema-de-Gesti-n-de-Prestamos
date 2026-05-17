@@ -48,6 +48,29 @@ body {
   background: rgba(16, 54, 125, 0.16);
 }
 
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(16, 54, 125, 0.15);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(16, 54, 125, 0.25);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(16, 54, 125, 0.15) transparent;
+}
+
 .page-shell {
   display: flex;
   flex-direction: column;

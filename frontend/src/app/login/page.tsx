@@ -6,6 +6,7 @@ import { useAuth } from '../../components/auth/AuthProvider';
 import { useNotification } from '../../components/ui/NotificationContext';
 import { notifyErrorPayload } from '../../lib/errors';
 import { obtenerRutaDestino } from '../../lib/permissions';
+import DotWaveBackground from '../../components/ui/DotWaveBackground';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -40,30 +41,29 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[var(--bg-soft)] px-6 py-8">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(16,54,125,0.18),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(165,206,224,0.35),_transparent_24%)]" />
+    <div className="relative min-h-screen overflow-hidden bg-[#0d1b3e] px-6 py-8">
+      <DotWaveBackground />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(16,54,125,0.3),_transparent_40%),radial-gradient(circle_at_bottom_right,_rgba(165,206,224,0.15),_transparent_40%)]" />
 
       <div className="relative mx-auto grid min-h-[calc(100vh-4rem)] max-w-7xl items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
         {/* Panel izquierdo */}
-        <section className="rounded-[36px] bg-[linear-gradient(145deg,#10367d_0%,#1548a4_72%,#1f61c5_100%)] p-10 text-white shadow-[0_40px_90px_rgba(16,54,125,0.24)] md:p-14">
-
-
-          <div className="max-w-xl space-y-2">
+        <section className="relative overflow-hidden rounded-[36px] border border-white/10 bg-white/10 p-10 text-white shadow-[0_40px_90px_rgba(0,0,0,0.3)] backdrop-blur-[8px] md:p-14">
+          <div className="relative z-10 max-w-xl space-y-2">
 
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/images/logo.png" alt="Logo" className="h-110 w-auto" />
 
-            <p className="max-w-lg text-base leading-8 text-white/78 md:text-lg">
+            <p className="max-w-lg text-base leading-8 text-white/70 md:text-lg">
               Una plataforma administrativa segura, rápida y enfocada para gestionar herramientas,
               existencias y movimientos diarios.
             </p>
           </div>
 
-          <div className="mt-12 grid gap-4 text-sm text-white/92">
+          <div className="mt-12 grid gap-4 text-sm text-white/85">
             {[
               'Mejor Organizacion de Objetos y herramientas dentro de un almacen',
             ].map((item) => (
-              <div key={item} className="flex items-center gap-3 rounded-2xl border border-white/14 bg-white/8 px-4 py-3">
+              <div key={item} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/8 px-4 py-3 backdrop-blur-[4px]">
                 <span className="text-lg">✓</span>
                 <span>{item}</span>
               </div>
@@ -72,28 +72,28 @@ export default function LoginPage() {
         </section>
 
         {/* Panel derecho — Formulario */}
-        <section className="rounded-[32px] border border-[var(--border)] bg-white p-8 shadow-[var(--shadow-soft)] md:p-10">
+        <section className="rounded-[32px] border border-white/15 bg-white/15 p-8 shadow-[0_40px_90px_rgba(0,0,0,0.25)] backdrop-blur-[12px] md:p-10">
           <div className="mx-auto max-w-md space-y-8">
             <div className="space-y-3 text-center">
-              <span className="inline-flex rounded-full bg-[var(--accent-soft)] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent-strong)]">
+              <span className="inline-flex rounded-full border border-white/15 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-white/80 backdrop-blur-[4px]">
                 Bienvenido
               </span>
-              <h2 className="text-4xl font-semibold text-[var(--text-main)]">Inicia sesión</h2>
-              <p className="text-base leading-7 text-[var(--text-muted)]">
+              <h2 className="text-4xl font-semibold text-white">Inicia sesión</h2>
+              <p className="text-base leading-7 text-white/60">
                 Ingresa con tu nombre de usuario y contraseña asignados por el administrador.
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-[var(--text-main)]">
+                <label className="text-sm font-medium text-white/80">
                   Nombre de usuario
                 </label>
                 <input
                   type="text"
                   value={usuario}
                   onChange={(e) => setUsuario(e.target.value)}
-                  className="soft-input"
+                  className="w-full rounded-[14px] border border-white/15 bg-white/10 px-4 py-3.5 text-white caret-white/80 placeholder-white/40 backdrop-blur-[4px] transition-all duration-200 focus:border-white/30 focus:bg-white/15 focus:outline-none focus:ring-[3px] focus:ring-white/10"
                   placeholder="Nombre de usuario"
                   autoComplete="username"
                   autoFocus
@@ -101,12 +101,12 @@ export default function LoginPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-[var(--text-main)]">Contraseña</label>
+                <label className="text-sm font-medium text-white/80">Contraseña</label>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="soft-input"
+                  className="w-full rounded-[14px] border border-white/15 bg-white/10 px-4 py-3.5 text-white caret-white/80 placeholder-white/40 backdrop-blur-[4px] transition-all duration-200 focus:border-white/30 focus:bg-white/15 focus:outline-none focus:ring-[3px] focus:ring-white/10"
                   placeholder="Tu contraseña"
                   autoComplete="current-password"
                 />
@@ -115,11 +115,11 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="soft-btn-primary w-full justify-center py-3.5 text-base"
+                className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-white/15 bg-white/15 px-6 py-3.5 text-base font-semibold text-white shadow-lg backdrop-blur-[4px] transition-all duration-200 hover:bg-white/25 hover:shadow-xl active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {loading ? 'Verificando...' : 'Entrar al sistema'}
               </button>
-              <a href="/recuperar" className="block text-center text-sm text-blue-600 hover:underline mt-2">
+              <a href="/recuperar" className="mt-2 block text-center text-sm text-white/50 transition-colors hover:text-white/80">
                 ¿Olvidaste tu contraseña?
               </a>
             </form>

@@ -36,17 +36,17 @@ export default function Sidebar() {
 
   return (
     <aside
-      className="fixed left-0 top-0 hidden h-screen w-72 shrink-0 border-r border-white/14 bg-[linear-gradient(180deg,#10367d_0%,#123c8d_45%,#174ba6_100%)] text-white shadow-[18px_0_45px_rgba(16,54,125,0.12)] lg:flex lg:flex-col"
+      className="fixed left-0 top-0 hidden h-screen w-72 shrink-0 border-r border-white/8 bg-[#0d1b3e] text-white shadow-[18px_0_45px_rgba(8,15,35,0.4)] lg:flex lg:flex-col"
     >
       <div className="flex h-full flex-col px-5 py-6 min-h-0">
         <div className="shrink-0">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
-            <div className="app-logo-dot flex h-12 w-12 items-center justify-center rounded-[18px] border border-white/16 bg-white/12 text-lg font-semibold text-white shadow-[0_10px_30px_rgba(255,255,255,0.08)]">
+            <div className="flex h-12 w-12 items-center justify-center rounded-[18px] border border-white/12 bg-white/10 text-lg font-semibold text-white shadow-[0_10px_30px_rgba(0,0,0,0.2)]">
               S
             </div>
             <div>
-              <p className="text-xs uppercase tracking-[0.28em] text-white/60">Panel</p>
+              <p className="text-xs uppercase tracking-[0.28em] text-white/50">Panel</p>
               <p className="text-lg font-semibold text-white">Gestión de Préstamos</p>
             </div>
           </div>
@@ -54,7 +54,7 @@ export default function Sidebar() {
       </div>
 
       <div className="flex-1 overflow-y-auto min-h-0 px-4">
-        <div className="rounded-[28px] border border-white/14 bg-white/8 p-3">
+        <div className="rounded-[28px] border border-white/8 bg-white/6 p-3">
           <nav className="space-y-1">
             {itemsVisibles.map((item) => {
               const isActive =
@@ -68,12 +68,12 @@ export default function Sidebar() {
                   href={item.href}
                   className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition ${
                     isActive
-                      ? 'bg-white text-[var(--accent-strong)] shadow-[0_12px_30px_rgba(8,25,61,0.18)]'
-                      : 'text-white/76 hover:bg-white/10 hover:text-white'
+                      ? 'bg-white/15 text-white shadow-[0_12px_30px_rgba(0,0,0,0.2)]'
+                      : 'text-white/60 hover:bg-white/10 hover:text-white/90'
                   }`}
                 >
                   <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-sm ${
-                    isActive ? 'bg-[var(--accent-soft)] text-[var(--accent-strong)]' : 'bg-white/10 text-white/88'
+                    isActive ? 'bg-white/20 text-white' : 'bg-white/8 text-white/70'
                   }`}>
                     {item.icon}
                   </span>

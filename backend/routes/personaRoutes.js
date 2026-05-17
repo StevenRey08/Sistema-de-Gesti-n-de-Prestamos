@@ -10,13 +10,16 @@ const excelUpload = multer({ dest: 'uploads/excel/' });
 
 router.use(verificarToken);
 
-router.post('/', checkPermiso('PERSONAS', 'ingresar'), validarPersona, personaController.create);
-router.put('/:id', checkPermiso('PERSONAS', 'actualizar'), validarPersona, personaController.update);
+// Rutas estáticas primero (antes de /:id)
 router.get('/', checkPermiso('PERSONAS', 'leer'), personaController.getAll);
-router.get('/:id', checkPermiso('PERSONAS', 'leer'), personaController.getById);
+router.post('/', checkPermiso('PERSONAS', 'ingresar'), validarPersona, personaController.create);
+router.get('/download-template', checkPermiso('PERSONAS', 'leer'), personaController.downloadTemplate);
+router.post('/import-excel', checkPermiso('PERSONAS', 'ingresar'), excelUpload.single('file'), personaController.importExcel);
 router.delete('/estudiantes', checkPermiso('PERSONAS', 'eliminar'), personaController.deleteEstudiantes);
 router.post('/delete-bulk', checkPermiso('PERSONAS', 'eliminar'), personaController.deleteBulk);
-router.post('/import-excel', checkPermiso('PERSONAS', 'ingresar'), excelUpload.single('file'), personaController.importExcel);
+// Rutas paramétricas después
+router.get('/:id', checkPermiso('PERSONAS', 'leer'), personaController.getById);
+router.put('/:id', checkPermiso('PERSONAS', 'actualizar'), validarPersona, personaController.update);
 router.delete('/:id', checkPermiso('PERSONAS', 'eliminar'), personaController.delete);
 
 module.exports = router;

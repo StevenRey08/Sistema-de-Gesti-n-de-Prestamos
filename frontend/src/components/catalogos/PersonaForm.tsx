@@ -36,6 +36,7 @@ interface PersonaFormProps {
   persona?: Persona | null;
   onGuardar: (form: PersonaPayload) => Promise<void>;
   onCancelar: () => void;
+  defaultTipo?: string;
 }
 
 interface PersonaFormState {
@@ -47,7 +48,7 @@ interface PersonaFormState {
   seccion: string;
 }
 
-export default function PersonaForm({ persona = null, onGuardar, onCancelar }: PersonaFormProps) {
+export default function PersonaForm({ persona = null, onGuardar, onCancelar, defaultTipo }: PersonaFormProps) {
   const { notify } = useNotification();
   const parsed = parseCurso(persona?.curso);
 
@@ -55,7 +56,7 @@ export default function PersonaForm({ persona = null, onGuardar, onCancelar }: P
     matricula: persona?.matricula ?? '',
     nombres: persona?.nombres ?? '',
     apellidos: persona?.apellidos ?? '',
-    tipo: persona?.tipo ?? 'ESTUDIANTE',
+    tipo: persona?.tipo ?? defaultTipo ?? 'ESTUDIANTE',
     nivel: parsed.nivel,
     seccion: parsed.seccion,
   });
