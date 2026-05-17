@@ -16,6 +16,20 @@ async function marcarVencidos() {
     }
 }
 
+function includeDetalles() {
+    return {
+        inventario: true,
+        detalles: {
+            include: {
+                inventario: { select: { id: true, nombre: true, codigo: true } }
+            }
+        },
+        persona: true,
+        instructor: { select: { id: true, nombres: true, apellidos: true, matricula: true } },
+        usuario: { select: { id: true, usuario: true, nombre: true, apellido: true } }
+    };
+}
+
 const prestamoController = {
     getAll: async (req, res) => {
         await marcarVencidos();
@@ -30,22 +44,19 @@ const prestamoController = {
                                 { estado: { contains: search, mode: 'insensitive' } },
                                 { observaciones: { contains: search, mode: 'insensitive' } },
                                 { persona: { nombres: { contains: search, mode: 'insensitive' } } },
-                                { inventario: { nombre: { contains: search, mode: 'insensitive' } } }
+                                { inventario: { nombre: { contains: search, mode: 'insensitive' } } },
+                                { detalles: { some: { inventario: { nombre: { contains: search, mode: 'insensitive' } } } } }
                             ]
                         } : {}
                     ]
                 },
-                include: {
-                    inventario: true,
-                    persona: true,
-                    instructor: { select: { id: true, nombres: true, apellidos: true, matricula: true } },
-                    usuario: { select: { id: true, usuario: true, nombre: true, apellido: true } }
-                },
+                include: includeDetalles(),
                 orderBy: { fecha_prestamo: 'desc' }
             });
             res.json(prestamos);
         } catch (error) {
-            res.status(500).json({ status: "error", mensaje: "Error al obtener los préstamos" });
+            logger.error("Error en prestamos.getAll:", error);
+            res.status(500).json({ status: "error", mensaje: "Error al obtener los préstamos", detalle: error.message });
         }
     },
 
@@ -57,13 +68,19 @@ const prestamoController = {
                 include: {
                     inventario: { select: { nombre: true, codigo: true } },
                     persona: { select: { nombres: true, apellidos: true, matricula: true } },
-                    instructor: { select: { id: true, nombres: true, apellidos: true } }
+                    instructor: { select: { id: true, nombres: true, apellidos: true } },
+                    detalles: {
+                        include: {
+                            inventario: { select: { nombre: true, codigo: true } }
+                        }
+                    }
                 },
                 orderBy: { fecha_prestamo: 'asc' }
             });
             res.json(vencidos);
         } catch (error) {
-            res.status(500).json({ status: "error", mensaje: "Error al obtener préstamos pendientes" });
+            logger.error("Error en prestamos.getVencidos:", error);
+            res.status(500).json({ status: "error", mensaje: "Error al obtener préstamos pendientes", detalle: error.message });
         }
     },
 
@@ -102,7 +119,10 @@ const prestamoController = {
 
                 await tx.inventario.update({
                     where: { id: inventario_id },
-                    data: { cantidad_disponible: { decrement: cantSolicitada } }
+                    data: {
+                        cantidad_disponible: { decrement: cantSolicitada },
+                        en_uso: { increment: cantSolicitada },
+                    }
                 });
 
                 await tx.movimiento.create({
@@ -134,14 +154,94 @@ const prestamoController = {
         }
     },
 
+    createLote: async (req, res) => {
+        const { items, persona_id, instructor_id, fecha_devolucion, observaciones } = req.body;
+        const usuario_id = req.usuario?.id || req.body.usuario_id;
+
+        if (!items || !Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ status: "error", mensaje: "Debes incluir al menos un artículo." });
+        }
+        if (!persona_id) return res.status(400).json({ status: "error", mensaje: "Debes seleccionar un estudiante." });
+        if (!instructor_id) return res.status(400).json({ status: "error", mensaje: "Debes seleccionar un instructor." });
+        if (!fecha_devolucion) return res.status(400).json({ status: "error", mensaje: "Debes ingresar una fecha de devolución." });
+
+        try {
+            const resultado = await prisma.$transaction(async (tx) => {
+                for (const item of items) {
+                    const { inventario_id, cantidad } = item;
+                    const cantSolicitada = parseInt(cantidad);
+                    if (!inventario_id || !cantSolicitada || cantSolicitada < 1) {
+                        throw new Error(`Cantidad inválida para un artículo.`);
+                    }
+                    const articulo = await tx.inventario.findUnique({ where: { id: inventario_id } });
+                    if (!articulo) throw new Error(`Artículo no encontrado.`);
+                    if (articulo.cantidad_disponible < cantSolicitada) {
+                        throw new Error(`Stock insuficiente para ${articulo.nombre}. Disponible: ${articulo.cantidad_disponible}, solicitado: ${cantSolicitada}.`);
+                    }
+                }
+
+                const prestamo = await tx.prestamo.create({
+                    data: {
+                        persona_id,
+                        instructor_id,
+                        usuario_id,
+                        cantidad: 0,
+                        fecha_devolucion: new Date(fecha_devolucion),
+                        observaciones,
+                        estado: 'ACTIVO',
+                        detalles: {
+                            create: items.map(item => ({
+                                inventario_id: item.inventario_id,
+                                cantidad: parseInt(item.cantidad),
+                            }))
+                        }
+                    },
+                    include: { detalles: true }
+                });
+
+                for (const detalle of prestamo.detalles) {
+                    await tx.inventario.update({
+                        where: { id: detalle.inventario_id },
+                        data: {
+                            cantidad_disponible: { decrement: detalle.cantidad },
+                            en_uso: { increment: detalle.cantidad },
+                        }
+                    });
+
+                    await tx.movimiento.create({
+                        data: {
+                            inventario_id: detalle.inventario_id,
+                            tipo: 'PRESTAMO',
+                            cantidad: detalle.cantidad,
+                            persona_id,
+                            usuario_id,
+                            prestamo_id: prestamo.id,
+                            observaciones: `Préstamo múltiple. ID: ${prestamo.id}`
+                        }
+                    });
+                }
+
+                return prestamo;
+            });
+
+            res.status(201).json({ status: "success", data: resultado });
+        } catch (error) {
+            logger.error("Error en prestamos.createLote:", error);
+            res.status(400).json({ status: "error", mensaje: error.message || "Error al procesar los préstamos" });
+        }
+    },
+
     registrarDevolucion: async (req, res) => {
         const { id } = req.params;
-        const { observaciones_dev, estado_fisico } = req.body;
+        const { observaciones_dev } = req.body;
         const usuario_id = req.usuario.id;
 
         try {
             const resultado = await prisma.$transaction(async (tx) => {
-                const prestamo = await tx.prestamo.findUnique({ where: { id } });
+                const prestamo = await tx.prestamo.findUnique({
+                    where: { id },
+                    include: { detalles: true }
+                });
                 if (!prestamo) throw new Error("Préstamo no encontrado.");
                 if (prestamo.estado === 'DEVUELTO') throw new Error("Ya fue devuelto.");
 
@@ -156,34 +256,48 @@ const prestamoController = {
                     }
                 });
 
-                const cantDevolver = prestamo.cantidad;
-                if (estado_fisico === 'DAÑADO') {
+                if (prestamo.detalles && prestamo.detalles.length > 0) {
+                    for (const detalle of prestamo.detalles) {
+                        await tx.inventario.update({
+                            where: { id: detalle.inventario_id },
+                            data: {
+                                en_uso: { decrement: detalle.cantidad },
+                                cantidad_disponible: { increment: detalle.cantidad },
+                            }
+                        });
+                        await tx.movimiento.create({
+                            data: {
+                                inventario_id: detalle.inventario_id,
+                                tipo: 'DEVUELTO',
+                                cantidad: detalle.cantidad,
+                                persona_id: prestamo.persona_id,
+                                usuario_id,
+                                prestamo_id: prestamo.id,
+                                observaciones: `Devolución préstamo múltiple ID: ${id}`
+                            }
+                        });
+                    }
+                } else {
+                    const cantDevolver = prestamo.cantidad;
                     await tx.inventario.update({
                         where: { id: prestamo.inventario_id },
                         data: {
-                            cantidad_danada: { increment: cantDevolver }
+                            en_uso: { decrement: cantDevolver },
+                            cantidad_disponible: { increment: cantDevolver },
                         }
                     });
-                } else {
-                    await tx.inventario.update({
-                        where: { id: prestamo.inventario_id },
+                    await tx.movimiento.create({
                         data: {
-                            cantidad_disponible: { increment: cantDevolver }
+                            inventario_id: prestamo.inventario_id,
+                            tipo: 'DEVUELTO',
+                            cantidad: cantDevolver,
+                            persona_id: prestamo.persona_id,
+                            usuario_id,
+                            prestamo_id: prestamo.id,
+                            observaciones: `Devolución de préstamo ID: ${id}`
                         }
                     });
                 }
-
-                await tx.movimiento.create({
-                    data: {
-                        inventario_id: prestamo.inventario_id,
-                        tipo: 'DEVUELTO',
-                        cantidad: prestamo.cantidad,
-                        persona_id: prestamo.persona_id,
-                        usuario_id,
-                        prestamo_id: prestamo.id,
-                        observaciones: `Devolución de préstamo ID: ${id}${estado_fisico ? ` - Estado: ${estado_fisico}` : ''}`
-                    }
-                });
 
                 return actualizado;
             });
@@ -196,28 +310,57 @@ const prestamoController = {
 
     update: async (req, res) => {
         try {
-            const { observaciones, fecha_devolucion, estado, persona_id, instructor_id, usuario_id } = req.body;
-            const payload = {};
-            if (observaciones !== undefined) payload.observaciones = observaciones;
-            if (estado !== undefined) payload.estado = estado;
-            if (persona_id !== undefined) payload.persona_id = persona_id;
-            if (instructor_id !== undefined) payload.instructor_id = instructor_id;
-            if (usuario_id !== undefined) payload.usuario_id = usuario_id;
-            if (fecha_devolucion !== undefined) {
-                payload.fecha_devolucion = fecha_devolucion ? new Date(fecha_devolucion) : null;
-            }
-            if (Object.keys(payload).length === 0) {
-                return res.status(400).json({ status: "error", mensaje: "No hay campos para actualizar" });
-            }
+            const { cantidad, observaciones, fecha_devolucion, estado, persona_id, instructor_id, usuario_id } = req.body;
 
-            const actualizado = await prisma.prestamo.update({
-                where: { id: req.params.id },
-                data: payload
+            const prestamoActual = await prisma.prestamo.findUnique({ where: { id: req.params.id } });
+            if (!prestamoActual) return res.status(404).json({ status: "error", mensaje: "Préstamo no encontrado" });
+
+            const resultado = await prisma.$transaction(async (tx) => {
+                const payload = {};
+                if (observaciones !== undefined) payload.observaciones = observaciones;
+                if (estado !== undefined) payload.estado = estado;
+                if (persona_id !== undefined) payload.persona_id = persona_id;
+                if (instructor_id !== undefined) payload.instructor_id = instructor_id;
+                if (usuario_id !== undefined) payload.usuario_id = usuario_id;
+                if (fecha_devolucion !== undefined) {
+                    payload.fecha_devolucion = fecha_devolucion ? new Date(fecha_devolucion) : null;
+                }
+
+                if (cantidad !== undefined && Number(cantidad) !== prestamoActual.cantidad) {
+                    const nuevaCantidad = Number(cantidad);
+                    const diff = nuevaCantidad - prestamoActual.cantidad;
+                    payload.cantidad = nuevaCantidad;
+
+                    if (prestamoActual.estado === 'ACTIVO') {
+                        const articulo = await tx.inventario.findUnique({ where: { id: prestamoActual.inventario_id } });
+                        if (diff > 0 && articulo.cantidad_disponible < diff) {
+                            throw new Error(`Stock insuficiente. Disponible: ${articulo.cantidad_disponible}, necesita: ${diff} más.`);
+                        }
+                        await tx.inventario.update({
+                            where: { id: prestamoActual.inventario_id },
+                            data: {
+                                cantidad_disponible: { decrement: diff },
+                                en_uso: { increment: diff },
+                            }
+                        });
+                    }
+                }
+
+                if (Object.keys(payload).length === 0) {
+                    throw new Error("No hay campos para actualizar");
+                }
+
+                return await tx.prestamo.update({
+                    where: { id: req.params.id },
+                    data: payload,
+                });
             });
-            res.json(actualizado);
+
+            res.json(resultado);
         } catch (error) {
             logger.error("Error al actualizar préstamo:", { error: error.message, stack: error.stack, id: req.params.id, body: req.body });
-            res.status(500).json({ status: "error", mensaje: "Error al actualizar el préstamo", detalles: [error.message] });
+            const status = error.message.includes("No hay campos") || error.message.includes("Stock insuficiente") ? 400 : 500;
+            res.status(status).json({ status: "error", mensaje: error.message });
         }
     },
 
@@ -225,12 +368,7 @@ const prestamoController = {
         try {
             const prestamo = await prisma.prestamo.findUnique({
                 where: { id: req.params.id },
-                include: {
-                    inventario: true,
-                    persona: true,
-                    instructor: { select: { id: true, nombres: true, apellidos: true } },
-                    usuario: { select: { id: true, usuario: true, nombre: true, apellido: true } }
-                }
+                include: includeDetalles()
             });
             if (!prestamo) return res.status(404).json({ status: "error", mensaje: "Préstamo no encontrado" });
             res.json(prestamo);
@@ -243,16 +381,31 @@ const prestamoController = {
         try {
             const prestamo = await prisma.prestamo.findUnique({
                 where: { id: req.params.id },
-                include: { movimientos: true }
+                include: { movimientos: true, detalles: true }
             });
             if (!prestamo) return res.status(404).json({ status: "error", mensaje: "Préstamo no encontrado" });
 
             await prisma.$transaction(async (tx) => {
                 if (prestamo.estado === 'ACTIVO') {
-                    await tx.inventario.update({
-                        where: { id: prestamo.inventario_id },
-                        data: { cantidad_disponible: { increment: prestamo.cantidad } }
-                    });
+                    if (prestamo.detalles && prestamo.detalles.length > 0) {
+                        for (const detalle of prestamo.detalles) {
+                            await tx.inventario.update({
+                                where: { id: detalle.inventario_id },
+                                data: {
+                                    cantidad_disponible: { increment: detalle.cantidad },
+                                    en_uso: { decrement: detalle.cantidad },
+                                }
+                            });
+                        }
+                    } else if (prestamo.inventario_id) {
+                        await tx.inventario.update({
+                            where: { id: prestamo.inventario_id },
+                            data: {
+                                cantidad_disponible: { increment: prestamo.cantidad },
+                                en_uso: { decrement: prestamo.cantidad },
+                            }
+                        });
+                    }
                 }
                 if (prestamo.movimientos?.length > 0) {
                     await tx.movimiento.deleteMany({ where: { prestamo_id: prestamo.id } });
@@ -271,6 +424,11 @@ const prestamoController = {
                 where: { id: req.params.id },
                 include: {
                     inventario: { include: { categoria: true } },
+                    detalles: {
+                        include: {
+                            inventario: { include: { categoria: true } }
+                        }
+                    },
                     persona: true,
                     instructor: { select: { id: true, nombres: true, apellidos: true } },
                     usuario: { select: { id: true, usuario: true, nombre: true, apellido: true } }
@@ -336,16 +494,34 @@ const prestamoController = {
             doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#ccc').stroke();
             doc.moveDown();
 
-            doc.fontSize(14).font('Helvetica-Bold').fillColor('#333').text('HERRAMIENTA');
-            doc.moveDown(0.5);
-            doc.fontSize(10).font('Helvetica').fillColor('#555').text(`Artículo: `, { continued: true });
-            doc.fillColor('#333').text(`${prestamo.inventario?.nombre || ''}`);
-            doc.fillColor('#555').text(`Código: `, { continued: true });
-            doc.fillColor('#333').text(`${prestamo.inventario?.codigo || ''}`);
-            doc.fillColor('#555').text(`Categoría: `, { continued: true });
-            doc.fillColor('#333').text(`${prestamo.inventario?.categoria?.nombre || 'N/A'}`);
-            doc.fillColor('#555').text(`Cantidad: `, { continued: true });
-            doc.fillColor('#333').text(`${prestamo.cantidad}`);
+            const articulos = prestamo.detalles && prestamo.detalles.length > 0
+                ? prestamo.detalles
+                : prestamo.inventario
+                    ? [{ inventario: prestamo.inventario, cantidad: prestamo.cantidad }]
+                    : [];
+
+            if (articulos.length === 1) {
+                doc.fontSize(14).font('Helvetica-Bold').fillColor('#333').text('HERRAMIENTA');
+                doc.moveDown(0.5);
+                const art = articulos[0];
+                doc.fontSize(10).font('Helvetica').fillColor('#555').text(`Artículo: `, { continued: true });
+                doc.fillColor('#333').text(`${art.inventario?.nombre || ''}`);
+                doc.fillColor('#555').text(`Código: `, { continued: true });
+                doc.fillColor('#333').text(`${art.inventario?.codigo || ''}`);
+                doc.fillColor('#555').text(`Categoría: `, { continued: true });
+                doc.fillColor('#333').text(`${art.inventario?.categoria?.nombre || 'N/A'}`);
+                doc.fillColor('#555').text(`Cantidad: `, { continued: true });
+                doc.fillColor('#333').text(`${art.cantidad}`);
+            } else {
+                doc.fontSize(14).font('Helvetica-Bold').fillColor('#333').text('HERRAMIENTAS');
+                doc.moveDown(0.5);
+                articulos.forEach((art, idx) => {
+                    doc.fontSize(10).font('Helvetica').fillColor('#555').text(`${idx + 1}. `, { continued: true });
+                    doc.fillColor('#333').text(`${art.inventario?.nombre || ''}`, { continued: true });
+                    doc.fillColor('#555').text(` x`, { continued: true });
+                    doc.fillColor('#333').text(`${art.cantidad}`);
+                });
+            }
 
             if (prestamo.observaciones) {
                 doc.moveDown();

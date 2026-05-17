@@ -64,7 +64,7 @@ export const personasApi    = buildCrud('personas');
 export const ubicacionesApi = buildCrud('ubicaciones');
 export const herramientasApi = buildCrud('inventario');
 export const inventarioApi   = buildCrud('inventario');
-export const prestamosApi    = buildCrud('prestamos');
+export const prestamosApi    = { ...buildCrud('prestamos'), createLote: (body: unknown) => request('/prestamos/lote', { method: 'POST', body: JSON.stringify(body) }) };
 export const movimientosApi  = { ...buildCrud('movimientos') };
 export const rolesApi    = buildCrud('roles');
 export const usuariosApi = buildCrud('usuarios');

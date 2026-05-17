@@ -2,16 +2,22 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { inventarioApi, categoriasApi, imagenUrl } from '../../lib/api';
 import InventarioForm from '../../components/catalogos/InventarioForm';
+import SalidaForm from '../../components/catalogos/SalidaForm';
+import PrestamoMultipleForm from '../../components/catalogos/PrestamoMultipleForm';
 import type { InventarioPayload, ItemInventario, Categoria } from '../../lib/types';
 import { useNotification } from '../../components/ui/NotificationContext';
 import { usePermiso } from '../../lib/permissions';
 import { notifyErrorPayload } from '../../lib/errors';
+import { useAuth } from '../../components/auth/AuthProvider';
 
 const ESTADOS = ['todos', 'DISPONIBLE', 'DANADO', 'SIN_STOCK'];
 
 export default function InventarioPage() {
   const { notify } = useNotification();
   const { puedeIngresar, puedeActualizar, puedeEliminar } = usePermiso('INVENTARIO');
+  const { user } = useAuth();
+  const puedeSalida = user?.permisos?.MOVIMIENTOS?.ingresar ?? false;
+  const puedePrestamo = user?.permisos?.PRESTAMOS?.ingresar ?? false;
 
   const [items, setItems] = useState<ItemInventario[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
@@ -22,6 +28,10 @@ export default function InventarioPage() {
   const [showForm, setShowForm] = useState(false);
   const [editando, setEditando] = useState<ItemInventario | null>(null);
   const [eliminando, setEliminando] = useState<string | null>(null);
+  const [showSalida, setShowSalida] = useState(false);
+  const [salidaItem, setSalidaItem] = useState<ItemInventario | null>(null);
+  const [showPrestamo, setShowPrestamo] = useState(false);
+  const [prestamoItem, setPrestamoItem] = useState<ItemInventario | null>(null);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -90,6 +100,7 @@ export default function InventarioPage() {
       <div className="stats-grid">
         <div className="stats-card"><p>Total artículos</p><p>{items.length}</p></div>
         <div className="stats-card"><p>Stock disponible</p><p>{items.reduce((s, i) => s + i.cantidad_disponible, 0)}</p></div>
+        <div className="stats-card"><p>En uso</p><p>{items.reduce((s, i) => s + i.en_uso, 0)}</p></div>
         <div className="stats-card"><p>Dañados</p><p>{items.reduce((s, i) => s + i.cantidad_danada, 0)}</p></div>
       </div>
 
@@ -133,6 +144,9 @@ export default function InventarioPage() {
                     <div className="flex gap-2 text-xs">
                       <span className="rounded-full bg-green-100 px-2 py-0.5 font-medium text-green-700">Total: {item.cantidad_total}</span>
                       <span className="rounded-full bg-blue-100 px-2 py-0.5 font-medium text-blue-700">Bueno: {item.cantidad_disponible}</span>
+                      {item.en_uso > 0 && (
+                        <span className="rounded-full bg-yellow-100 px-2 py-0.5 font-medium text-yellow-700">En uso: {item.en_uso}</span>
+                      )}
                       {item.cantidad_danada > 0 && (
                         <span className="rounded-full bg-red-100 px-2 py-0.5 font-medium text-red-700">Dañado: {item.cantidad_danada}</span>
                       )}
@@ -147,6 +161,14 @@ export default function InventarioPage() {
                       {puedeActualizar && (
                         <button onClick={() => { setEditando(item); setShowForm(true); }}
                           className="text-xs font-medium text-[var(--accent)] hover:text-[var(--accent-strong)]">Editar</button>
+                      )}
+                      {puedePrestamo && (
+                        <button onClick={() => { setPrestamoItem(item); setShowPrestamo(true); }}
+                          className="text-xs font-medium text-[var(--warning)] hover:opacity-80">Préstamo</button>
+                      )}
+                      {puedeSalida && (
+                        <button onClick={() => { setSalidaItem(item); setShowSalida(true); }}
+                          className="text-xs font-medium text-[var(--danger)] hover:opacity-80">Salida</button>
                       )}
                       {puedeEliminar && (
                         <button onClick={() => setEliminando(item.id)}
@@ -182,6 +204,30 @@ export default function InventarioPage() {
               <button onClick={() => setEliminando(null)} className="soft-btn-secondary px-4 py-2 text-sm">Cancelar</button>
               <button onClick={handleEliminar} className="rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">Sí, eliminar</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showSalida && salidaItem && (
+        <div className="modal-backdrop">
+          <div className="modal-panel max-w-lg p-0">
+            <SalidaForm
+              item={salidaItem}
+              onSuccess={() => { setShowSalida(false); setSalidaItem(null); cargar(); }}
+              onCancelar={() => { setShowSalida(false); setSalidaItem(null); }}
+            />
+          </div>
+        </div>
+      )}
+
+      {showPrestamo && (
+        <div className="modal-backdrop">
+          <div className="modal-panel max-w-2xl p-0">
+            <PrestamoMultipleForm
+              itemInicial={prestamoItem}
+              onSuccess={() => { setShowPrestamo(false); setPrestamoItem(null); cargar(); }}
+              onCancelar={() => { setShowPrestamo(false); setPrestamoItem(null); }}
+            />
           </div>
         </div>
       )}

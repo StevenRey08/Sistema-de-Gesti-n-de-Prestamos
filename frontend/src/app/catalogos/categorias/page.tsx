@@ -116,6 +116,7 @@ export default function CategoriasPage() {
                 <th className="px-4 py-3 text-left">ID</th>
                 <th className="px-4 py-3 text-left">Nombre</th>
                 <th className="px-4 py-3 text-left">Descripción</th>
+                <th className="px-4 py-3 text-left">Ubicación</th>
                 <th className="px-4 py-3 text-right">Acciones</th>
               </tr>
             </thead>
@@ -125,6 +126,7 @@ export default function CategoriasPage() {
                   <td className="px-4 py-3 text-xs text-[var(--text-muted)]">{c.id}</td>
                   <td className="px-4 py-3 font-medium text-[var(--text-main)]">{c.nombre}</td>
                   <td className="px-4 py-3 text-[var(--text-muted)]">{c.descripcion || '—'}</td>
+                  <td className="px-4 py-3 text-[var(--text-muted)]">{c.ubicacion ? `${c.ubicacion.codigo} - ${c.ubicacion.nombre}` : '—'}</td>
                   <td className="px-4 py-3 text-right space-x-2">
                     {puedeActualizar && (
                       <button onClick={() => { setEditando(c); setShowForm(true); }}

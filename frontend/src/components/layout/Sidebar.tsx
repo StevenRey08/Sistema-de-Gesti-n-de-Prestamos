@@ -38,7 +38,7 @@ export default function Sidebar() {
     <aside
       className="fixed left-0 top-0 hidden h-screen w-72 shrink-0 border-r border-white/14 bg-[linear-gradient(180deg,#10367d_0%,#123c8d_45%,#174ba6_100%)] text-white shadow-[18px_0_45px_rgba(16,54,125,0.12)] lg:flex lg:flex-col"
     >
-      <div className="flex h-full flex-col px-5 py-6">
+      <div className="flex h-full flex-col px-5 py-6 min-h-0">
         <div className="shrink-0">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
@@ -53,7 +53,7 @@ export default function Sidebar() {
         </div>
       </div>
 
-      <div className="px-4">
+      <div className="flex-1 overflow-y-auto min-h-0 px-4">
         <div className="rounded-[28px] border border-white/14 bg-white/8 p-3">
           <nav className="space-y-1">
             {itemsVisibles.map((item) => {

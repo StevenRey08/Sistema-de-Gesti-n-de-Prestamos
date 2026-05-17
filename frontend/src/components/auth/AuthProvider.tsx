@@ -47,12 +47,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         const res = await api.get('/auth/me') as { status: string; usuario: Record<string, unknown> };
         if (res.status === 'ok' && res.usuario) {
-          const sessionUser = toSessionUser(res.usuario);
+          const existingToken = (() => {
+            try { const s = safeGet(AUTH_STORAGE_KEY); return s ? (JSON.parse(s) as SessionUser).token : undefined; } catch { return undefined; }
+          })();
+          const sessionUser = toSessionUser({ ...res.usuario, token: existingToken });
           setUser(sessionUser);
           safeSet(AUTH_STORAGE_KEY, JSON.stringify(sessionUser));
+          if (sessionUser.token) safeSet('token', sessionUser.token);
         }
       } catch {
         safeRemove(AUTH_STORAGE_KEY);
+        safeRemove('token');
         setUser(null);
       } finally {
         setHydrated(true);
@@ -69,6 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Credenciales inválidas. Verifica tu usuario y contraseña.');
     }
     safeSet(AUTH_STORAGE_KEY, JSON.stringify(sessionUser));
+    if (sessionUser.token) safeSet('token', sessionUser.token);
     setUser(sessionUser);
     return sessionUser;
   }

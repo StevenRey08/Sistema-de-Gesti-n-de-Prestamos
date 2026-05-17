@@ -66,6 +66,9 @@ const roleController = {
             await prisma.role.delete({ where: { id: req.params.id } });
             res.json({ message: "Rol eliminado correctamente" });
         } catch (error) {
+            if (error.message === 'No se puede eliminar un rol protegido') {
+                return res.status(403).json({ status: "error", mensaje: "No se puede eliminar el rol administrador porque es un rol protegido" });
+            }
             res.status(500).json({ status: "error", mensaje: "Error al eliminar (puede que tenga usuarios o permisos asociados)" });
         }
     }

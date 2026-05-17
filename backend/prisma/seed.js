@@ -15,7 +15,7 @@ async function main() {
     // 1. ROLES (3)
     // ────────────────────────────────────
     const rolesData = [
-        { nombre_rol: 'ADMINISTRADOR', descripcion: 'Control total del sistema' },
+        { nombre_rol: 'ADMINISTRADOR', descripcion: 'Control total del sistema', protegido: true },
         { nombre_rol: 'OPERADOR',      descripcion: 'Gestión de inventario y préstamos' },
         { nombre_rol: 'AUDITOR',       descripcion: 'Solo lectura y reportes' },
     ];
@@ -60,23 +60,24 @@ async function main() {
     const auditorRole = await prisma.role.findUnique({ where: { nombre_rol: 'AUDITOR' } });
 
     const usuariosData = [
-        { td: 'CEDULA', nd: '000-0000000-0', nombre: 'Administrador', apellido: 'Del Sistema', usuario: 'admin', pass: 'admin123', rol: adminRole.id },
+        { td: 'CEDULA', nd: '000-0000000-0', nombre: 'Administrador', apellido: 'Del Sistema', usuario: 'admin', pass: 'admin', rol: adminRole.id },
         { td: 'CEDULA', nd: '000-0000000-1', nombre: 'Operador', apellido: 'De Taller', usuario: 'operador', pass: 'operador123', rol: operadorRole.id },
         { td: 'CEDULA', nd: '000-0000000-2', nombre: 'Auditor', apellido: 'General', usuario: 'auditor', pass: 'auditor123', rol: auditorRole.id },
         { td: 'CEDULA', nd: '000-0000000-3', nombre: 'Carlos', apellido: 'Mejia', usuario: 'cmejia', pass: 'carlos123', rol: operadorRole.id },
         { td: 'CEDULA', nd: '000-0000000-4', nombre: 'Rosa', apellido: 'Santana', usuario: 'rsantana', pass: 'rosa123', rol: operadorRole.id },
     ];
     for (const u of usuariosData) {
+        const hashed = await bcrypt.hash(u.pass, 10);
         await prisma.usuario.upsert({
             where: { usuario: u.usuario },
-            update: {},
+            update: { contrasena: hashed },
             create: {
                 tipo_documento: u.td,
                 numero_documento: u.nd,
                 nombre: u.nombre,
                 apellido: u.apellido,
                 usuario: u.usuario,
-                contrasena: await bcrypt.hash(u.pass, 10),
+                contrasena: hashed,
                 rol_id: u.rol,
                 activo: true,
             },
@@ -207,15 +208,14 @@ async function main() {
     const personaIds = {};
     for (const p of personasData) {
         const created = await prisma.persona.upsert({
-            where: { numero_documento: p.nd },
+            where: { matricula: p.nd },
             update: {},
             create: {
-                numero_documento: p.nd,
+                matricula: p.nd,
                 nombres: p.nombres,
                 apellidos: p.apellidos,
                 tipo: p.tipo,
                 telefono: p.tel,
-                email: p.email,
             },
         });
         personaIds[p.nd] = created.id;
@@ -280,9 +280,9 @@ async function main() {
                 codigo: item.c,
                 nombre: item.n,
                 categoria_id: catIds[item.cat],
-                cantidad: item.cant,
-                estado: item.est,
-                ubicacion_id: ubiIds[item.ubi],
+                cantidad_total: item.cant,
+                cantidad_disponible: item.cant,
+                en_uso: 0,
             },
         });
         invIds[item.c] = created.id;
@@ -405,7 +405,7 @@ async function main() {
     console.log('✅ Movimientos creados (40+)');
 
     console.log('\n✨ ¡Seed completado exitosamente!');
-    console.log('   Usuarios: admin/admin123 | operador/operador123 | auditor/auditor123');
+    console.log('   Usuarios: admin/admin | operador/operador123 | auditor/auditor123');
     console.log('   También: cmejia/carlos123 | rsantana/rosa123');
 }
 

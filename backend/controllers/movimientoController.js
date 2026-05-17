@@ -46,14 +46,26 @@ const movimientoController = {
 
                 let nuevaDisponible = articulo.cantidad_disponible;
                 let nuevaDanada = articulo.cantidad_danada;
+                let nuevaTotal = articulo.cantidad_total;
 
                 if (tipoUpper === 'ENTRADA') {
                     nuevaDisponible += cantMovimiento;
+                    nuevaTotal += cantMovimiento;
                 } else if (tipoUpper === 'SALIDA') {
-                    if (articulo.cantidad_disponible < cantMovimiento) {
-                        throw new Error(`Stock insuficiente. Disponible: ${articulo.cantidad_disponible}`);
+                    const desdeDanado = req.body.desde_danado === true || req.body.desde_danado === 'true';
+                    if (desdeDanado) {
+                        if (articulo.cantidad_danada < cantMovimiento) {
+                            throw new Error(`Stock dañado insuficiente. Dañado: ${articulo.cantidad_danada}`);
+                        }
+                        nuevaDanada -= cantMovimiento;
+                        nuevaTotal -= cantMovimiento;
+                    } else {
+                        if (articulo.cantidad_disponible < cantMovimiento) {
+                            throw new Error(`Stock insuficiente. Disponible: ${articulo.cantidad_disponible}`);
+                        }
+                        nuevaDisponible -= cantMovimiento;
+                        nuevaTotal -= cantMovimiento;
                     }
-                    nuevaDisponible -= cantMovimiento;
                 } else if (tipoUpper === 'DAÑADO') {
                     if (articulo.cantidad_disponible < cantMovimiento) {
                         throw new Error(`Stock insuficiente para marcar como dañado. Disponible: ${articulo.cantidad_disponible}`);
@@ -75,7 +87,7 @@ const movimientoController = {
                     }
                 });
 
-                const updateData = { cantidad_disponible: nuevaDisponible, cantidad_danada: nuevaDanada };
+                const updateData = { cantidad_total: nuevaTotal, cantidad_disponible: nuevaDisponible, cantidad_danada: nuevaDanada };
                 if ((tipoUpper === 'TRASLADO' || tipoUpper === 'ENTRADA') && ubicacion_destino_id) {
                 }
 

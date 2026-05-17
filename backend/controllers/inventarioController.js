@@ -85,11 +85,14 @@ const inventarioController = {
             }
             const cantTotal = data.cantidad_total !== undefined && data.cantidad_total !== null && data.cantidad_total !== ''
                 ? parseInt(data.cantidad_total) : 0;
+            const cantDanada = data.cantidad_danada ? parseInt(data.cantidad_danada) : 0;
+            const cantEnUso = data.en_uso ? parseInt(data.en_uso) : 0;
             const cantDisponible = data.cantidad_disponible !== undefined && data.cantidad_disponible !== null && data.cantidad_disponible !== ''
-                ? parseInt(data.cantidad_disponible) : cantTotal;
+                ? parseInt(data.cantidad_disponible) : (cantTotal - cantDanada - cantEnUso);
             data.cantidad_total = cantTotal;
             data.cantidad_disponible = cantDisponible;
-            data.cantidad_danada = data.cantidad_danada ? parseInt(data.cantidad_danada) : 0;
+            data.cantidad_danada = cantDanada;
+            data.en_uso = cantEnUso;
             data.stock_minimo = data.stock_minimo ? parseInt(data.stock_minimo) : 1;
 
             const nuevo = await prisma.inventario.create({
@@ -153,14 +156,53 @@ const inventarioController = {
                 data.imagen_ruta = `/uploads/inventario/${req.file.filename}`;
             }
             if (data.cantidad_total !== undefined) data.cantidad_total = parseInt(data.cantidad_total);
-            if (data.cantidad_disponible !== undefined) data.cantidad_disponible = parseInt(data.cantidad_disponible);
             if (data.cantidad_danada !== undefined) data.cantidad_danada = parseInt(data.cantidad_danada);
+            if (data.en_uso !== undefined) data.en_uso = parseInt(data.en_uso);
             if (data.stock_minimo !== undefined) data.stock_minimo = parseInt(data.stock_minimo);
+
+            const total = data.cantidad_total ?? existente.cantidad_total;
+            const danada = data.cantidad_danada ?? existente.cantidad_danada;
+            const enUso = data.en_uso ?? existente.en_uso;
+
+            if (danada > total) {
+                return res.status(400).json({ status: "error", mensaje: "La cantidad dañada no puede ser mayor al total." });
+            }
+            if (danada + enUso > total) {
+                return res.status(400).json({ status: "error", mensaje: "La suma de dañado y en uso no puede superar el total." });
+            }
+
+            const disponibleAuto = total - danada - enUso;
+            if (data.cantidad_disponible !== undefined) {
+                data.cantidad_disponible = parseInt(data.cantidad_disponible);
+                if (data.cantidad_disponible > disponibleAuto) {
+                    return res.status(400).json({ status: "error", mensaje: `El disponible no puede ser mayor a ${disponibleAuto} (total - dañado - en uso).` });
+                }
+                if (data.cantidad_disponible < 0) {
+                    return res.status(400).json({ status: "error", mensaje: "El disponible no puede ser negativo." });
+                }
+            } else {
+                data.cantidad_disponible = disponibleAuto;
+            }
+
+            const totalAnterior = existente.cantidad_total;
+            const aumentoTotal = data.cantidad_total > totalAnterior ? data.cantidad_total - totalAnterior : 0;
 
             const actualizado = await prisma.inventario.update({
                 where: { id: req.params.id },
                 data: data
             });
+
+            if (aumentoTotal > 0) {
+                await prisma.movimiento.create({
+                    data: {
+                        inventario_id: req.params.id,
+                        tipo: 'ENTRADA',
+                        cantidad: aumentoTotal,
+                        usuario_id: req.usuario?.id,
+                        observaciones: `Aumento de inventario: +${aumentoTotal} unidades (total: ${totalAnterior} → ${data.cantidad_total})`
+                    }
+                });
+            }
 
             res.json(actualizado);
         } catch (error) {
@@ -178,10 +220,13 @@ const inventarioController = {
             const existente = await prisma.inventario.findUnique({ where: { id: req.params.id } });
             if (!existente) return res.status(404).json({ status: "error", mensaje: "Artículo no encontrado" });
 
-            const prestamosActivos = await prisma.prestamo.count({
+            const prestamosDirectos = await prisma.prestamo.count({
                 where: { inventario_id: req.params.id, estado: 'ACTIVO' }
             });
-            if (prestamosActivos > 0) {
+            const prestamosDetalles = await prisma.prestamoDetalle.count({
+                where: { inventario_id: req.params.id, prestamo: { estado: 'ACTIVO' } }
+            });
+            if (prestamosDirectos > 0 || prestamosDetalles > 0) {
                 return res.status(400).json({
                     error: "No se puede eliminar: el artículo tiene préstamos activos."
                 });

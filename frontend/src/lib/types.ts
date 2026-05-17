@@ -2,11 +2,14 @@ export interface Categoria {
   id: string;
   nombre: string;
   descripcion?: string | null;
+  ubicacion_id?: string | null;
+  ubicacion?: Ubicacion | null;
 }
 
 export interface CategoriaPayload {
   nombre: string;
   descripcion?: string | null;
+  ubicacion_id?: string | null;
 }
 
 export interface Persona {
@@ -45,6 +48,7 @@ export interface ItemInventario {
   cantidad_total: number;
   cantidad_disponible: number;
   cantidad_danada: number;
+  en_uso: number;
   stock_minimo: number;
   imagen_ruta?: string | null;
   categoria_id?: string | null;
@@ -53,6 +57,14 @@ export interface ItemInventario {
 }
 
 export type EstadoPrestamo = 'ACTIVO' | 'DEVUELTO' | 'VENCIDO' | 'PENDIENTE' | string;
+
+export interface PrestamoDetalle {
+  id: string;
+  prestamo_id: string;
+  inventario_id: string;
+  cantidad: number;
+  inventario?: ItemInventario | null;
+}
 
 export interface Prestamo {
   id: string;
@@ -69,6 +81,7 @@ export interface Prestamo {
   persona?: Persona | null;
   instructor?: Persona | null;
   usuario?: Usuario | null;
+  detalles?: PrestamoDetalle[];
 }
 
 export interface Movimiento {
@@ -137,6 +150,7 @@ export interface InventarioPayload {
   cantidad_total: number;
   cantidad_disponible: number;
   cantidad_danada: number;
+  en_uso?: number;
   stock_minimo?: number;
   imagen_ruta?: string | null;
 }

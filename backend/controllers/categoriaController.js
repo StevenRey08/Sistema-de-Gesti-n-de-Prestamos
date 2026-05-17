@@ -10,6 +10,7 @@ const categoriaController = {
                 where: search ? {
                     nombre: { contains: search, mode: 'insensitive' }
                 } : {},
+                include: { ubicacion: true },
                 orderBy: { nombre: 'asc' }
             });
             res.json(categorias);

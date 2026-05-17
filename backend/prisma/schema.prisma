@@ -14,6 +14,7 @@ model Role {
   id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   nombre_rol  String    @unique @db.VarChar(50)
   descripcion String?
+  protegido   Boolean   @default(false)
   permisos    Permiso[]
   usuarios    Usuario[]
 
@@ -119,6 +120,7 @@ model Inventario {
   cantidad_total       Int                  @default(0) 
   cantidad_disponible  Int                  @default(0) 
   cantidad_danada      Int                  @default(0) 
+  en_uso               Int                  @default(0) 
   
   stock_minimo        Int                   @default(1) 
   imagen_ruta         String?
@@ -126,6 +128,7 @@ model Inventario {
   categoria           CategoriaHerramienta? @relation(fields: [categoria_id], references: [id], onDelete: Restrict)
   movimientos         Movimiento[]
   prestamos           Prestamo[]
+  prestamos_detalles  PrestamoDetalle[]
   // Cambiado: Ahora la relación es con los detalles
   detalles_pedidos    DetallePedido[] 
 
@@ -175,26 +178,27 @@ model DetallePedido {
 model Prestamo {
   id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   inventario_id    String?      @db.Uuid
-  
+
   // 1. Quién recibe la herramienta (Estudiante)
   persona_id       String?      @db.Uuid
-  
+
   // 2. Quién autoriza/manda (Instructor/Profesor)
   instructor_id    String?      @db.Uuid
-  
+
   usuario_id       String?      @db.Uuid
-  cantidad         Int
+  cantidad         Int          @default(0)
   fecha_prestamo   DateTime?    @default(now()) @db.Timestamp(6)
   fecha_devolucion DateTime?    @db.Timestamp(6)
   estado           String?      @db.VarChar(50)
   observaciones    String?
-  
+
   movimientos      Movimiento[]
-  
+  detalles         PrestamoDetalle[]
+
   // Relaciones
   inventario       Inventario?  @relation(fields: [inventario_id], references: [id], onDelete: Restrict)
   usuario          Usuario?     @relation(fields: [usuario_id], references: [id], onDelete: Restrict)
-  
+
   // Relaciones duales con Persona (Se deben nombrar para diferenciarlas)
   persona          Persona?     @relation("EstudiantePrestamo", fields: [persona_id], references: [id], onDelete: Restrict)
   instructor       Persona?     @relation("InstructorPrestamo", fields: [instructor_id], references: [id], onDelete: Restrict)
@@ -204,6 +208,20 @@ model Prestamo {
   @@index([instructor_id])
   @@index([estado])
   @@map("prestamos")
+}
+
+model PrestamoDetalle {
+  id            String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  prestamo_id   String     @db.Uuid
+  inventario_id String     @db.Uuid
+  cantidad      Int
+
+  prestamo   Prestamo   @relation(fields: [prestamo_id], references: [id], onDelete: Cascade)
+  inventario Inventario @relation(fields: [inventario_id], references: [id], onDelete: Restrict)
+
+  @@index([prestamo_id])
+  @@index([inventario_id])
+  @@map("prestamos_detalles")
 }
 
 model Movimiento {

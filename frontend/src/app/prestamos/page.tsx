@@ -102,7 +102,8 @@ export default function PrestamosPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="modal-panel w-full max-w-2xl p-6">
             <PrestamoForm prestamo={editando} onGuardar={handleGuardar}
-              onCancelar={() => { setShowForm(false); setEditando(null); }} />
+              onCancelar={() => { setShowForm(false); setEditando(null); }}
+              onSuccess={() => { setShowForm(false); setEditando(null); cargar(); window.dispatchEvent(new CustomEvent('refresh-alertas')); }} />
           </div>
         </div>
       )}
@@ -127,16 +128,28 @@ export default function PrestamosPage() {
               </tr>
             </thead>
             <tbody>
-              {lista.map((p: Prestamo) => (
+                  {lista.map((p: Prestamo) => {
+                    const articulos = p.detalles && p.detalles.length > 0
+                      ? p.detalles.map(d => ({ nombre: d.inventario?.nombre || '—', cantidad: d.cantidad }))
+                      : p.inventario ? [{ nombre: p.inventario.nombre, cantidad: p.cantidad }] : [{ nombre: '—', cantidad: 0 }];
+                    return (
                 <tr key={p.id} className={p.estado === 'VENCIDO' ? 'bg-red-50' : ''}>
-                  <td className="px-4 py-3 font-medium text-[var(--text-main)]">{p.inventario?.nombre || '—'}</td>
+                  <td className="px-4 py-3">
+                    {articulos.map((a, i) => (
+                      <span key={i} className="block text-sm font-medium text-[var(--text-main)]">
+                        {a.nombre} <span className="font-bold text-[var(--accent-strong)]">x{a.cantidad}</span>
+                      </span>
+                    ))}
+                  </td>
                   <td className="px-4 py-3 text-[var(--text-main)]">
                     {p.persona ? `${p.persona.nombres} ${p.persona.apellidos}` : '—'}
                   </td>
                   <td className="px-4 py-3 text-[var(--text-muted)]">
                     {p.instructor ? `${p.instructor.nombres} ${p.instructor.apellidos}` : '—'}
                   </td>
-                  <td className="px-4 py-3 font-bold text-[var(--accent-strong)]">{p.cantidad}</td>
+                  <td className="px-4 py-3 font-bold text-[var(--accent-strong)]">
+                    {articulos.reduce((s, a) => s + a.cantidad, 0)}
+                  </td>
                   <td className="px-4 py-3 text-[var(--text-muted)]">
                     {p.usuario ? `${p.usuario.nombre} ${p.usuario.apellido}` : '—'}
                   </td>
@@ -157,7 +170,8 @@ export default function PrestamosPage() {
                       className="text-orange-400 hover:text-orange-300 text-xs font-medium">PDF</button>
                   </td>
                 </tr>
-              ))}
+              );
+            })}
             </tbody>
           </table>
         )}

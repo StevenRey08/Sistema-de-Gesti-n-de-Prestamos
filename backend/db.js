@@ -3,17 +3,28 @@ const { Pool } = require('pg');
 const { PrismaPg } = require('@prisma/adapter-pg');
 require('dotenv').config();
 
-// Pool de pg para consultas SQL directas y para el adaptador de Prisma
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
 });
 
-// En Prisma v7 se recomienda el uso de adaptadores para conexiones directas
 const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
+const basePrisma = new PrismaClient({ adapter });
 
-// Verificar conexión al iniciar el servidor
-prisma.$connect()
+const prisma = basePrisma.$extends({
+    query: {
+        role: {
+            async delete({ args, query }) {
+                const role = await basePrisma.role.findUnique({ where: args.where });
+                if (role && role.protegido) {
+                    throw new Error('No se puede eliminar un rol protegido');
+                }
+                return query(args);
+            },
+        },
+    },
+});
+
+basePrisma.$connect()
     .then(() => {
         console.log('✅ Conectado a la base de datos con Prisma');
     })

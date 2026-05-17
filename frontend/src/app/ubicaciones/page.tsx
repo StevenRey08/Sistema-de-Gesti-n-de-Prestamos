@@ -273,7 +273,7 @@ export default function UbicacionesPage() {
                 >
                   <option value="">— Sin padre (Ubicación raíz) —</option>
                   {ubicaciones
-                    .filter(u => u.id !== editando?.id)
+                    .filter(u => u.id !== editando?.id && (u.tipo === 'CAJA' || u.tipo === 'ESTANTE'))
                     .map(u => (
                       <option key={u.id} value={u.id}>{u.codigo} - {u.nombre}</option>
                     ))
