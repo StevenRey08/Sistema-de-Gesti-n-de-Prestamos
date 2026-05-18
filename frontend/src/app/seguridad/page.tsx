@@ -458,23 +458,25 @@ export default function SeguridadPage() {
             ) : filteredUsers.length === 0 ? (
               <p className="py-12 text-center text-[var(--text-muted)]">No hay usuarios para mostrar.</p>
             ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr>
-                    <th className="px-4 py-3 text-left">Usuario</th>
-                    <th className="px-4 py-3 text-left">Rol</th>
-                    <th className="px-4 py-3 text-left">Estado</th>
-                    <th className="px-4 py-3 text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredUsers.map((managedUser) => (
-                    <tr key={managedUser.id}>
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-[var(--text-main)]">{managedUser.nombre} {managedUser.apellido}</p>
-                        <p className="text-xs text-[var(--text-muted)]">{managedUser.usuario}</p>
-                      </td>
-                      <td className="px-4 py-3 text-[var(--text-muted)]">{managedUser.rol?.nombre_rol || 'Sin rol'}</td>
+          <table className="w-full text-sm">
+            <thead>
+              <tr>
+                <th className="px-4 py-3 text-left">Usuario</th>
+                <th className="px-4 py-3 text-left">Email</th>
+                <th className="px-4 py-3 text-left">Rol</th>
+                <th className="px-4 py-3 text-left">Estado</th>
+                <th className="px-4 py-3 text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredUsers.map((managedUser) => (
+                <tr key={managedUser.id}>
+                  <td className="px-4 py-3">
+                    <p className="font-medium text-[var(--text-main)]">{managedUser.nombre} {managedUser.apellido}</p>
+                    <p className="text-xs text-[var(--text-muted)]">{managedUser.usuario}</p>
+                  </td>
+                  <td className="px-4 py-3 text-[var(--text-muted)]">{managedUser.email || '—'}</td>
+                  <td className="px-4 py-3 text-[var(--text-muted)]">{managedUser.rol?.nombre_rol || 'Sin rol'}</td>
                       <td className="px-4 py-3">
                         <span className={`status-badge ${managedUser.activo ? 'status-success' : 'status-warning'}`}>
                           {managedUser.activo ? 'Activo' : 'Inactivo'}

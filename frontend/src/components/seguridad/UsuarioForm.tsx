@@ -27,6 +27,7 @@ export default function UsuarioForm({ initialData = null, roles, onSuccess, onCa
     nombre:           initialData?.nombre           ?? '',
     apellido:         initialData?.apellido         ?? '',
     usuario:          initialData?.usuario          ?? '',
+    email:            initialData?.email            ?? '',
     contrasena:       '',
     rol_id:           initialData?.rol_id           ?? '',
     tipo_documento:   tipoDocumentoInicial,
@@ -72,6 +73,7 @@ export default function UsuarioForm({ initialData = null, roles, onSuccess, onCa
     if (form.tipo_documento === 'Cédula' && form.numero_documento && !CEDULA_RE.test(form.numero_documento)) detalles.push('La cédula debe tener el formato 000-0000000-0');
     if (form.tipo_documento === 'Matrícula' && form.numero_documento && !MATRICULA_RE.test(form.numero_documento)) detalles.push('La matrícula debe tener el formato 0000-0000');
     if (!esEdicion && (!form.contrasena || form.contrasena.length < 6)) detalles.push('La contraseña es obligatoria y debe tener mínimo 6 caracteres');
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) detalles.push('El formato del email no es válido');
     if (detalles.length > 0) {
       notify('error', 'Revisa los datos del usuario', detalles);
       return;
@@ -80,6 +82,7 @@ export default function UsuarioForm({ initialData = null, roles, onSuccess, onCa
     try {
       const payload: UsuarioPayload = {
         nombre: form.nombre.trim(), apellido: form.apellido.trim(), usuario: form.usuario.trim(),
+        email: form.email ? form.email.trim() : undefined,
         rol_id: form.rol_id || null, tipo_documento: form.tipo_documento || null,
         numero_documento: form.numero_documento || null, activo: form.activo,
       };
@@ -125,12 +128,17 @@ export default function UsuarioForm({ initialData = null, roles, onSuccess, onCa
           <input name="usuario" value={form.usuario} onChange={handleChange} placeholder="Ej. jperez" className="soft-input" autoComplete="off" />
         </div>
         <div className="flex flex-col gap-1.5">
-          <label className={lbl} style={lblStyle}>
-            Contraseña {esEdicion ? '(vacío = sin cambio)' : '*'}
-          </label>
-          <input type="password" name="contrasena" value={form.contrasena} onChange={handleChange}
-            placeholder={esEdicion ? '••••••' : 'Mínimo 6 caracteres'} className="soft-input" autoComplete="new-password" />
+          <label className={lbl} style={lblStyle}>Email</label>
+          <input name="email" type="email" value={form.email ?? ''} onChange={handleChange} placeholder="correo@ejemplo.com" className="soft-input" autoComplete="email" />
         </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className={lbl} style={lblStyle}>
+          Contraseña {esEdicion ? '(vacío = sin cambio)' : '*'}
+        </label>
+        <input type="password" name="contrasena" value={form.contrasena} onChange={handleChange}
+          placeholder={esEdicion ? '••••••' : 'Mínimo 6 caracteres'} className="soft-input" autoComplete="new-password" />
       </div>
 
       <FilterableSelect

@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '../auth/AuthProvider';
+import api from '../../lib/api';
 
 const TITLES: Record<string, { title: string; subtitle: string }> = {
   '/': {
@@ -51,6 +52,33 @@ export default function Topbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, signOut } = useAuth();
+  const [vencidos, setVencidos] = useState<any[]>([]);
+  const [showAlerts, setShowAlerts] = useState(false);
+
+  useEffect(() => {
+    const cargarVencidos = async () => {
+      try {
+        const data = await api.get('/prestamos/vencidos') as any;
+        setVencidos(Array.isArray(data) ? data : []);
+      } catch {
+        setVencidos([]);
+      }
+    };
+    cargarVencidos();
+    const handler = () => cargarVencidos();
+    window.addEventListener('refresh-alertas', handler);
+    return () => window.removeEventListener('refresh-alertas', handler);
+  }, []);
+
+  useEffect(() => {
+    if (!showAlerts) return;
+    const cerrar = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-alert-panel]')) setShowAlerts(false);
+    };
+    document.addEventListener('mousedown', cerrar);
+    return () => document.removeEventListener('mousedown', cerrar);
+  }, [showAlerts]);
 
   const section = useMemo(() => {
     const key = Object.keys(TITLES).find((item) => pathname === item || pathname.startsWith(`${item}/`));
@@ -81,6 +109,55 @@ export default function Topbar() {
         </div>
 
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:flex-wrap">
+          <div className="relative">
+            <button
+              onClick={() => setShowAlerts(!showAlerts)}
+              className="relative flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border)] bg-white text-lg transition hover:bg-[var(--surface-2)]"
+            >
+              🔔
+              {vencidos.length > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                  {vencidos.length > 9 ? '9+' : vencidos.length}
+                </span>
+              )}
+            </button>
+
+            {showAlerts && (
+              <div data-alert-panel className="absolute right-0 z-40 mt-2 w-80 rounded-2xl border border-[var(--border)] bg-white shadow-[var(--shadow-soft)]">
+                <div className="border-b border-[var(--border)] px-4 py-3">
+                  <h3 className="text-sm font-semibold text-[var(--text-main)]">Préstamos vencidos</h3>
+                  <p className="text-xs text-[var(--text-muted)]">{vencidos.length} sin devolver</p>
+                </div>
+                <div className="max-h-72 overflow-y-auto">
+                  {vencidos.length === 0 ? (
+                    <p className="px-4 py-6 text-center text-sm text-[var(--text-muted)]">No hay préstamos vencidos</p>
+                  ) : (
+                    vencidos.map((v) => {
+                      const estudiante = v.persona ? `${v.persona.nombres} ${v.persona.apellidos}` : '—';
+                      const items = (v.detalles as any[])?.map((d: any) => `${d.inventario.nombre} (x${d.cantidad})`).join(', ') || '';
+                      const fecha = v.fecha_devolucion ? new Date(v.fecha_devolucion).toLocaleDateString('es-DO') : '';
+                      return (
+                        <div key={v.id} className="border-b border-[var(--border)] px-4 py-3 last:border-0">
+                          <p className="text-sm font-medium text-[var(--text-main)]">{estudiante}</p>
+                          {items && <p className="text-xs text-[var(--text-muted)]">{items}</p>}
+                          <p className="mt-1 text-xs text-red-500">Venció: {fecha}</p>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+                <div className="border-t border-[var(--border)] px-4 py-2">
+                  <button
+                    onClick={() => { setShowAlerts(false); router.push('/prestamos'); }}
+                    className="w-full text-center text-xs font-medium text-[var(--accent-strong)] hover:underline"
+                  >
+                    Ver todos los préstamos
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2 text-sm text-[var(--text-muted)] shrink-0">
             <span className="hidden xs:inline">Sesión activa como </span>
             <span className="font-semibold text-[var(--text-main)]">{user?.rol}</span>

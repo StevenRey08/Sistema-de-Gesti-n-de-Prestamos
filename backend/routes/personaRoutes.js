@@ -15,11 +15,12 @@ router.get('/', checkPermiso('PERSONAS', 'leer'), personaController.getAll);
 router.post('/', checkPermiso('PERSONAS', 'ingresar'), validarPersona, personaController.create);
 router.get('/download-template', checkPermiso('PERSONAS', 'leer'), personaController.downloadTemplate);
 router.post('/import-excel', checkPermiso('PERSONAS', 'ingresar'), excelUpload.single('file'), personaController.importExcel);
-router.delete('/estudiantes', checkPermiso('PERSONAS', 'eliminar'), personaController.deleteEstudiantes);
+router.patch('/estudiantes/debaja', checkPermiso('PERSONAS', 'eliminar'), personaController.debajaEstudiantes);
 router.post('/delete-bulk', checkPermiso('PERSONAS', 'eliminar'), personaController.deleteBulk);
 // Rutas paramétricas después
 router.get('/:id', checkPermiso('PERSONAS', 'leer'), personaController.getById);
 router.put('/:id', checkPermiso('PERSONAS', 'actualizar'), validarPersona, personaController.update);
+router.patch('/:id/debaja', checkPermiso('PERSONAS', 'eliminar'), personaController.debaja);
 router.delete('/:id', checkPermiso('PERSONAS', 'eliminar'), personaController.delete);
 
 module.exports = router;

@@ -7,9 +7,12 @@ const fs = require('fs');
 
 const personaController = {
     getAll: async (req, res) => {
-        const { search, tipo, curso, seccion } = req.query;
+        const { search, tipo, curso, seccion, incluirInactivos } = req.query;
         try {
             const where = { AND: [] };
+            if (incluirInactivos !== 'true') {
+                where.AND.push({ activo: true });
+            }
             if (tipo) where.AND.push({ tipo: { equals: tipo, mode: 'insensitive' } });
             if (search) {
                 where.AND.push({
@@ -96,35 +99,55 @@ const personaController = {
     },
 
     delete: async (req, res) => {
-        try {
-            await prisma.persona.delete({ where: { id: req.params.id } });
-            res.json({ message: "Persona eliminada correctamente" });
-        } catch (error) {
-            res.status(500).json({ status: "error", mensaje: "Error al eliminar (puede que tenga préstamos asociados)" });
-        }
+        return res.status(405).json({ status: "error", mensaje: "No se pueden eliminar personas. Use 'Dar de baja' en su lugar." });
     },
 
     deleteBulk: async (req, res) => {
-        const { ids } = req.body;
-        if (!Array.isArray(ids) || ids.length === 0) {
-            return res.status(400).json({ status: "error", mensaje: "Debe proporcionar un array de IDs" });
-        }
+        return res.status(405).json({ status: "error", mensaje: "No se pueden eliminar personas en lote. Use 'Dar de baja' en su lugar." });
+    },
+
+    debaja: async (req, res) => {
         try {
-            const tipo = req.query.tipo || 'ESTUDIANTE';
-            const result = await prisma.persona.deleteMany({
-                where: { id: { in: ids }, tipo: { equals: tipo, mode: 'insensitive' } }
+            const persona = await prisma.persona.findUnique({
+                where: { id: req.params.id },
+                include: {
+                    _count: {
+                        select: {
+                            prestamos_estudiante: {
+                                where: { estado: { in: ['ACTIVO', 'PENDIENTE', 'VENCIDO'] } }
+                            },
+                            prestamos_instructor: {
+                                where: { estado: { in: ['ACTIVO', 'PENDIENTE', 'VENCIDO'] } }
+                            }
+                        }
+                    }
+                }
             });
-            res.json({ message: `${result.count} persona(s) eliminada(s) correctamente`, count: result.count });
+            if (!persona) return res.status(404).json({ status: "error", mensaje: "Persona no encontrada" });
+
+            const prestamosActivos = persona._count.prestamos_estudiante + persona._count.prestamos_instructor;
+            if (prestamosActivos > 0) {
+                return res.status(400).json({
+                    status: "error",
+                    mensaje: `No se puede dar de baja a "${persona.nombres} ${persona.apellidos}" porque tiene ${prestamosActivos} préstamo(s) pendiente(s).`
+                });
+            }
+
+            await prisma.persona.update({
+                where: { id: req.params.id },
+                data: { activo: false }
+            });
+            res.json({ message: "Persona dada de baja correctamente" });
         } catch (error) {
-            logger.error("Error en personas.deleteBulk:", error);
-            res.status(500).json({ status: "error", mensaje: "Error al eliminar personas" });
+            logger.error("Error en personas.debaja:", error);
+            res.status(500).json({ status: "error", mensaje: "Error al dar de baja" });
         }
     },
 
-    deleteEstudiantes: async (req, res) => {
+    debajaEstudiantes: async (req, res) => {
         try {
             const estudiantes = await prisma.persona.findMany({
-                where: { tipo: { equals: 'ESTUDIANTE', mode: 'insensitive' } },
+                where: { tipo: { equals: 'ESTUDIANTE', mode: 'insensitive' }, activo: true },
                 include: {
                     _count: {
                         select: {
@@ -140,19 +163,20 @@ const personaController = {
             const conPrestamos = estudiantes.filter(e => e._count.prestamos_estudiante > 0);
 
             if (sinPrestamos.length > 0) {
-                await prisma.persona.deleteMany({
-                    where: { id: { in: sinPrestamos.map(e => e.id) } }
+                await prisma.persona.updateMany({
+                    where: { id: { in: sinPrestamos.map(e => e.id) } },
+                    data: { activo: false }
                 });
             }
 
             res.json({
-                message: `${sinPrestamos.length} estudiante(s) eliminado(s). ${conPrestamos.length} estudiante(s) no se eliminaron porque tienen préstamos activos.`,
-                eliminados: sinPrestamos.length,
+                message: `${sinPrestamos.length} estudiante(s) dado(s) de baja. ${conPrestamos.length} estudiante(s) no se dieron de baja porque tienen préstamos activos.`,
+                dadosBaja: sinPrestamos.length,
                 omitidos: conPrestamos.length
             });
         } catch (error) {
-            logger.error("Error en personas.deleteEstudiantes:", error);
-            res.status(500).json({ status: "error", mensaje: "Error al eliminar estudiantes" });
+            logger.error("Error en personas.debajaEstudiantes:", error);
+            res.status(500).json({ status: "error", mensaje: "Error al dar de baja estudiantes" });
         }
     },
 

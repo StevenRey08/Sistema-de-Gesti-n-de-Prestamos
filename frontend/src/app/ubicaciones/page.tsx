@@ -9,7 +9,7 @@ interface Ubicacion {
   id: string;
   codigo: string;
   nombre: string;
-  tipo: 'ESTANTE' | 'CAJA' | 'ESTUCHE' | string;
+  tipo: 'ESTANTE' | 'CAJA' | string;
   descripcion?: string;
   ubicacion_padre_id?: string | null;
   padre?: Ubicacion;
@@ -132,7 +132,7 @@ export default function UbicacionesPage() {
         <div>
           <h1 className="page-title">Ubicaciones</h1>
           <p className="page-subtitle">
-            Administra estantes, cajas y estuches en una estructura unificada.
+            Administra estantes y cajas en una estructura unificada.
           </p>
         </div>
 
@@ -188,7 +188,7 @@ export default function UbicacionesPage() {
                       u.tipo === 'ESTANTE' ? 'bg-blue-100 text-blue-700' : 
                       u.tipo === 'CAJA' ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-700'
                     }`}>
-                      {u.tipo}
+                      {u.tipo === 'ESTANTE' ? 'Estante' : u.tipo === 'CAJA' ? 'Caja' : u.tipo}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-[var(--text-muted)]">
@@ -247,9 +247,8 @@ export default function UbicacionesPage() {
                     onChange={(e) => setForm({ ...form, tipo: e.target.value })}
                     className="soft-input"
                   >
-                    <option value="ESTANTE">ESTANTE</option>
-                    <option value="CAJA">CAJA</option>
-                    <option value="ESTUCHE">ESTUCHE</option>
+                    <option value="ESTANTE">Estante</option>
+                    <option value="CAJA">Caja</option>
                   </select>
                 </div>
               </div>

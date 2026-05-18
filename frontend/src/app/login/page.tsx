@@ -119,9 +119,6 @@ export default function LoginPage() {
               >
                 {loading ? 'Verificando...' : 'Entrar al sistema'}
               </button>
-              <a href="/recuperar" className="mt-2 block text-center text-sm text-white/50 transition-colors hover:text-white/80">
-                ¿Olvidaste tu contraseña?
-              </a>
             </form>
           </div>
         </section>

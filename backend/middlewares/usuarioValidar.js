@@ -1,7 +1,7 @@
 const { esCedula, esMatricula, esUUID } = require('../utils/validadores');
 
 const validarUsuario = (req, res, next) => {
-    const { nombre, apellido, usuario, contrasena, rol_id, tipo_documento, numero_documento, activo } = req.body;
+    const { nombre, apellido, usuario, email, contrasena, rol_id, tipo_documento, numero_documento, activo } = req.body;
     const errores = [];
 
     // 1. Validar Nombre y Apellido
@@ -13,6 +13,14 @@ const validarUsuario = (req, res, next) => {
         errores.push("El nombre de usuario es obligatorio.");
     } else if (usuario.length < 4) {
         errores.push("El nombre de usuario debe tener al menos 4 caracteres.");
+    }
+
+    // 3. Validar Email (Opcional, pero si viene debe tener formato válido)
+    if (email && email.trim() !== "") {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email.trim())) {
+            errores.push("El formato del email no es válido.");
+        }
     }
 
     // 3. Validar Contraseña (Solo obligatoria en creación)

@@ -10,7 +10,7 @@ import { usePermiso } from '../../lib/permissions';
 import { notifyErrorPayload } from '../../lib/errors';
 import { useAuth } from '../../components/auth/AuthProvider';
 
-const ESTADOS = ['todos', 'DISPONIBLE', 'DANADO', 'SIN_STOCK'];
+const ESTADOS = ['todos', 'DISPONIBLE', 'DANADO', 'SIN_STOCK', 'PRESTADO'];
 
 export default function InventarioPage() {
   const { notify } = useNotification();
@@ -24,6 +24,7 @@ export default function InventarioPage() {
   const [search, setSearch] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('todos');
   const [filtroCategoria, setFiltroCategoria] = useState('');
+  const [filtroNombre, setFiltroNombre] = useState('');
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editando, setEditando] = useState<ItemInventario | null>(null);
@@ -57,11 +58,16 @@ export default function InventarioPage() {
       if (filtroEstado === 'DISPONIBLE' && item.cantidad_disponible <= 0) return false;
       if (filtroEstado === 'DANADO' && item.cantidad_danada <= 0) return false;
       if (filtroEstado === 'SIN_STOCK' && item.cantidad_disponible > 0) return false;
+      if (filtroEstado === 'PRESTADO' && (item.cantidad_prestada || 0) <= 0) return false;
       if (filtroCategoria && item.categoria_id !== filtroCategoria) return false;
+      if (filtroNombre) {
+        const cat = categorias.find(c => c.id === item.categoria_id);
+        if (!cat || !cat.nombre.toLowerCase().includes(filtroNombre.toLowerCase())) return false;
+      }
       if (!term) return true;
       return `${item.nombre} ${item.codigo}`.toLowerCase().includes(term);
     });
-  }, [search, filtroEstado, filtroCategoria, items]);
+  }, [search, filtroEstado, filtroCategoria, filtroNombre, categorias, items]);
 
   async function handleGuardar(form: InventarioPayload | FormData) {
     if (editando) await inventarioApi.update(editando.id, form);
@@ -98,8 +104,7 @@ export default function InventarioPage() {
 
       <div className="stats-grid">
         <div className="stats-card"><p>Total artículos</p><p>{items.length}</p></div>
-        <div className="stats-card"><p>Stock disponible</p><p>{items.reduce((s, i) => s + i.cantidad_disponible, 0)}</p></div>
-        <div className="stats-card"><p>Prestado</p><p>{items.reduce((s, i) => s + Math.max(0, i.cantidad_total - i.cantidad_disponible - i.cantidad_danada), 0)}</p></div>
+        <div className="stats-card"><p>Prestado</p><p>{items.reduce((s, i) => s + (i.cantidad_prestada || 0), 0)}</p></div>
         <div className="stats-card"><p>Dañados</p><p>{items.reduce((s, i) => s + i.cantidad_danada, 0)}</p></div>
       </div>
 
@@ -107,15 +112,30 @@ export default function InventarioPage() {
         <div className="flex flex-wrap gap-3">
           <input type="search" placeholder="Buscar..." value={search}
             onChange={(e) => setSearch(e.target.value)} className="soft-input max-w-md" />
-          <select value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value)} className="soft-select max-w-xs">
+          <input list="categorias-list" placeholder="Categoría..." value={categorias.find(c => c.id === filtroCategoria)?.nombre ?? filtroNombre}
+            onChange={(e) => {
+              const found = categorias.find(c => c.nombre.toLowerCase() === e.target.value.toLowerCase());
+              setFiltroCategoria(found ? found.id : '');
+            }}
+            onInput={(e) => {
+              const val = (e.target as HTMLInputElement).value;
+              setFiltroNombre(val);
+            }}
+            onBlur={() => {
+              if (filtroNombre && !categorias.find(c => c.nombre.toLowerCase() === filtroNombre.toLowerCase())) {
+                setFiltroNombre('');
+              }
+            }}
+            className="soft-select max-w-xs" />
+          <datalist id="categorias-list">
             <option value="">Todas las categorías</option>
-            {categorias.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-          </select>
+            {categorias.map((c) => <option key={c.id} value={c.nombre} />)}
+          </datalist>
           <div className="flex gap-2 flex-wrap items-center">
             {ESTADOS.map((e) => (
               <button key={e} onClick={() => setFiltroEstado(e)}
                 className={`filter-pill ${filtroEstado === e ? 'active' : ''}`}>
-                {e === 'todos' ? 'Todos' : e === 'DISPONIBLE' ? 'Disponible' : e === 'DANADO' ? 'Dañado' : 'Sin Stock'}
+                {e === 'todos' ? 'Todos' : e === 'DISPONIBLE' ? 'Disponible' : e === 'DANADO' ? 'Dañado' : e === 'PRESTADO' ? 'Prestado' : 'Sin Stock'}
               </button>
             ))}
           </div>
@@ -143,9 +163,9 @@ export default function InventarioPage() {
                     <div className="flex gap-2 text-xs">
                       <span className="rounded-full bg-green-100 px-2 py-0.5 font-medium text-green-700">Total: {item.cantidad_total}</span>
                       <span className="rounded-full bg-blue-100 px-2 py-0.5 font-medium text-blue-700">Bueno: {item.cantidad_disponible}</span>
-                      {item.cantidad_total - item.cantidad_disponible - item.cantidad_danada > 0 && (
-                        <span className="rounded-full bg-yellow-100 px-2 py-0.5 font-medium text-yellow-700">Prestado: {item.cantidad_total - item.cantidad_disponible - item.cantidad_danada}</span>
-                      )}
+                       {(item.cantidad_prestada || 0) > 0 && (
+                         <span className="rounded-full bg-yellow-100 px-2 py-0.5 font-medium text-yellow-700">Prestado: {item.cantidad_prestada}</span>
+                       )}
                       {item.cantidad_danada > 0 && (
                         <span className="rounded-full bg-red-100 px-2 py-0.5 font-medium text-red-700">Dañado: {item.cantidad_danada}</span>
                       )}

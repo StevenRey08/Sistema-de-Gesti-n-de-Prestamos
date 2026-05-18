@@ -22,7 +22,6 @@ const menuItems: MenuItem[] = [
   { label: 'Pedidos', icon: '☰', href: '/pedidos', modulo: 'INVENTARIO' },
   { label: 'Reportes', icon: '▣', href: '/reportes' },
   { label: 'Seguridad', icon: '◈', href: '/seguridad', modulo: 'USUARIOS' },
-  { label: 'Admin', icon: '⚙', href: '/admin' },
 ];
 
 

@@ -1,5 +1,5 @@
 const { prisma } = require('../db');
-const { esMatricula } = require('../utils/validadores');
+const { esMatricula, esCedula } = require('../utils/validadores');
 
 const validarPersona = async (req, res, next) => {
     const { nombres, apellidos, matricula, tipo, curso, telefono } = req.body;
@@ -16,8 +16,14 @@ const validarPersona = async (req, res, next) => {
     if (!matricula?.trim()) {
         errores.push("La matrícula es obligatoria.");
     } else {
-        if (!esMatricula(matricula)) {
-            errores.push("La matrícula debe tener el formato: 0000-0000.");
+        if (tipo !== 'ESTUDIANTE') {
+            if (!esCedula(matricula)) {
+                errores.push("La cédula debe tener el formato: 000-0000000-0.");
+            }
+        } else {
+            if (!esMatricula(matricula)) {
+                errores.push("La matrícula debe tener el formato: 0000-0000.");
+            }
         }
         try {
             const existePersona = await prisma.persona.findUnique({

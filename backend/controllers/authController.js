@@ -107,7 +107,7 @@ const authController = {
     },
 
     actualizarPerfil: async (req, res) => {
-        const { nombre, apellido, usuario, contrasena, contrasena_actual, confirmar_contrasena } = req.body;
+        const { nombre, apellido, usuario, email, contrasena, contrasena_actual, confirmar_contrasena } = req.body;
 
         try {
             const currentUser = await prisma.usuario.findUnique({
@@ -141,10 +141,18 @@ const authController = {
                 }
             }
 
+            if (email && email !== currentUser.email) {
+                const existe = await prisma.usuario.findUnique({ where: { email } });
+                if (existe) {
+                    return res.status(400).json({ status: "error", mensaje: "El correo electrónico ya está en uso" });
+                }
+            }
+
             const data = {};
             if (nombre !== undefined) data.nombre = nombre;
             if (apellido !== undefined) data.apellido = apellido;
             if (usuario !== undefined) data.usuario = usuario;
+            if (email !== undefined) data.email = email || null;
             if (contrasena) {
                 data.contrasena = await bcrypt.hash(contrasena, 10);
             }

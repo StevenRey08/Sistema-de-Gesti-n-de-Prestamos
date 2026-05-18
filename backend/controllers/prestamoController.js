@@ -106,10 +106,10 @@ const prestamoController = {
 
                 const nuevoPrestamo = await tx.prestamo.create({
                     data: {
-                        inventario_id,
-                        persona_id,
-                        instructor_id,
-                        usuario_id,
+                        inventario: { connect: { id: inventario_id } },
+                        persona: { connect: { id: persona_id } },
+                        instructor: { connect: { id: instructor_id } },
+                        usuario: { connect: { id: usuario_id } },
                         cantidad: cantSolicitada,
                         fecha_devolucion: new Date(fecha_devolucion),
                         observaciones,
@@ -176,9 +176,9 @@ const prestamoController = {
 
                 const prestamo = await tx.prestamo.create({
                     data: {
-                        persona_id,
-                        instructor_id,
-                        usuario_id,
+                        persona: { connect: { id: persona_id } },
+                        instructor: { connect: { id: instructor_id } },
+                        usuario: { connect: { id: usuario_id } },
                         cantidad: 0,
                         fecha_devolucion: new Date(fecha_devolucion),
                         observaciones,
@@ -226,49 +226,165 @@ const prestamoController = {
 
     registrarDevolucion: async (req, res) => {
         const { id } = req.params;
-        const { observaciones_dev } = req.body;
+        const { observaciones_dev, items_devolucion } = req.body;
         const usuario_id = req.usuario.id;
 
         try {
             const resultado = await prisma.$transaction(async (tx) => {
                 const prestamo = await tx.prestamo.findUnique({
                     where: { id },
-                    include: { detalles: true }
+                    include: { detalles: true, inventario: true }
                 });
                 if (!prestamo) throw new Error("Préstamo no encontrado.");
                 if (prestamo.estado === 'DEVUELTO') throw new Error("Ya fue devuelto.");
+                if (prestamo.estado === 'PERDIDO') throw new Error("Ya fue marcado como perdido.");
 
-                const actualizado = await tx.prestamo.update({
-                    where: { id },
-                    data: {
-                        estado: 'DEVUELTO',
-                        fecha_devolucion: new Date(),
-                        observaciones: observaciones_dev
-                            ? `${prestamo.observaciones || ''} | DEV: ${observaciones_dev}`
-                            : prestamo.observaciones
+                const esMultiItem = prestamo.detalles && prestamo.detalles.length > 0;
+                const items = esMultiItem ? prestamo.detalles : [{ inventario_id: prestamo.inventario_id, cantidad: prestamo.cantidad, id: 'directo' }];
+
+                if (items_devolucion && Array.isArray(items_devolucion) && items_devolucion.length > 0) {
+                    const devolucionMap = {};
+                    for (const item of items) {
+                        devolucionMap[item.inventario_id] = { buena: 0, danada: 0, perdida: 0, obsBuena: '', obsDanada: '', obsPerdida: '' };
                     }
-                });
 
-                if (prestamo.detalles && prestamo.detalles.length > 0) {
-                    for (const detalle of prestamo.detalles) {
-                        await tx.inventario.update({
-                            where: { id: detalle.inventario_id },
+                    for (const devItem of items_devolucion) {
+                        const invId = devItem.inventario_id;
+                        if (!devolucionMap.hasOwnProperty(invId)) continue;
+                        const estado = (devItem.estado || 'BUEN_ESTADO').toUpperCase();
+                        const cant = parseInt(devItem.cantidad) || 0;
+                        const obs = `${devItem.observaciones || ''}`.trim();
+
+                        if (estado === 'BUEN_ESTADO') {
+                            devolucionMap[invId].buena += cant;
+                            if (obs) devolucionMap[invId].obsBuena = obs;
+                            if (cant > 0) {
+                                await tx.inventario.update({
+                                    where: { id: invId },
+                                    data: { cantidad_disponible: { increment: cant } }
+                                });
+                                await tx.movimiento.create({
+                                    data: {
+                                        inventario_id: invId,
+                                        tipo: 'DEVUELTO',
+                                        cantidad: cant,
+                                        persona_id: prestamo.persona_id,
+                                        usuario_id,
+                                        prestamo_id: prestamo.id,
+                                        ubicacion_origen_id: null,
+                                        ubicacion_destino_id: null,
+                                        observaciones: `Devolución (buen estado) x${cant}. ${obs}`
+                                    }
+                                });
+                            }
+                        } else if (estado === 'MAL_ESTADO') {
+                            devolucionMap[invId].danada += cant;
+                            if (obs) devolucionMap[invId].obsDanada = obs;
+                            if (cant > 0) {
+                                await tx.inventario.update({
+                                    where: { id: invId },
+                                    data: {
+                                        cantidad_danada: { increment: cant }
+                                    }
+                                });
+                                await tx.movimiento.create({
+                                    data: {
+                                        inventario_id: invId,
+                                        tipo: 'DEVUELTO_DANADO',
+                                        cantidad: cant,
+                                        persona_id: prestamo.persona_id,
+                                        usuario_id,
+                                        prestamo_id: prestamo.id,
+                                        ubicacion_origen_id: null,
+                                        ubicacion_destino_id: null,
+                                        observaciones: `Devolución (mal estado/dañado) x${cant}. ${obs}`
+                                    }
+                                });
+                            }
+                        } else if (estado === 'PERDIDO') {
+                            devolucionMap[invId].perdida += cant;
+                            if (obs) devolucionMap[invId].obsPerdida = obs;
+                            if (cant > 0) {
+                                await tx.inventario.update({
+                                    where: { id: invId },
+                                    data: {
+                                        cantidad_total: { decrement: cant }
+                                    }
+                                });
+                                await tx.movimiento.create({
+                                    data: {
+                                        inventario_id: invId,
+                                        tipo: 'PERDIDO',
+                                        cantidad: cant,
+                                        persona_id: prestamo.persona_id,
+                                        usuario_id,
+                                        prestamo_id: prestamo.id,
+                                        ubicacion_origen_id: null,
+                                        ubicacion_destino_id: null,
+                                        observaciones: `Artículo perdido/no aparece x${cant}. ${obs}`
+                                    }
+                                });
+                            }
+                        }
+                    }
+
+                    let todosPerdidos = true;
+                    let hayAlgunDevuelto = false;
+                    for (const invId of Object.keys(devolucionMap)) {
+                        const d = devolucionMap[invId];
+                        const item = items.find(i => i.inventario_id === invId);
+                        if (!item) continue;
+                        if (d.buena > 0 || d.danada > 0) hayAlgunDevuelto = true;
+                        if (d.buena + d.danada + d.perdida < item.cantidad) todosPerdidos = false;
+                    }
+
+                    const nuevoEstado = todosPerdidos && !hayAlgunDevuelto ? 'PERDIDO' : 'DEVUELTO';
+
+                    for (const invId of Object.keys(devolucionMap)) {
+                        const d = devolucionMap[invId];
+                        const item = items.find(i => i.inventario_id === invId);
+                        if (!item || item.id === 'directo') continue;
+
+                        const partes = [];
+                        if (d.buena > 0) partes.push(`Buena: ${d.buena}`);
+                        if (d.danada > 0) partes.push(`Dañada: ${d.danada}`);
+                        if (d.perdida > 0) partes.push(`Perdida: ${d.perdida}`);
+
+                        const obsParts = [];
+                        if (d.obsBuena) obsParts.push(`Buena: ${d.obsBuena}`);
+                        if (d.obsDanada) obsParts.push(`Dañada: ${d.obsDanada}`);
+                        if (d.obsPerdida) obsParts.push(`Perdida: ${d.obsPerdida}`);
+
+                        await tx.prestamoDetalle.update({
+                            where: { id: item.id },
                             data: {
-                                cantidad_disponible: { increment: detalle.cantidad },
+                                cantidad_devuelta_buena: d.buena,
+                                cantidad_devuelta_danada: d.danada,
+                                cantidad_perdida: d.perdida,
+                                estado_devolucion: d.perdida === item.cantidad ? 'PERDIDO' : d.danada === item.cantidad ? 'MAL_ESTADO' : 'BUEN_ESTADO',
+                                observaciones_devolucion: obsParts.length > 0 ? obsParts.join(' | ') : null
                             }
                         });
-                        await tx.movimiento.create({
-                            data: {
-                                inventario_id: detalle.inventario_id,
-                                tipo: 'DEVUELTO',
-                                cantidad: detalle.cantidad,
-                                persona_id: prestamo.persona_id,
-                                usuario_id,
-                                prestamo_id: prestamo.id,
-                                observaciones: `Devolución préstamo múltiple ID: ${id}`
-                            }
-                        });
                     }
+
+                    const obsExtra = observaciones_dev ? ` | DEV: ${observaciones_dev}` : '';
+                    const resumenItems = Object.entries(devolucionMap).map(([invId, d]) => {
+                        const partes = [];
+                        if (d.buena > 0) partes.push(`Buena:${d.buena}`);
+                        if (d.danada > 0) partes.push(`Dañada:${d.danada}`);
+                        if (d.perdida > 0) partes.push(`Perdida:${d.perdida}`);
+                        return `${invId.substring(0, 8)}[${partes.join(', ')}]`;
+                    }).join(', ');
+                    const actualizado = await tx.prestamo.update({
+                        where: { id },
+                        data: {
+                            estado: nuevoEstado,
+                            fecha_devolucion: new Date(),
+                            observaciones: `${prestamo.observaciones || ''}${obsExtra} | Resumen: ${resumenItems}`
+                        },
+                        include: { detalles: true }
+                    });
+                    return actualizado;
                 } else {
                     const cantDevolver = prestamo.cantidad;
                     await tx.inventario.update({
@@ -285,12 +401,23 @@ const prestamoController = {
                             persona_id: prestamo.persona_id,
                             usuario_id,
                             prestamo_id: prestamo.id,
-                            observaciones: `Devolución de préstamo ID: ${id}`
+                            ubicacion_origen_id: null,
+                            ubicacion_destino_id: null,
+                            observaciones: `Devolución de préstamo ID: ${id}${observaciones_dev ? ` | ${observaciones_dev}` : ''}`
+                        }
+                    });
+
+                    return await tx.prestamo.update({
+                        where: { id },
+                        data: {
+                            estado: 'DEVUELTO',
+                            fecha_devolucion: new Date(),
+                            observaciones: observaciones_dev
+                                ? `${prestamo.observaciones || ''} | DEV: ${observaciones_dev}`
+                                : prestamo.observaciones
                         }
                     });
                 }
-
-                return actualizado;
             });
 
             res.json(resultado);
@@ -310,9 +437,9 @@ const prestamoController = {
                 const payload = {};
                 if (observaciones !== undefined) payload.observaciones = observaciones;
                 if (estado !== undefined) payload.estado = estado;
-                if (persona_id !== undefined) payload.persona_id = persona_id;
-                if (instructor_id !== undefined) payload.instructor_id = instructor_id;
-                if (usuario_id !== undefined) payload.usuario_id = usuario_id;
+                if (persona_id !== undefined) payload.persona = { connect: { id: persona_id } };
+                if (instructor_id !== undefined) payload.instructor = { connect: { id: instructor_id } };
+                if (usuario_id !== undefined) payload.usuario = { connect: { id: usuario_id } };
                 if (fecha_devolucion !== undefined) {
                     payload.fecha_devolucion = fecha_devolucion ? new Date(fecha_devolucion) : null;
                 }
@@ -500,6 +627,25 @@ const prestamoController = {
                 doc.fillColor('#333').text(`${art.inventario?.categoria?.nombre || 'N/A'}`);
                 doc.fillColor('#555').text(`Cantidad: `, { continued: true });
                 doc.fillColor('#333').text(`${art.cantidad}`);
+
+                if (art.estado_devolucion) {
+                    doc.fillColor('#555').text(`Estado devolución: `, { continued: true });
+                    const estadoLabel = art.estado_devolucion === 'BUEN_ESTADO' ? 'Buen estado' :
+                                       art.estado_devolucion === 'MAL_ESTADO' ? 'Dañado' : 'Perdido';
+                    doc.fillColor('#333').text(`${estadoLabel}`);
+                }
+                if (art.cantidad_devuelta_buena > 0) {
+                    doc.fillColor('#555').text(`Devuelta buena: `, { continued: true });
+                    doc.fillColor('#333').text(`${art.cantidad_devuelta_buena}`);
+                }
+                if (art.cantidad_devuelta_danada > 0) {
+                    doc.fillColor('#555').text(`Devuelta dañada: `, { continued: true });
+                    doc.fillColor('#333').text(`${art.cantidad_devuelta_danada}`);
+                }
+                if (art.cantidad_perdida > 0) {
+                    doc.fillColor('#555').text(`Perdida: `, { continued: true });
+                    doc.fillColor('#333').text(`${art.cantidad_perdida}`);
+                }
             } else {
                 doc.fontSize(14).font('Helvetica-Bold').fillColor('#333').text('HERRAMIENTAS');
                 doc.moveDown(0.5);
@@ -508,6 +654,28 @@ const prestamoController = {
                     doc.fillColor('#333').text(`${art.inventario?.nombre || ''}`, { continued: true });
                     doc.fillColor('#555').text(` x`, { continued: true });
                     doc.fillColor('#333').text(`${art.cantidad}`);
+
+                    if (art.estado_devolucion) {
+                        const estadoLabel = art.estado_devolucion === 'BUEN_ESTADO' ? '✓Buena' :
+                                           art.estado_devolucion === 'MAL_ESTADO' ? '⚠Dañada' : '✕Perdida';
+                        doc.fillColor('#333').text(` (${estadoLabel})`);
+                    }
+                    doc.moveDown(0.3);
+
+                    if (art.cantidad_devuelta_buena > 0) {
+                        doc.fontSize(8).font('Helvetica').fillColor('#333').text(`   Buena: ${art.cantidad_devuelta_buena}`);
+                    }
+                    if (art.cantidad_devuelta_danada > 0) {
+                        doc.fontSize(8).font('Helvetica').fillColor('#333').text(`   Dañada: ${art.cantidad_devuelta_danada}`);
+                    }
+                    if (art.cantidad_perdida > 0) {
+                        doc.fontSize(8).font('Helvetica').fillColor('#333').text(`   Perdida: ${art.cantidad_perdida}`);
+                    }
+                    if (art.observaciones_devolucion) {
+                        doc.fontSize(8).font('Helvetica').fillColor('#666').text(`   Obs: ${art.observaciones_devolucion}`);
+                    }
+                    doc.moveDown(0.2);
+                    doc.fontSize(10);
                 });
             }
 

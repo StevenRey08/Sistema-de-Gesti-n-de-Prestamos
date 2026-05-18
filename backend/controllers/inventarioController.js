@@ -40,7 +40,42 @@ const inventarioController = {
                 },
                 orderBy: { nombre: 'asc' }
             });
-            res.json(items);
+
+            const itemsIds = items.map(i => i.id);
+            const detallesActivos = await prisma.prestamoDetalle.groupBy({
+                by: ['inventario_id'],
+                where: {
+                    inventario_id: { in: itemsIds },
+                    prestamo: { estado: { in: ['ACTIVO', 'VENCIDO'] } }
+                },
+                _sum: { cantidad: true }
+            });
+
+            const prestamosDirectos = await prisma.prestamo.groupBy({
+                by: ['inventario_id'],
+                where: {
+                    inventario_id: { in: itemsIds },
+                    estado: { in: ['ACTIVO', 'VENCIDO'] }
+                },
+                _sum: { cantidad: true }
+            });
+
+            const cantidadPrestadaMap = {};
+            detallesActivos.forEach(d => {
+                cantidadPrestadaMap[d.inventario_id] = (cantidadPrestadaMap[d.inventario_id] || 0) + (d._sum.cantidad || 0);
+            });
+            prestamosDirectos.forEach(p => {
+                if (p.inventario_id) {
+                    cantidadPrestadaMap[p.inventario_id] = (cantidadPrestadaMap[p.inventario_id] || 0) + (p._sum.cantidad || 0);
+                }
+            });
+
+            const itemsConPrestada = items.map(item => ({
+                ...item,
+                cantidad_prestada: cantidadPrestadaMap[item.id] || 0
+            }));
+
+            res.json(itemsConPrestada);
         } catch (error) {
             logger.error("Error en inventario.getAll:", error);
             res.status(500).json({ status: "error", mensaje: "Error al obtener el inventario" });
@@ -134,45 +169,58 @@ const inventarioController = {
             if (req.file) {
                 data.imagen_ruta = `/uploads/inventario/${req.file.filename}`;
             }
-            if (data.cantidad_total !== undefined) data.cantidad_total = parseInt(data.cantidad_total);
-            if (data.cantidad_danada !== undefined) data.cantidad_danada = parseInt(data.cantidad_danada);
 
-            const total = data.cantidad_total ?? existente.cantidad_total;
-            const danada = data.cantidad_danada ?? existente.cantidad_danada;
+            const prestamosDirectos = await prisma.prestamo.aggregate({
+                where: { inventario_id: req.params.id, estado: { in: ['ACTIVO', 'VENCIDO'] } },
+                _sum: { cantidad: true }
+            });
+            const detallesActivos = await prisma.prestamoDetalle.aggregate({
+                where: { inventario_id: req.params.id, prestamo: { estado: { in: ['ACTIVO', 'VENCIDO'] } } },
+                _sum: { cantidad: true }
+            });
+            const cantidadPrestada = (prestamosDirectos._sum.cantidad || 0) + (detallesActivos._sum.cantidad || 0);
 
-            if (danada > total) {
-                return res.status(400).json({ status: "error", mensaje: "La cantidad dañada no puede ser mayor al total." });
-            }
-
-            const disponibleAuto = total - danada;
-            if (data.cantidad_disponible !== undefined) {
-                data.cantidad_disponible = parseInt(data.cantidad_disponible);
-                if (data.cantidad_disponible > disponibleAuto) {
-                    return res.status(400).json({ status: "error", mensaje: `El disponible no puede ser mayor a ${disponibleAuto} (total - dañado).` });
-                }
-                if (data.cantidad_disponible < 0) {
-                    return res.status(400).json({ status: "error", mensaje: "El disponible no puede ser negativo." });
-                }
-            } else {
-                data.cantidad_disponible = disponibleAuto;
-            }
-
+            const danadaAnterior = existente.cantidad_danada;
+            const disponibleAnterior = existente.cantidad_disponible;
             const totalAnterior = existente.cantidad_total;
-            const aumentoTotal = data.cantidad_total > totalAnterior ? data.cantidad_total - totalAnterior : 0;
+
+            const nuevoDanada = data.cantidad_danada !== undefined ? parseInt(data.cantidad_danada) : danadaAnterior;
+            const nuevoDisponible = data.cantidad_disponible !== undefined ? parseInt(data.cantidad_disponible) : disponibleAnterior;
+            const nuevoTotal = nuevoDisponible + nuevoDanada + cantidadPrestada;
+
+            if (nuevoDanada < 0) {
+                return res.status(400).json({ status: "error", mensaje: "La cantidad dañada no puede ser negativa." });
+            }
+            if (nuevoDisponible < 0) {
+                return res.status(400).json({ status: "error", mensaje: "La cantidad disponible no puede ser negativa." });
+            }
+
+            data.cantidad_danada = nuevoDanada;
+            data.cantidad_disponible = nuevoDisponible;
+            data.cantidad_total = nuevoTotal;
+
+            const cambioTotal = nuevoTotal - totalAnterior;
+            const cambioDanada = nuevoDanada - danadaAnterior;
+            const cambioDisponible = nuevoDisponible - disponibleAnterior;
 
             const actualizado = await prisma.inventario.update({
                 where: { id: req.params.id },
                 data: data
             });
 
-            if (aumentoTotal > 0) {
+            const partes = [];
+            if (cambioDisponible !== 0) partes.push(`Disponible: ${disponibleAnterior} → ${nuevoDisponible}`);
+            if (cambioDanada !== 0) partes.push(`Dañada: ${danadaAnterior} → ${nuevoDanada}`);
+            if (cambioTotal !== 0) partes.push(`Total: ${totalAnterior} → ${nuevoTotal}`);
+
+            if (partes.length > 0) {
                 await prisma.movimiento.create({
                     data: {
                         inventario_id: req.params.id,
-                        tipo: 'ENTRADA',
-                        cantidad: aumentoTotal,
+                        tipo: 'ACTUALIZACION_STOCK',
+                        cantidad: Math.abs(cambioTotal),
                         usuario_id: req.usuario?.id,
-                        observaciones: `Aumento de inventario: +${aumentoTotal} unidades (total: ${totalAnterior} → ${data.cantidad_total})`
+                        observaciones: `Actualización de stock. ${partes.join(', ')}`
                     }
                 });
             }

@@ -21,6 +21,7 @@ export interface Persona {
   curso?: string | null;
   telefono?: string | null;
   prestamosActivos?: number;
+  activo?: boolean;
 }
 
 export interface Ubicacion {
@@ -49,6 +50,7 @@ export interface ItemInventario {
   cantidad_total: number;
   cantidad_disponible: number;
   cantidad_danada: number;
+  cantidad_prestada?: number;
   imagen_ruta?: string | null;
   categoria_id?: string | null;
   categoria?: Categoria | null;
@@ -62,6 +64,11 @@ export interface PrestamoDetalle {
   prestamo_id: string;
   inventario_id: string;
   cantidad: number;
+  estado_devolucion?: string | null;
+  cantidad_devuelta_buena?: number;
+  cantidad_devuelta_danada?: number;
+  cantidad_perdida?: number;
+  observaciones_devolucion?: string | null;
   inventario?: ItemInventario | null;
 }
 

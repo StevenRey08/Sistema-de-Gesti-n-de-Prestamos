@@ -13,25 +13,21 @@ interface InventarioFormProps {
 }
 
 interface InventarioFormState {
-  codigo: string;
   nombre: string;
   categoria_id: string;
   cantidad_total: number | string;
   cantidad_disponible: number | string;
   cantidad_danada: number | string;
-  imagen_ruta: string;
 }
 
 export default function InventarioForm({ item = null, onGuardar, onCancelar }: InventarioFormProps) {
   const { notify } = useNotification();
   const [form, setForm] = useState<InventarioFormState>({
-    codigo: item?.codigo || '',
     nombre: item?.nombre || '',
     categoria_id: item?.categoria_id || '',
     cantidad_total: item?.cantidad_total || 0,
     cantidad_disponible: item?.cantidad_disponible || 0,
     cantidad_danada: item?.cantidad_danada || 0,
-    imagen_ruta: item?.imagen_ruta || '',
   });
   const [archivo, setArchivo] = useState<File | null>(null);
   const [vistaPrevia, setVistaPrevia] = useState<string>(imagenUrl(item?.imagen_ruta) || '');
@@ -66,7 +62,8 @@ export default function InventarioForm({ item = null, onGuardar, onCancelar }: I
     const file = e.target.files?.[0] || null;
     setArchivo(file);
     if (file) setVistaPrevia(URL.createObjectURL(file));
-    else setVistaPrevia(imagenUrl(form.imagen_ruta) || '');
+    else if (item?.imagen_ruta) setVistaPrevia(imagenUrl(item.imagen_ruta) || '');
+    else setVistaPrevia('');
   }
 
   function validar() {
@@ -96,11 +93,8 @@ export default function InventarioForm({ item = null, onGuardar, onCancelar }: I
         const fd = new FormData();
         fd.append('imagen', archivo);
         Object.entries(payload).forEach(([k, v]) => fd.append(k, String(v)));
-        if (form.codigo.trim()) fd.append('codigo', form.codigo.trim().toUpperCase());
         await onGuardar(fd);
       } else {
-        payload.codigo = form.codigo.trim().toUpperCase() || undefined;
-        payload.imagen_ruta = form.imagen_ruta || null;
         await onGuardar(payload);
       }
     } catch (err: unknown) {
@@ -113,11 +107,7 @@ export default function InventarioForm({ item = null, onGuardar, onCancelar }: I
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Código <span className="text-[var(--text-muted)]">(opcional)</span></label>
-          <input name="codigo" value={form.codigo} onChange={handleChange} className="soft-input" placeholder="Dejar vacío para auto-generar" />
-        </div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-1">
         <div>
           <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Nombre *</label>
           <input name="nombre" value={form.nombre} onChange={handleChange} className="soft-input" placeholder="Ej: Martillo" />
@@ -166,14 +156,6 @@ export default function InventarioForm({ item = null, onGuardar, onCancelar }: I
               <img src={vistaPrevia} alt="Vista previa" className="max-h-32 rounded object-contain" />
             </div>
           )}
-        </div>
-        <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
-          <span className="h-px flex-1 bg-[var(--border)]" />
-          <span>o pega una URL externa</span>
-          <span className="h-px flex-1 bg-[var(--border)]" />
-        </div>
-        <div>
-          <input name="imagen_ruta" value={form.imagen_ruta} onChange={handleChange} className="soft-input" placeholder="https://ejemplo.com/imagen.jpg" disabled={!!archivo} />
         </div>
       </div>
 

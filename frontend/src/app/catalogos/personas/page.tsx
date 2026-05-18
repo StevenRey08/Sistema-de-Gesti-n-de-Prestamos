@@ -40,6 +40,7 @@ export default function PersonasPage() {
   const [editando, setEditando] = useState<Persona | null>(null);
   const [eliminando, setElim] = useState<string | null>(null);
   const [eliminandoTodo, setEliminandoTodo] = useState(false);
+  const [confirmarEliminarTodo, setConfirmarEliminarTodo] = useState(false);
   const [panelActivo, setPanelActivo] = useState<'estudiantes' | 'docentes'>('estudiantes');
 
   const buildUrl = useCallback((base: string, params: Record<string, string>) => {
@@ -75,7 +76,7 @@ export default function PersonasPage() {
         tipo: docTipo,
       });
       const todas = await api.get(url) as Persona[];
-      setDocentes(todas.filter(p => p.tipo !== 'ESTUDIANTE'));
+      setDocentes(todas.filter(p => p.tipo?.toUpperCase() !== 'ESTUDIANTE'));
     } catch (e: unknown) {
       const { message, details } = notifyErrorPayload(e, 'Error');
       notify('error', message, details);
@@ -92,9 +93,12 @@ export default function PersonasPage() {
     cargarEstudiantes(); cargarDocentes();
   }
 
-  async function handleEliminar() {
+  async function handleDarDeBaja() {
     try {
-      if (eliminando) await personasApi.delete(eliminando);
+      if (eliminando) {
+        await api.patch(`/personas/${eliminando}/debaja`, {});
+        notify('success', 'Persona dada de baja correctamente');
+      }
       setElim(null);
       cargarEstudiantes(); cargarDocentes();
     } catch (e: unknown) {
@@ -128,10 +132,14 @@ export default function PersonasPage() {
   }
 
   async function handleEliminarTodosEstudiantes() {
-    if (!window.confirm('¿Estás seguro? Esta acción eliminará todos los estudiantes que NO tengan préstamos activos.')) return;
+    setConfirmarEliminarTodo(true);
+  }
+
+  async function ejecutarEliminarTodos() {
+    setConfirmarEliminarTodo(false);
     setEliminandoTodo(true);
     try {
-      const res = await api.delete('/personas/estudiantes') as { message: string };
+      const res = await api.patch('/personas/estudiantes/debaja', {}) as { message: string };
       notify('success', res.message);
       cargarEstudiantes();
     } catch (e: unknown) {
@@ -204,7 +212,7 @@ export default function PersonasPage() {
             {puedeEliminar && (
               <button onClick={handleEliminarTodosEstudiantes} disabled={eliminandoTodo}
                 className="rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-[10px] font-medium text-red-600 transition hover:bg-red-100 disabled:opacity-50">
-                {eliminandoTodo ? 'Eliminando...' : 'Dar de baja todos'}
+                {eliminandoTodo ? 'Dando de baja...' : 'Dar de baja todos'}
               </button>
             )}
           </div>
@@ -265,7 +273,7 @@ export default function PersonasPage() {
                         )}
                         {puedeEliminar && (
                           <button onClick={() => setElim(p.id)}
-                            className="text-xs font-medium text-red-500 hover:underline">Eliminar</button>
+                            className="text-xs font-medium text-red-500 hover:underline">Dar de baja</button>
                         )}
                       </td>
                     </tr>
@@ -341,7 +349,7 @@ export default function PersonasPage() {
                       )}
                       {puedeEliminar && (
                         <button onClick={() => setElim(p.id)}
-                          className="text-xs font-medium text-red-500 hover:underline">Eliminar</button>
+                          className="text-xs font-medium text-red-500 hover:underline">Dar de baja</button>
                       )}
                     </td>
                   </tr>
@@ -372,13 +380,28 @@ export default function PersonasPage() {
       {eliminando && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="rounded-2xl bg-white p-6 text-center shadow-2xl max-w-sm w-full space-y-4">
-            <p className="font-medium text-[var(--text-main)]">¿Eliminar esta persona?</p>
-            <p className="text-sm text-[var(--text-muted)]">Esta acción no se puede deshacer.</p>
+            <p className="font-medium text-[var(--text-main)]">¿Dar de baja a esta persona?</p>
+            <p className="text-sm text-[var(--text-muted)]">Se desactivará del sistema pero no se eliminará. No se puede dar de baja si tiene préstamos pendientes.</p>
             <div className="flex justify-center gap-3">
               <button onClick={() => setElim(null)}
                 className="soft-btn-secondary px-4 py-2 text-xs">Cancelar</button>
-              <button onClick={handleEliminar}
-                className="rounded-full bg-red-600 px-6 py-2 text-xs font-medium text-white hover:bg-red-700">Sí, eliminar</button>
+              <button onClick={handleDarDeBaja}
+                className="rounded-full bg-red-600 px-6 py-2 text-xs font-medium text-white hover:bg-red-700">Sí, dar de baja</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmarEliminarTodo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="rounded-2xl bg-white p-6 text-center shadow-2xl max-w-sm w-full space-y-4">
+            <p className="font-medium text-[var(--text-main)]">¿Dar de baja a todos los estudiantes?</p>
+            <p className="text-sm text-[var(--text-muted)]">Se darán de baja todos los estudiantes que NO tengan préstamos activos. Los que tengan préstamos pendientes no se verán afectados.</p>
+            <div className="flex justify-center gap-3">
+              <button onClick={() => setConfirmarEliminarTodo(false)}
+                className="soft-btn-secondary px-4 py-2 text-xs">Cancelar</button>
+              <button onClick={ejecutarEliminarTodos}
+                className="rounded-full bg-red-600 px-6 py-2 text-xs font-medium text-white hover:bg-red-700">Sí, dar de baja</button>
             </div>
           </div>
         </div>

@@ -13,6 +13,7 @@ export default function MiCuentaPage() {
   const [nombre, setNombre] = useState('');
   const [apellido, setApellido] = useState('');
   const [usuario, setUsuario] = useState('');
+  const [email, setEmail] = useState('');
   const [passwordActual, setPasswordActual] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -22,11 +23,12 @@ export default function MiCuentaPage() {
     if (!user) return;
     const loadCurrentUser = async () => {
       try {
-        const res = await api.get('/auth/me') as { status: string; usuario: { nombre: string; apellido: string; usuario: string } };
+        const res = await api.get('/auth/me') as { status: string; usuario: { nombre: string; apellido: string; usuario: string; email?: string } };
         if (res.status === 'ok' && res.usuario) {
           setNombre(res.usuario.nombre);
           setApellido(res.usuario.apellido);
           setUsuario(res.usuario.usuario);
+          setEmail(res.usuario.email ?? '');
         }
       } catch (err) {
         const { message, details } = notifyErrorPayload(err, 'No se pudo cargar el perfil actual.');
@@ -60,6 +62,10 @@ export default function MiCuentaPage() {
       detalles.push('La confirmación de contraseña no coincide.');
     }
 
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      detalles.push('El formato del email no es válido.');
+    }
+
     if (detalles.length > 0) {
       notify('error', 'Revisa los datos del perfil', detalles);
       return;
@@ -71,6 +77,7 @@ export default function MiCuentaPage() {
         nombre: nombre.trim(),
         apellido: apellido.trim(),
         usuario: usuario.trim(),
+        email: email.trim(),
       };
       if (password) {
         payload.contrasena = password;
@@ -131,6 +138,10 @@ export default function MiCuentaPage() {
           <div>
             <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Usuario</label>
             <input className="soft-input" value={usuario} onChange={(e) => setUsuario(e.target.value)} />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Email</label>
+            <input className="soft-input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="correo@ejemplo.com" />
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Contraseña actual</label>
