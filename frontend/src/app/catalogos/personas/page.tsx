@@ -72,7 +72,7 @@ export default function PersonasPage() {
     try {
       const url = buildUrl('/personas', {
         search: docSearch,
-        tipo: docTipo || undefined,
+        tipo: docTipo,
       });
       const todas = await api.get(url) as Persona[];
       setDocentes(todas.filter(p => p.tipo !== 'ESTUDIANTE'));

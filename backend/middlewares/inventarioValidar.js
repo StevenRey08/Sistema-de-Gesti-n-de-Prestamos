@@ -1,7 +1,7 @@
 const { esUUID } = require('../utils/validadores');
 
 const validarInventario = (req, res, next) => {
-    const { nombre, codigo, categoria_id, cantidad_disponible, cantidad_total, cantidad_danada, stock_minimo } = req.body;
+    const { nombre, codigo, categoria_id, cantidad_disponible, cantidad_total, cantidad_danada } = req.body;
     const errores = [];
     const esCreacion = !req.params || !req.params.id;
 
@@ -32,11 +32,6 @@ const validarInventario = (req, res, next) => {
     if (cantidad_danada !== undefined && cantidad_danada !== null) {
         if (!Number.isInteger(Number(cantidad_danada)) || Number(cantidad_danada) < 0) {
             errores.push("La cantidad dañada debe ser un número entero mayor o igual a 0.");
-        }
-    }
-    if (stock_minimo !== undefined && stock_minimo !== null) {
-        if (!Number.isInteger(Number(stock_minimo)) || Number(stock_minimo) < 0) {
-            errores.push("El stock mínimo debe ser un número entero mayor o igual a 0.");
         }
     }
 

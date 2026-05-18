@@ -49,8 +49,6 @@ export interface ItemInventario {
   cantidad_total: number;
   cantidad_disponible: number;
   cantidad_danada: number;
-  en_uso: number;
-  stock_minimo: number;
   imagen_ruta?: string | null;
   categoria_id?: string | null;
   categoria?: Categoria | null;
@@ -151,8 +149,6 @@ export interface InventarioPayload {
   cantidad_total: number;
   cantidad_disponible: number;
   cantidad_danada: number;
-  en_uso?: number;
-  stock_minimo?: number;
   imagen_ruta?: string | null;
 }
 

@@ -120,9 +120,7 @@ model Inventario {
   cantidad_total       Int                  @default(0) 
   cantidad_disponible  Int                  @default(0) 
   cantidad_danada      Int                  @default(0) 
-  en_uso               Int                  @default(0) 
   
-  stock_minimo        Int                   @default(1) 
   imagen_ruta         String?
   
   categoria           CategoriaHerramienta? @relation(fields: [categoria_id], references: [id], onDelete: Restrict)

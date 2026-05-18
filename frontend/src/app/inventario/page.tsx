@@ -27,7 +27,6 @@ export default function InventarioPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editando, setEditando] = useState<ItemInventario | null>(null);
-  const [eliminando, setEliminando] = useState<string | null>(null);
   const [showSalida, setShowSalida] = useState(false);
   const [salidaItem, setSalidaItem] = useState<ItemInventario | null>(null);
   const [showPrestamo, setShowPrestamo] = useState(false);
@@ -72,10 +71,10 @@ export default function InventarioPage() {
     cargar();
   }
 
-  async function handleEliminar() {
+  async function handleEliminarTodo(item: ItemInventario) {
     try {
-      if (eliminando) await inventarioApi.delete(eliminando);
-      setEliminando(null);
+      await inventarioApi.delete(item.id);
+      notify('success', `${item.nombre} eliminado del inventario`);
       cargar();
     } catch (e: unknown) {
       const { message, details } = notifyErrorPayload(e, 'Error al eliminar');
@@ -100,7 +99,7 @@ export default function InventarioPage() {
       <div className="stats-grid">
         <div className="stats-card"><p>Total artículos</p><p>{items.length}</p></div>
         <div className="stats-card"><p>Stock disponible</p><p>{items.reduce((s, i) => s + i.cantidad_disponible, 0)}</p></div>
-        <div className="stats-card"><p>En uso</p><p>{items.reduce((s, i) => s + i.en_uso, 0)}</p></div>
+        <div className="stats-card"><p>Prestado</p><p>{items.reduce((s, i) => s + Math.max(0, i.cantidad_total - i.cantidad_disponible - i.cantidad_danada), 0)}</p></div>
         <div className="stats-card"><p>Dañados</p><p>{items.reduce((s, i) => s + i.cantidad_danada, 0)}</p></div>
       </div>
 
@@ -144,8 +143,8 @@ export default function InventarioPage() {
                     <div className="flex gap-2 text-xs">
                       <span className="rounded-full bg-green-100 px-2 py-0.5 font-medium text-green-700">Total: {item.cantidad_total}</span>
                       <span className="rounded-full bg-blue-100 px-2 py-0.5 font-medium text-blue-700">Bueno: {item.cantidad_disponible}</span>
-                      {item.en_uso > 0 && (
-                        <span className="rounded-full bg-yellow-100 px-2 py-0.5 font-medium text-yellow-700">En uso: {item.en_uso}</span>
+                      {item.cantidad_total - item.cantidad_disponible - item.cantidad_danada > 0 && (
+                        <span className="rounded-full bg-yellow-100 px-2 py-0.5 font-medium text-yellow-700">Prestado: {item.cantidad_total - item.cantidad_disponible - item.cantidad_danada}</span>
                       )}
                       {item.cantidad_danada > 0 && (
                         <span className="rounded-full bg-red-100 px-2 py-0.5 font-medium text-red-700">Dañado: {item.cantidad_danada}</span>
@@ -153,9 +152,6 @@ export default function InventarioPage() {
                     </div>
                     {item.categoria && (
                       <p className="text-[10px] text-[var(--text-muted)]">{item.categoria.nombre}</p>
-                    )}
-                    {item.cantidad_disponible <= item.stock_minimo && (
-                      <p className="text-[10px] font-bold text-red-500">⚠ Stock bajo (mín: {item.stock_minimo})</p>
                     )}
                     <div className="flex items-center gap-2 border-t border-[var(--border)] pt-2">
                       {puedeActualizar && (
@@ -166,13 +162,14 @@ export default function InventarioPage() {
                         <button onClick={() => { setPrestamoItem(item); setShowPrestamo(true); }}
                           className="text-xs font-medium text-[var(--warning)] hover:opacity-80">Préstamo</button>
                       )}
-                      {puedeSalida && (
-                        <button onClick={() => { setSalidaItem(item); setShowSalida(true); }}
-                          className="text-xs font-medium text-[var(--danger)] hover:opacity-80">Salida</button>
-                      )}
-                      {puedeEliminar && (
-                        <button onClick={() => setEliminando(item.id)}
-                          className="ml-auto text-xs font-medium text-[var(--danger)] hover:opacity-80">Eliminar</button>
+                      {(puedeSalida || puedeEliminar) && (
+                        item.cantidad_disponible === 0 && item.cantidad_danada === 0 ? (
+                          <button onClick={() => { if (confirm(`¿Eliminar "${item.nombre}" permanentemente?`)) handleEliminarTodo(item); }}
+                            className="ml-auto text-xs font-medium text-[var(--danger)] hover:opacity-80">Eliminar</button>
+                        ) : (
+                          <button onClick={() => { setSalidaItem(item); setShowSalida(true); }}
+                            className="ml-auto text-xs font-medium text-[var(--danger)] hover:opacity-80">Eliminar</button>
+                        )
                       )}
                     </div>
                   </div>
@@ -191,19 +188,6 @@ export default function InventarioPage() {
             </h2>
             <InventarioForm item={editando} onGuardar={handleGuardar}
               onCancelar={() => { setShowForm(false); setEditando(null); }} />
-          </div>
-        </div>
-      )}
-
-      {eliminando && (
-        <div className="modal-backdrop">
-          <div className="modal-panel max-w-sm space-y-4 p-6 text-center">
-            <p className="font-medium text-[var(--text-main)]">¿Eliminar este registro?</p>
-            <p className="text-sm text-[var(--text-muted)]">Esta acción no se puede deshacer.</p>
-            <div className="flex justify-center gap-3">
-              <button onClick={() => setEliminando(null)} className="soft-btn-secondary px-4 py-2 text-sm">Cancelar</button>
-              <button onClick={handleEliminar} className="rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">Sí, eliminar</button>
-            </div>
           </div>
         </div>
       )}

@@ -165,7 +165,7 @@ const reportesController = {
         include: { categoria: true },
         orderBy: { cantidad_disponible: 'asc' }
       });
-      const filtrados = items.filter(item => item.cantidad_disponible <= item.stock_minimo);
+        const filtrados = items.filter(item => item.cantidad_disponible <= 0);
       if (Object.keys(whereFecha).length > 0) {
         const idsConPrestamos = await prisma.prestamo.findMany({
           where: whereFecha,
@@ -286,7 +286,7 @@ const reportesController = {
           include: { categoria: true },
           orderBy: { cantidad_disponible: 'asc' }
         });
-        const filtrados = items.filter(item => item.cantidad_disponible <= item.stock_minimo);
+      const filtrados = items.filter(item => item.cantidad_disponible <= 0);
         let itemsFinal = filtrados;
         if (Object.keys(whereFecha).length > 0) {
           const idsConPrestamos = await prisma.prestamo.findMany({
@@ -301,11 +301,10 @@ const reportesController = {
           Nombre: i.nombre,
           Categoría: i.categoria?.nombre || '—',
           Disponible: String(i.cantidad_disponible),
-          'Stock Mín.': String(i.stock_minimo),
           Dañado: String(i.cantidad_danada),
         }));
         generarPDF(res, 'Reporte de Bajo Stock', fechaInicio, fechaFin,
-          ['Código', 'Nombre', 'Categoría', 'Disponible', 'Stock Mín.', 'Dañado'], filas, '#10367d', autorNombre);
+          ['Código', 'Nombre', 'Categoría', 'Disponible', 'Dañado'], filas, '#10367d', autorNombre);
       } else if (tipo === 'mas-prestados') {
         const resultados = await prisma.prestamo.groupBy({
           by: ['inventario_id'],

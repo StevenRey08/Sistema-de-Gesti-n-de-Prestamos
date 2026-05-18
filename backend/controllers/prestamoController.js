@@ -121,7 +121,6 @@ const prestamoController = {
                     where: { id: inventario_id },
                     data: {
                         cantidad_disponible: { decrement: cantSolicitada },
-                        en_uso: { increment: cantSolicitada },
                     }
                 });
 
@@ -137,17 +136,12 @@ const prestamoController = {
                     }
                 });
 
-                const alerta = articulo.cantidad_disponible - cantSolicitada <= articulo.stock_minimo
-                    ? { mensaje: `¡Alerta! ${articulo.nombre} está por debajo del stock mínimo.`, nivel: 'CRITICO' }
-                    : null;
-
-                return { nuevoPrestamo, alerta };
+                return { nuevoPrestamo };
             });
 
             res.status(201).json({
                 status: "success",
-                data: resultado.nuevoPrestamo,
-                alerta: resultado.alerta
+                data: resultado.nuevoPrestamo
             });
         } catch (error) {
             res.status(400).json({ status: "error", mensaje: error.message });
@@ -204,7 +198,6 @@ const prestamoController = {
                         where: { id: detalle.inventario_id },
                         data: {
                             cantidad_disponible: { decrement: detalle.cantidad },
-                            en_uso: { increment: detalle.cantidad },
                         }
                     });
 
@@ -261,7 +254,6 @@ const prestamoController = {
                         await tx.inventario.update({
                             where: { id: detalle.inventario_id },
                             data: {
-                                en_uso: { decrement: detalle.cantidad },
                                 cantidad_disponible: { increment: detalle.cantidad },
                             }
                         });
@@ -282,7 +274,6 @@ const prestamoController = {
                     await tx.inventario.update({
                         where: { id: prestamo.inventario_id },
                         data: {
-                            en_uso: { decrement: cantDevolver },
                             cantidad_disponible: { increment: cantDevolver },
                         }
                     });
@@ -340,7 +331,6 @@ const prestamoController = {
                             where: { id: prestamoActual.inventario_id },
                             data: {
                                 cantidad_disponible: { decrement: diff },
-                                en_uso: { increment: diff },
                             }
                         });
                     }
@@ -393,7 +383,6 @@ const prestamoController = {
                                 where: { id: detalle.inventario_id },
                                 data: {
                                     cantidad_disponible: { increment: detalle.cantidad },
-                                    en_uso: { decrement: detalle.cantidad },
                                 }
                             });
                         }
@@ -402,7 +391,6 @@ const prestamoController = {
                             where: { id: prestamo.inventario_id },
                             data: {
                                 cantidad_disponible: { increment: prestamo.cantidad },
-                                en_uso: { decrement: prestamo.cantidad },
                             }
                         });
                     }

@@ -149,7 +149,7 @@ export default function ReportesPage() {
                   {tipo === 'bajo-stock' && <td className="px-4 py-3">{item.categoria?.nombre || '—'}</td>}
                   {tipo === 'bajo-stock' && (
                     <td className="px-4 py-3">
-                      <span className={`font-bold ${item.cantidad_disponible <= (item.stock_minimo || 2) ? 'text-red-500' : 'text-[var(--text-main)]'}`}>
+                      <span className={`font-bold ${item.cantidad_disponible <= 0 ? 'text-red-500' : 'text-[var(--text-main)]'}`}>
                         {item.cantidad_disponible}
                       </span>
                     </td>

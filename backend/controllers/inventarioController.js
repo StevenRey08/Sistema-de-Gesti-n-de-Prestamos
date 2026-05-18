@@ -47,24 +47,6 @@ const inventarioController = {
         }
     },
 
-    getAlertasStock: async (req, res) => {
-        try {
-            const inventarioCompleto = await prisma.inventario.findMany({
-                include: { categoria: true }
-            });
-            const alertas = inventarioCompleto.filter(item =>
-                item.cantidad_disponible <= item.stock_minimo
-            );
-            res.json({
-                total_alertas: alertas.length,
-                articulos: alertas
-            });
-        } catch (error) {
-            console.error("Error al obtener alertas:", error);
-            res.status(500).json({ status: "error", mensaje: "Error al generar reporte de alertas" });
-        }
-    },
-
     create: async (req, res) => {
         try {
             let data = req.body;
@@ -86,14 +68,11 @@ const inventarioController = {
             const cantTotal = data.cantidad_total !== undefined && data.cantidad_total !== null && data.cantidad_total !== ''
                 ? parseInt(data.cantidad_total) : 0;
             const cantDanada = data.cantidad_danada ? parseInt(data.cantidad_danada) : 0;
-            const cantEnUso = data.en_uso ? parseInt(data.en_uso) : 0;
             const cantDisponible = data.cantidad_disponible !== undefined && data.cantidad_disponible !== null && data.cantidad_disponible !== ''
-                ? parseInt(data.cantidad_disponible) : (cantTotal - cantDanada - cantEnUso);
+                ? parseInt(data.cantidad_disponible) : (cantTotal - cantDanada);
             data.cantidad_total = cantTotal;
             data.cantidad_disponible = cantDisponible;
             data.cantidad_danada = cantDanada;
-            data.en_uso = cantEnUso;
-            data.stock_minimo = data.stock_minimo ? parseInt(data.stock_minimo) : 1;
 
             const nuevo = await prisma.inventario.create({
                 data,
@@ -157,25 +136,19 @@ const inventarioController = {
             }
             if (data.cantidad_total !== undefined) data.cantidad_total = parseInt(data.cantidad_total);
             if (data.cantidad_danada !== undefined) data.cantidad_danada = parseInt(data.cantidad_danada);
-            if (data.en_uso !== undefined) data.en_uso = parseInt(data.en_uso);
-            if (data.stock_minimo !== undefined) data.stock_minimo = parseInt(data.stock_minimo);
 
             const total = data.cantidad_total ?? existente.cantidad_total;
             const danada = data.cantidad_danada ?? existente.cantidad_danada;
-            const enUso = data.en_uso ?? existente.en_uso;
 
             if (danada > total) {
                 return res.status(400).json({ status: "error", mensaje: "La cantidad dañada no puede ser mayor al total." });
             }
-            if (danada + enUso > total) {
-                return res.status(400).json({ status: "error", mensaje: "La suma de dañado y en uso no puede superar el total." });
-            }
 
-            const disponibleAuto = total - danada - enUso;
+            const disponibleAuto = total - danada;
             if (data.cantidad_disponible !== undefined) {
                 data.cantidad_disponible = parseInt(data.cantidad_disponible);
                 if (data.cantidad_disponible > disponibleAuto) {
-                    return res.status(400).json({ status: "error", mensaje: `El disponible no puede ser mayor a ${disponibleAuto} (total - dañado - en uso).` });
+                    return res.status(400).json({ status: "error", mensaje: `El disponible no puede ser mayor a ${disponibleAuto} (total - dañado).` });
                 }
                 if (data.cantidad_disponible < 0) {
                     return res.status(400).json({ status: "error", mensaje: "El disponible no puede ser negativo." });

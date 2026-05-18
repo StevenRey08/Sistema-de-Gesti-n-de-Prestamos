@@ -5,7 +5,10 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon index.js",
-    "start": "node index.js"
+    "start": "node index.js",
+    "migrate": "npx prisma generate && npx prisma migrate deploy && node prisma/seed.js",
+    "migrate:dev": "npx prisma generate && npx prisma migrate dev && node prisma/seed.js",
+    "postinstall": "npx prisma generate"
   },
   "keywords": [],
   "author": "",

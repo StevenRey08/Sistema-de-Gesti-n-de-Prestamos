@@ -197,7 +197,7 @@ export default function PrestamoForm({ prestamo = null, onGuardar, onCancelar, o
           </div>
 
           {items.length === 0 && !agregando && (
-            <p className="text-xs text-[var(--text-muted)] italic">Presiona "+ Agregar herramienta" para añadir artículos al préstamo.</p>
+            <p className="text-xs text-[var(--text-muted)] italic">Presiona &quot;+ Agregar herramienta&quot; para añadir artículos al préstamo.</p>
           )}
 
           {items.map((item) => (

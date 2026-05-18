@@ -8,6 +8,7 @@ router.use(verificarToken);
 
 router.get('/', checkPermiso('INVENTARIO', 'leer'), pedidoController.getAll);
 router.get('/:id', checkPermiso('INVENTARIO', 'leer'), pedidoController.getById);
+router.get('/:id/pdf', checkPermiso('INVENTARIO', 'leer'), pedidoController.generarPdf);
 router.post('/', checkPermiso('INVENTARIO', 'ingresar'), pedidoController.create);
 router.put('/:id', checkPermiso('INVENTARIO', 'actualizar'), pedidoController.update);
 router.patch('/:id/recibir', checkPermiso('INVENTARIO', 'actualizar'), pedidoController.recibirPedido);

@@ -282,7 +282,6 @@ async function main() {
                 categoria_id: catIds[item.cat],
                 cantidad_total: item.cant,
                 cantidad_disponible: item.cant,
-                en_uso: 0,
             },
         });
         invIds[item.c] = created.id;

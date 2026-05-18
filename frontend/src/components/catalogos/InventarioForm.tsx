@@ -19,8 +19,6 @@ interface InventarioFormState {
   cantidad_total: number | string;
   cantidad_disponible: number | string;
   cantidad_danada: number | string;
-  en_uso: number | string;
-  stock_minimo: number | string;
   imagen_ruta: string;
 }
 
@@ -33,8 +31,6 @@ export default function InventarioForm({ item = null, onGuardar, onCancelar }: I
     cantidad_total: item?.cantidad_total || 0,
     cantidad_disponible: item?.cantidad_disponible || 0,
     cantidad_danada: item?.cantidad_danada || 0,
-    en_uso: item?.en_uso || 0,
-    stock_minimo: item?.stock_minimo || 1,
     imagen_ruta: item?.imagen_ruta || '',
   });
   const [archivo, setArchivo] = useState<File | null>(null);
@@ -54,14 +50,12 @@ export default function InventarioForm({ item = null, onGuardar, onCancelar }: I
       if (name === 'cantidad_total') {
         const total = Number(value);
         const danada = Number(prev.cantidad_danada);
-        const enUso = Number(prev.en_uso);
-        next.cantidad_disponible = Math.max(0, total - danada - enUso);
+        next.cantidad_disponible = Math.max(0, total - danada);
       }
       if (name === 'cantidad_danada') {
         const total = Number(prev.cantidad_total);
         const danada = Number(value);
-        const enUso = Number(prev.en_uso);
-        next.cantidad_disponible = Math.max(0, total - danada - enUso);
+        next.cantidad_disponible = Math.max(0, total - danada);
       }
       return next;
     });
@@ -96,8 +90,6 @@ export default function InventarioForm({ item = null, onGuardar, onCancelar }: I
         cantidad_total: Number(form.cantidad_total),
         cantidad_disponible: Number(form.cantidad_disponible),
         cantidad_danada: Number(form.cantidad_danada),
-        en_uso: Number(form.en_uso),
-        stock_minimo: Number(form.stock_minimo),
       };
 
       if (archivo) {
@@ -145,7 +137,7 @@ export default function InventarioForm({ item = null, onGuardar, onCancelar }: I
         emptyLabel="Sin categorías coincidentes"
       />
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <div>
           <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Total</label>
           <input type="number" name="cantidad_total" value={form.cantidad_total} onChange={handleChange} min={0} className="soft-input" />
@@ -157,14 +149,6 @@ export default function InventarioForm({ item = null, onGuardar, onCancelar }: I
         <div>
           <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Dañado</label>
           <input type="number" name="cantidad_danada" value={form.cantidad_danada} onChange={handleChange} min={0} className="soft-input" />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">En uso</label>
-          <input type="number" name="en_uso" value={form.en_uso} onChange={handleChange} min={0} className="soft-input" disabled />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Stock Mín.</label>
-          <input type="number" name="stock_minimo" value={form.stock_minimo} onChange={handleChange} min={0} className="soft-input" />
         </div>
       </div>
 

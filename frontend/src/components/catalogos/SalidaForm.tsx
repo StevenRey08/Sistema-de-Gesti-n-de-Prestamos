@@ -1,9 +1,8 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { movimientosApi, personasApi } from '../../lib/api';
+import { useState } from 'react';
+import { movimientosApi, inventarioApi } from '../../lib/api';
 import { useAuth } from '../auth/AuthProvider';
-import FilterableSelect from '../ui/FilterableSelect';
-import type { ItemInventario, Persona, FormErrors } from '../../lib/types';
+import type { ItemInventario, FormErrors } from '../../lib/types';
 import { notifyErrorPayload } from '../../lib/errors';
 import { useNotification } from '../ui/NotificationContext';
 
@@ -17,13 +16,11 @@ interface SalidaFormState {
   origen: 'disponible' | 'danado';
   cantidad: number | string;
   motivo: string;
-  persona_id: string;
 }
 
 export default function SalidaForm({ item, onSuccess, onCancelar }: SalidaFormProps) {
   const { notify } = useNotification();
   const { user } = useAuth();
-  const [personas, setPersonas] = useState<Persona[]>([]);
 
   const maxOrigen = (
     origen: 'disponible' | 'danado'
@@ -33,14 +30,9 @@ export default function SalidaForm({ item, onSuccess, onCancelar }: SalidaFormPr
     origen: 'disponible',
     cantidad: 1,
     motivo: '',
-    persona_id: '',
   });
   const [errores, setErrores] = useState<FormErrors<SalidaFormState>>({});
   const [cargando, setCargando] = useState(false);
-
-  useEffect(() => {
-    personasApi.getAll().then((d) => setPersonas(d as Persona[]));
-  }, []);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
     const { name, value } = e.target;
@@ -72,7 +64,6 @@ export default function SalidaForm({ item, onSuccess, onCancelar }: SalidaFormPr
         tipo: 'SALIDA',
         cantidad: Number(form.cantidad),
         desde_danado: desdeDanado,
-        persona_id: form.persona_id || undefined,
         usuario_id: user?.id,
         observaciones: form.motivo.trim(),
       });
@@ -88,10 +79,25 @@ export default function SalidaForm({ item, onSuccess, onCancelar }: SalidaFormPr
 
   const max = maxOrigen(form.origen);
 
+  async function handleEliminarTodo() {
+    if (!confirm(`¿Eliminar "${item.nombre}" del inventario permanentemente?`)) return;
+    setCargando(true);
+    try {
+      await inventarioApi.delete(item.id);
+      notify('success', `${item.nombre} eliminado del inventario`);
+      onSuccess();
+    } catch (err: unknown) {
+      const { message, details } = notifyErrorPayload(err, 'Error al eliminar');
+      notify('error', message, details);
+    } finally {
+      setCargando(false);
+    }
+  }
+
   return (
     <div className="w-full max-w-lg overflow-hidden rounded-[28px] border border-[var(--border)] bg-white shadow-[var(--shadow-soft)]">
       <div className="border-b border-[var(--border)] p-6">
-        <h2 className="text-xl font-bold text-[var(--text-main)]">Salida de inventario</h2>
+        <h2 className="text-xl font-bold text-[var(--text-main)]">Eliminar del inventario</h2>
         <p className="mt-1 text-xs text-[var(--text-muted)]">{item.nombre} ({item.codigo})</p>
       </div>
 
@@ -108,7 +114,11 @@ export default function SalidaForm({ item, onSuccess, onCancelar }: SalidaFormPr
             <label className="ml-1 text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Cantidad *</label>
             <input type="number" name="cantidad" value={form.cantidad} onChange={handleChange}
               min={1} max={max} className="soft-input" />
-            <p className="text-[10px] text-[var(--text-muted)]">Disponible: {item.cantidad_disponible} · Dañado: {item.cantidad_danada}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-[10px] text-[var(--text-muted)]">Disponible: {item.cantidad_disponible} · Dañado: {item.cantidad_danada}</p>
+              <button type="button" onClick={() => setForm(prev => ({ ...prev, cantidad: max }))}
+                className="text-[10px] font-medium text-[var(--accent)] hover:underline">Máx</button>
+            </div>
           </div>
         </div>
 
@@ -118,26 +128,14 @@ export default function SalidaForm({ item, onSuccess, onCancelar }: SalidaFormPr
             placeholder="Ej: Mantenimiento, descarte, reparación..." className="soft-textarea" />
         </div>
 
-        <FilterableSelect
-          label="Responsable (opcional)"
-          value={form.persona_id}
-          onChange={(value) => {
-            setForm((prev) => ({ ...prev, persona_id: value }));
-            if (errores.persona_id) setErrores((prev) => ({ ...prev, persona_id: '' }));
-          }}
-          options={personas.map((p) => ({
-            value: p.id,
-            label: `${p.nombres} ${p.apellidos}`,
-            searchText: `${p.matricula} ${p.tipo}`,
-          }))}
-          placeholder="Buscar persona..."
-          emptyLabel="Sin personas coincidentes"
-        />
-
         <div className="flex justify-end gap-3 border-t border-[var(--border)] pt-4">
           <button type="button" onClick={onCancelar} className="soft-btn-secondary px-4 py-2 text-xs uppercase tracking-widest">Cancelar</button>
           <button type="submit" disabled={cargando} className="soft-btn-primary px-8 py-2 text-xs uppercase tracking-widest disabled:opacity-50">
-            {cargando ? 'Registrando...' : 'Registrar salida'}
+            {cargando ? 'Eliminando...' : 'Eliminar'}
+          </button>
+          <button type="button" onClick={handleEliminarTodo} disabled={cargando}
+            className="rounded-full bg-red-600 px-6 py-2 text-xs font-bold uppercase tracking-widest text-white hover:bg-red-700 disabled:opacity-50">
+            Eliminar todo
           </button>
         </div>
       </form>

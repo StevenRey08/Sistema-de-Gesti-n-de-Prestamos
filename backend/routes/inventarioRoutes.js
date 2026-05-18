@@ -12,7 +12,6 @@ router.post('/', checkPermiso('INVENTARIO', 'ingresar'), upload.single('imagen')
 router.put('/:id', checkPermiso('INVENTARIO', 'actualizar'), upload.single('imagen'), validarInventario, inventarioController.update);
 
 router.get('/', checkPermiso('INVENTARIO', 'leer'), inventarioController.getAll);
-router.get('/alertas', checkPermiso('INVENTARIO', 'leer'), inventarioController.getAlertasStock);
 router.get('/:id', checkPermiso('INVENTARIO', 'leer'), inventarioController.getById);
 router.delete('/:id', checkPermiso('INVENTARIO', 'eliminar'), inventarioController.delete);
 
