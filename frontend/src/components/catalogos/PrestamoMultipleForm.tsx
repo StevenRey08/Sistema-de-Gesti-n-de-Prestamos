@@ -84,7 +84,11 @@ export default function PrestamoMultipleForm({ itemInicial, onSuccess, onCancela
     if (items.length === 0) e.items = 'Agrega al menos una herramienta';
     if (!persona_id) e.persona_id = 'Selecciona el estudiante';
     if (!instructor_id) e.instructor_id = 'Selecciona el instructor';
-    if (!fecha_devolucion) e.fecha_devolucion = 'Selecciona la fecha de devolución';
+    if (!fecha_devolucion) {
+      e.fecha_devolucion = 'Selecciona la fecha de devolución';
+    } else if (new Date(fecha_devolucion) <= new Date()) {
+      e.fecha_devolucion = 'La fecha debe ser posterior a la actual';
+    }
     for (const item of items) {
       const cant = Number(item.cantidad);
       if (!item.cantidad || cant < 1) e[`cant_${item.inventario_id}`] = `"${item.nombre}": mínimo 1`;
@@ -217,7 +221,7 @@ export default function PrestamoMultipleForm({ itemInicial, onSuccess, onCancela
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <label className="ml-1 text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Fecha devolución *</label>
-            <input type="date" value={fecha_devolucion}
+            <input type="datetime-local" value={fecha_devolucion}
               onChange={(e) => { setFechaDevolucion(e.target.value); if (errores.fecha_devolucion) setErrores((prev) => ({ ...prev, fecha_devolucion: '' })); }}
               className="soft-input" />
           </div>

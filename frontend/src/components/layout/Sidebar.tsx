@@ -15,6 +15,7 @@ const menuItems: MenuItem[] = [
   { label: 'Inicio', icon: '◌', href: '/', modulo: 'DASHBOARD' },
   { label: 'Categorías', icon: '◇', href: '/catalogos/categorias', modulo: 'CATEGORIAS' },
   { label: 'Personas', icon: '◎', href: '/catalogos/personas', modulo: 'PERSONAS' },
+  { label: 'Histórico', icon: '◷', href: '/catalogos/historico', modulo: 'PERSONAS' },
   { label: 'Ubicaciones', icon: '▤', href: '/ubicaciones', modulo: 'UBICACIONES' },
   { label: 'Inventario', icon: '◫', href: '/inventario', modulo: 'INVENTARIO' },
   { label: 'Préstamos', icon: '↗', href: '/prestamos', modulo: 'PRESTAMOS' },

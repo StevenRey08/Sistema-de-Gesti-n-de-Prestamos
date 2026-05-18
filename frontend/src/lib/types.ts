@@ -24,6 +24,20 @@ export interface Persona {
   activo?: boolean;
 }
 
+export interface PersonaHistorico {
+  id: string;
+  persona_id: string | null;
+  matricula: string | null;
+  nombres: string | null;
+  apellidos: string | null;
+  tipo: string | null;
+  curso: string | null;
+  telefono: string | null;
+  fecha_baja: string;
+  usuario_id_baja: string | null;
+  usuario_baja?: { id: string; nombre: string; apellido: string; usuario: string } | null;
+}
+
 export interface Ubicacion {
   id: string;
   codigo: string;

@@ -139,7 +139,7 @@ export default function PersonasPage() {
     setConfirmarEliminarTodo(false);
     setEliminandoTodo(true);
     try {
-      const res = await api.patch('/personas/estudiantes/debaja', {}) as { message: string };
+      const res = await api.patch('/personas/estudiantes/debaja', {}) as { message: string; pasadosHistorico: number; eliminados: number; omitidos: number };
       notify('success', res.message);
       cargarEstudiantes();
     } catch (e: unknown) {
@@ -183,6 +183,11 @@ export default function PersonasPage() {
         </div>
         <div className="flex gap-2">
           {puedeIngresar && (
+            <button onClick={handleDownloadTemplate} className="soft-btn-secondary text-xs">
+              Descargar Plantilla Excel
+            </button>
+          )}
+          {!puedeIngresar && puedeActualizar && (
             <button onClick={handleDownloadTemplate} className="soft-btn-secondary text-xs">
               Descargar Plantilla Excel
             </button>
@@ -396,7 +401,7 @@ export default function PersonasPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="rounded-2xl bg-white p-6 text-center shadow-2xl max-w-sm w-full space-y-4">
             <p className="font-medium text-[var(--text-main)]">¿Dar de baja a todos los estudiantes?</p>
-            <p className="text-sm text-[var(--text-muted)]">Se darán de baja todos los estudiantes que NO tengan préstamos activos. Los que tengan préstamos pendientes no se verán afectados.</p>
+            <p className="text-sm text-[var(--text-muted)]">Estudiantes de 6to sin préstamos → pasan a histórico. Estudiantes de 4to/5to sin préstamos → se eliminan del sistema. Los que tengan préstamos activos se quedan.</p>
             <div className="flex justify-center gap-3">
               <button onClick={() => setConfirmarEliminarTodo(false)}
                 className="soft-btn-secondary px-4 py-2 text-xs">Cancelar</button>

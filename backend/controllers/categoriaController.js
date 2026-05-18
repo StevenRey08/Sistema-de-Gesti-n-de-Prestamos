@@ -70,10 +70,33 @@ const categoriaController = {
                     return res.status(400).json({ status: "error", mensaje: "Ya existe una categoría con ese nombre (sin diferenciar mayúsculas/minúsculas)." });
                 }
             }
+
+            const vieja = await prisma.categoriaHerramienta.findUnique({
+                where: { id: req.params.id },
+                include: { ubicacion: true }
+            });
+            if (!vieja) return res.status(404).json({ status: "error", mensaje: "Categoría no encontrada" });
+
             const actualizada = await prisma.categoriaHerramienta.update({
                 where: { id: req.params.id },
                 data: req.body
             });
+
+            const nuevaUbicacionId = req.body.ubicacion_id;
+            if (nuevaUbicacionId !== undefined && nuevaUbicacionId !== vieja.ubicacion_id) {
+                const nuevaUbicacion = await prisma.ubicacion.findUnique({ where: { id: nuevaUbicacionId } });
+                await prisma.movimiento.create({
+                    data: {
+                        tipo: 'TRASLADO',
+                        cantidad: 0,
+                        usuario_id: req.usuario?.id,
+                        ubicacion_origen_id: vieja.ubicacion_id,
+                        ubicacion_destino_id: nuevaUbicacionId,
+                        observaciones: `Categoría "${vieja.nombre}" trasladada de "${vieja.ubicacion?.nombre || 'Sin ubicación'}" a "${nuevaUbicacion?.nombre || 'Sin ubicación'}"`
+                    }
+                });
+            }
+
             res.json(actualizada);
         } catch (error) {
             const duplicateError = buildUniqueConstraintError(error, {

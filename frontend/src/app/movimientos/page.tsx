@@ -78,7 +78,7 @@ export default function MovimientosPage() {
             <thead>
               <tr>
                 <th className="px-4 py-3 text-left">Tipo</th>
-                <th className="px-4 py-3 text-left">Herramienta</th>
+                <th className="px-4 py-3 text-left">Artículo</th>
                 <th className="px-4 py-3 text-left">Persona</th>
                 <th className="px-4 py-3 text-left">Usuario</th>
                 <th className="px-4 py-3 text-left">Cant.</th>

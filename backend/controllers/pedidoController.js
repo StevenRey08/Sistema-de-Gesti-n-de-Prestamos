@@ -314,7 +314,7 @@ const pedidoController = {
             }
 
             iy = infoRow('Prioridad:', pedido.prioridad || '—', iy);
-            iy = infoRow('Fecha:', new Date(pedido.fecha_pedido).toLocaleDateString('es-DO'), iy);
+            iy = infoRow('Fecha emisión:', new Date().toLocaleString('es-DO', { dateStyle: 'long', timeStyle: 'short' }), iy);
             iy = infoRow('Solicitado por:', `${pedido.usuario?.nombre || ''} ${pedido.usuario?.apellido || ''}`, iy);
             if (pedido.observaciones) {
                 doc.fontSize(10).font('Helvetica').fillColor('#64748b').text('Observaciones:', col1X, iy + 5);

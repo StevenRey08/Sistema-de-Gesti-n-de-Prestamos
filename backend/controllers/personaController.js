@@ -99,11 +99,11 @@ const personaController = {
     },
 
     delete: async (req, res) => {
-        return res.status(405).json({ status: "error", mensaje: "No se pueden eliminar personas. Use 'Dar de baja' en su lugar." });
+        return res.status(405).json({ status: "error", mensaje: "No se pueden eliminar personas de forma individual. Use 'Dar de baja' en su lugar." });
     },
 
     deleteBulk: async (req, res) => {
-        return res.status(405).json({ status: "error", mensaje: "No se pueden eliminar personas en lote. Use 'Dar de baja' en su lugar." });
+        return res.status(405).json({ status: "error", mensaje: "No se pueden eliminar personas en lote de esta forma." });
     },
 
     debaja: async (req, res) => {
@@ -133,6 +133,21 @@ const personaController = {
                 });
             }
 
+            const usuarioId = req.usuario?.id;
+
+            await prisma.personaHistorico.create({
+                data: {
+                    persona_id: persona.id,
+                    matricula: persona.matricula,
+                    nombres: persona.nombres,
+                    apellidos: persona.apellidos,
+                    tipo: persona.tipo,
+                    curso: persona.curso,
+                    telefono: persona.telefono,
+                    usuario_id_baja: usuarioId,
+                }
+            });
+
             await prisma.persona.update({
                 where: { id: req.params.id },
                 data: { activo: false }
@@ -153,30 +168,117 @@ const personaController = {
                         select: {
                             prestamos_estudiante: {
                                 where: { estado: { in: ['ACTIVO', 'PENDIENTE', 'VENCIDO'] } }
+                            },
+                            prestamos_instructor: {
+                                where: { estado: { in: ['ACTIVO', 'PENDIENTE', 'VENCIDO'] } }
                             }
                         }
                     }
                 }
             });
 
-            const sinPrestamos = estudiantes.filter(e => e._count.prestamos_estudiante === 0);
-            const conPrestamos = estudiantes.filter(e => e._count.prestamos_estudiante > 0);
+            const aHistorico = [];
+            const aEliminar = [];
+            const conPrestamos = [];
 
-            if (sinPrestamos.length > 0) {
+            for (const est of estudiantes) {
+                const curso = (est.curso || '').toUpperCase();
+                const tienePrestamos = est._count.prestamos_estudiante > 0 || est._count.prestamos_instructor > 0;
+
+                if (tienePrestamos) {
+                    conPrestamos.push(est);
+                    continue;
+                }
+
+                if (curso.startsWith('6TO')) {
+                    aHistorico.push(est);
+                } else {
+                    aEliminar.push(est);
+                }
+            }
+
+            const usuarioId = req.usuario?.id;
+
+            if (aHistorico.length > 0) {
+                for (const est of aHistorico) {
+                    await prisma.personaHistorico.create({
+                        data: {
+                            persona_id: est.id,
+                            matricula: est.matricula,
+                            nombres: est.nombres,
+                            apellidos: est.apellidos,
+                            tipo: est.tipo,
+                            curso: est.curso,
+                            telefono: est.telefono,
+                            usuario_id_baja: usuarioId,
+                        }
+                    });
+                }
                 await prisma.persona.updateMany({
-                    where: { id: { in: sinPrestamos.map(e => e.id) } },
+                    where: { id: { in: aHistorico.map(e => e.id) } },
                     data: { activo: false }
                 });
             }
 
+            if (aEliminar.length > 0) {
+                const ids = aEliminar.map(e => e.id);
+
+                await prisma.movimiento.updateMany({
+                    where: { persona_id: { in: ids } },
+                    data: { persona_id: null }
+                });
+
+                await prisma.prestamo.updateMany({
+                    where: { persona_id: { in: ids } },
+                    data: { persona_id: null }
+                });
+
+                await prisma.prestamo.updateMany({
+                    where: { instructor_id: { in: ids } },
+                    data: { instructor_id: null }
+                });
+
+                await prisma.persona.deleteMany({
+                    where: { id: { in: ids } }
+                });
+            }
+
             res.json({
-                message: `${sinPrestamos.length} estudiante(s) dado(s) de baja. ${conPrestamos.length} estudiante(s) no se dieron de baja porque tienen préstamos activos.`,
-                dadosBaja: sinPrestamos.length,
+                message: `${aHistorico.length} estudiante(s) de 6to pasado(s) a histórico. ${aEliminar.length} estudiante(s) de 4to/5to eliminado(s). ${conPrestamos.length} estudiante(s) no se movieron por tener préstamos activos.`,
+                pasadosHistorico: aHistorico.length,
+                eliminados: aEliminar.length,
                 omitidos: conPrestamos.length
             });
         } catch (error) {
             logger.error("Error en personas.debajaEstudiantes:", error);
             res.status(500).json({ status: "error", mensaje: "Error al dar de baja estudiantes" });
+        }
+    },
+
+    getHistorico: async (req, res) => {
+        try {
+            const { search } = req.query;
+            const where = {};
+            if (search) {
+                where.OR = [
+                    { nombres: { contains: search, mode: 'insensitive' } },
+                    { apellidos: { contains: search, mode: 'insensitive' } },
+                    { matricula: { contains: search, mode: 'insensitive' } },
+                ];
+            }
+            const historico = await prisma.personaHistorico.findMany({
+                where,
+                include: {
+                    usuario_baja: {
+                        select: { id: true, nombre: true, apellido: true, usuario: true }
+                    }
+                },
+                orderBy: { fecha_baja: 'desc' }
+            });
+            res.json(historico);
+        } catch (error) {
+            logger.error("Error en personas.getHistorico:", error);
+            res.status(500).json({ status: "error", mensaje: "Error al obtener historial" });
         }
     },
 
@@ -261,7 +363,10 @@ const personaController = {
                         if (existente) {
                             await prisma.persona.update({
                                 where: { id: existente.id },
-                                data: { nombres, apellidos, curso: curso || undefined, tipo }
+                                data: { nombres, apellidos, curso: curso || undefined, tipo, activo: true }
+                            });
+                            await prisma.personaHistorico.deleteMany({
+                                where: { persona_id: existente.id }
                             });
                             resultados.actualizados++;
                         } else {

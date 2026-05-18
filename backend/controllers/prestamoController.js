@@ -200,19 +200,18 @@ const prestamoController = {
                             cantidad_disponible: { decrement: detalle.cantidad },
                         }
                     });
-
-                    await tx.movimiento.create({
-                        data: {
-                            inventario_id: detalle.inventario_id,
-                            tipo: 'PRESTAMO',
-                            cantidad: detalle.cantidad,
-                            persona_id,
-                            usuario_id,
-                            prestamo_id: prestamo.id,
-                            observaciones: `Préstamo múltiple. ID: ${prestamo.id}`
-                        }
-                    });
                 }
+
+                await tx.movimiento.create({
+                    data: {
+                        tipo: 'PRESTAMO',
+                        cantidad: 0,
+                        persona_id,
+                        usuario_id,
+                        prestamo_id: prestamo.id,
+                        observaciones: `Préstamo múltiple. ID: ${prestamo.id}`
+                    }
+                });
 
                 return prestamo;
             });
@@ -551,12 +550,22 @@ const prestamoController = {
             });
             if (!prestamo) return res.status(404).json({ status: "error", mensaje: "Préstamo no encontrado" });
 
+            await prisma.prestamo.update({
+                where: { id: prestamo.id },
+                data: { veces_impreso: { increment: 1 } }
+            });
+            const esDuplicado = prestamo.veces_impreso > 0;
+
             const doc = new PDFDocument({ size: 'A4', margin: 50 });
             res.setHeader('Content-Type', 'application/pdf');
             res.setHeader('Content-Disposition', `inline; filename=prestamo-${prestamo.id}.pdf`);
             doc.pipe(res);
 
-            doc.fontSize(22).font('Helvetica-Bold').text('COMPROBANTE DE PRÉSTAMO', { align: 'center' });
+            doc.fontSize(22).font('Helvetica-Bold').fillColor('#333').text('COMPROBANTE DE PRÉSTAMO', { align: 'center' });
+            if (esDuplicado) {
+                doc.moveDown(0.3);
+                doc.fontSize(14).font('Helvetica-Bold').fillColor('#cc0000').text('** DUPLICADO **', { align: 'center' });
+            }
             doc.moveDown();
             doc.fontSize(10).font('Helvetica').fillColor('#666').text(`Fecha: ${new Date().toLocaleDateString('es-DO')}`, { align: 'right' });
             doc.text(`ID: ${prestamo.id}`, { align: 'right' });
@@ -571,18 +580,8 @@ const prestamoController = {
             let currentY = doc.y;
 
             doc.fontSize(10).font('Helvetica').fillColor('#555');
-            doc.text('Estado:', startX, currentY, { continued: true });
-            doc.fillColor('#333').text(` ${prestamo.estado}`, { continued: false });
-
-            currentY = doc.y;
-            doc.fillColor('#555').text('Fecha de préstamo:', startX, currentY, { continued: true });
-            doc.fillColor('#333').text(` ${prestamo.fecha_prestamo ? new Date(prestamo.fecha_prestamo).toLocaleDateString('es-DO') : 'N/A'}`, { continued: false });
-
-            if (prestamo.fecha_devolucion) {
-                currentY = doc.y;
-                doc.fillColor('#555').text('Fecha de devolución:', startX, currentY, { continued: true });
-                doc.fillColor('#333').text(` ${new Date(prestamo.fecha_devolucion).toLocaleDateString('es-DO')}`, { continued: false });
-            }
+            doc.text('Fecha de préstamo:', startX, currentY, { continued: true });
+            doc.fillColor('#333').text(` ${prestamo.fecha_prestamo ? new Date(prestamo.fecha_prestamo).toLocaleString('es-DO', { dateStyle: 'long', timeStyle: 'short' }) : 'N/A'}`, { continued: false });
 
             doc.moveDown(2);
             doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#ccc').stroke();
@@ -616,7 +615,7 @@ const prestamoController = {
                     : [];
 
             if (articulos.length === 1) {
-                doc.fontSize(14).font('Helvetica-Bold').fillColor('#333').text('HERRAMIENTA');
+                doc.fontSize(14).font('Helvetica-Bold').fillColor('#333').text('ARTÍCULO');
                 doc.moveDown(0.5);
                 const art = articulos[0];
                 doc.fontSize(10).font('Helvetica').fillColor('#555').text(`Artículo: `, { continued: true });
@@ -647,7 +646,7 @@ const prestamoController = {
                     doc.fillColor('#333').text(`${art.cantidad_perdida}`);
                 }
             } else {
-                doc.fontSize(14).font('Helvetica-Bold').fillColor('#333').text('HERRAMIENTAS');
+                doc.fontSize(14).font('Helvetica-Bold').fillColor('#333').text('ARTÍCULOS');
                 doc.moveDown(0.5);
                 articulos.forEach((art, idx) => {
                     doc.fontSize(10).font('Helvetica').fillColor('#555').text(`${idx + 1}. `, { continued: true });
@@ -685,11 +684,19 @@ const prestamoController = {
                 doc.fillColor('#333').text(` ${prestamo.observaciones}`);
             }
 
-            doc.moveDown(3);
+            doc.moveDown(2);
             doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#ccc').stroke();
             doc.moveDown(1.5);
 
-            doc.fontSize(8).font('Helvetica').fillColor('#999').text('Este documento es un comprobante de préstamo de herramientas.', { align: 'center' });
+            if (prestamo.fecha_devolucion) {
+                doc.fontSize(12).font('Helvetica-Bold').fillColor('#333').text(
+                    `Fecha de devolución: ${new Date(prestamo.fecha_devolucion).toLocaleString('es-DO', { dateStyle: 'long', timeStyle: 'short' })}`,
+                    { align: 'center' }
+                );
+                doc.moveDown(2);
+            }
+
+            doc.fontSize(8).font('Helvetica').fillColor('#999').text('Este documento es un comprobante de préstamo.', { align: 'center' });
             doc.text('Debe presentarse al momento de la devolución.', { align: 'center' });
             doc.text(`Generado por: ${prestamo.usuario?.nombre || prestamo.usuario?.usuario || 'Sistema'}`, { align: 'center' });
 
