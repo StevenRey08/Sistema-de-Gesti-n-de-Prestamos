@@ -14,10 +14,12 @@ export default function MiCuentaPage() {
   const [apellido, setApellido] = useState('');
   const [usuario, setUsuario] = useState('');
   const [email, setEmail] = useState('');
-  const [passwordActual, setPasswordActual] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
+  const [confirming, setConfirming] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -39,7 +41,7 @@ export default function MiCuentaPage() {
     void loadCurrentUser();
   }, [notify, user]);
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!user) return;
 
@@ -49,12 +51,8 @@ export default function MiCuentaPage() {
     }
 
     if (password) {
-      if (!passwordActual) {
-        detalles.push('Debes ingresar tu contraseña actual para cambiarla.');
-      } else if (password.length < 6) {
+      if (password.length < 6) {
         detalles.push('La nueva contraseña debe tener al menos 6 caracteres.');
-      } else if (passwordActual === password && password === confirmPassword) {
-        detalles.push('La nueva contraseña no puede ser igual a la actual. Por seguridad, elige una contraseña diferente.');
       }
     }
 
@@ -71,17 +69,26 @@ export default function MiCuentaPage() {
       return;
     }
 
-    setLoading(true);
+    setShowConfirm(true);
+  }
+
+  async function handleConfirm() {
+    if (!confirmPasswordInput) {
+      notify('error', 'Ingresa tu contraseña para confirmar.');
+      return;
+    }
+
+    setConfirming(true);
     try {
       const payload: Record<string, string> = {
         nombre: nombre.trim(),
         apellido: apellido.trim(),
         usuario: usuario.trim(),
         email: email.trim(),
+        contrasena_actual: confirmPasswordInput,
       };
       if (password) {
         payload.contrasena = password;
-        payload.contrasena_actual = passwordActual;
         payload.confirmar_contrasena = confirmPassword;
       }
 
@@ -89,15 +96,16 @@ export default function MiCuentaPage() {
       if (res.status === 'ok' && res.usuario) {
         updateCurrentUser(toSessionUser(res.usuario));
       }
-      setPasswordActual('');
       setPassword('');
       setConfirmPassword('');
+      setConfirmPasswordInput('');
+      setShowConfirm(false);
       notify('success', 'Tus datos fueron actualizados correctamente.');
     } catch (err) {
       const { message, details } = notifyErrorPayload(err, 'No se pudo actualizar el perfil.');
       notify('error', message, details);
     } finally {
-      setLoading(false);
+      setConfirming(false);
     }
   }
 
@@ -144,10 +152,6 @@ export default function MiCuentaPage() {
             <input className="soft-input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="correo@ejemplo.com" />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Contraseña actual</label>
-            <input type="password" className="soft-input" value={passwordActual} onChange={(e) => setPasswordActual(e.target.value)} placeholder="Necesaria para cambiar la contraseña" />
-          </div>
-          <div>
             <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Nueva contraseña</label>
             <input type="password" className="soft-input" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Déjala vacía si no quieres cambiarla" />
           </div>
@@ -156,10 +160,33 @@ export default function MiCuentaPage() {
             <input type="password" className="soft-input" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Repite la nueva contraseña" />
           </div>
           <div className="flex justify-end">
-            <button type="submit" disabled={loading} className="soft-btn-primary">{loading ? 'Guardando...' : 'Guardar cambios'}</button>
+            <button type="submit" className="soft-btn-primary">Guardar cambios</button>
           </div>
         </form>
       </div>
+
+      {showConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="rounded-2xl bg-white p-6 text-center shadow-2xl max-w-sm w-full space-y-4">
+            <p className="font-medium text-[var(--text-main)]">Confirmar cambios</p>
+            <p className="text-sm text-[var(--text-muted)]">Ingresa tu contraseña actual para guardar los cambios.</p>
+            <input type="password" autoFocus
+              value={confirmPasswordInput}
+              onChange={e => setConfirmPasswordInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleConfirm(); }}
+              placeholder="Contraseña actual"
+              className="soft-input w-full text-sm" />
+            <div className="flex justify-center gap-3">
+              <button onClick={() => { setShowConfirm(false); setConfirmPasswordInput(''); }}
+                className="soft-btn-secondary px-4 py-2 text-xs">Cancelar</button>
+              <button onClick={handleConfirm} disabled={confirming}
+                className="rounded-full bg-[var(--accent-strong)] px-6 py-2 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50">
+                {confirming ? 'Guardando...' : 'Confirmar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -36,6 +36,18 @@ export interface PersonaHistorico {
   fecha_baja: string;
   usuario_id_baja: string | null;
   usuario_baja?: { id: string; nombre: string; apellido: string; usuario: string } | null;
+  ultimo_prestamo?: {
+    id: string;
+    persona_id: string;
+    fecha_prestamo: string;
+    estado: string;
+    cantidad: number;
+    usuario?: { nombre: string; apellido: string } | null;
+    detalles?: {
+      cantidad: number;
+      inventario: { nombre: string; codigo: string } | null;
+    }[];
+  } | null;
 }
 
 export interface Ubicacion {
@@ -71,7 +83,7 @@ export interface ItemInventario {
   detalles_pedidos?: DetallePedido[];
 }
 
-export type EstadoPrestamo = 'ACTIVO' | 'DEVUELTO' | 'VENCIDO' | 'PENDIENTE' | string;
+export type EstadoPrestamo = 'PENDIENTE' | 'DEVUELTO' | 'VENCIDO' | string;
 
 export interface PrestamoDetalle {
   id: string;
@@ -175,8 +187,8 @@ export interface InventarioPayload {
 
 export interface PrestamoPayload {
   inventario_id: string;
-  persona_id: string;
-  instructor_id: string;
+  persona_id?: string;
+  instructor_id?: string;
   usuario_id: string;
   cantidad: number;
   fecha_devolucion?: string;
@@ -220,12 +232,6 @@ export interface RolePayload {
   descripcion?: string;
 }
 
-export interface Modulo {
-  id: string;
-  nombre: string;
-  descripcion?: string | null;
-}
-
 export interface Permiso {
   id: string;
   rol_id: string;
@@ -245,19 +251,6 @@ export interface PermisoPayload {
   ingresar: boolean;
   actualizar: boolean;
   eliminar: boolean;
-}
-
-export interface Usuario {
-  id: string;
-  nombre: string;
-  apellido: string;
-  usuario: string;
-  email?: string | null;
-  rol_id?: string | null;
-  tipo_documento?: string | null;
-  numero_documento?: string | null;
-  activo: boolean;
-  rol?: Role | null;
 }
 
 export interface UsuarioPayload {

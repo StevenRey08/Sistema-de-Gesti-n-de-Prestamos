@@ -42,7 +42,7 @@ npx prisma generate
 
 -npx prisma studio: Abre una interfaz visual en el navegador para gestionar los datos de las tablas sin necesidad de SQL.
 
--npx prisma migrate reset: Borra todos los datos y vuelve a crear las tablas desde cero (útil si el esquema se corrompe).
+-DS: Borra todos los datos y vuelve a crear las tablas desde cero (útil si el esquema se corrompe).
 
 -npx prisma db push: Sincroniza el esquema rápidamente sin crear archivos de migración (solo para desarrollo).
 

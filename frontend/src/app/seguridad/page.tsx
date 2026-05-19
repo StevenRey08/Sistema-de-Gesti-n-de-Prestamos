@@ -1,11 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { permisosApi, rolesApi, usuariosApi } from '../../lib/api';
-import type { Permiso, PermisoPayload, Role, Usuario, UsuarioPayload } from '../../lib/types';
+import { modulosApi, permisosApi, rolesApi, usuariosApi } from '../../lib/api';
+import type { Modulo, Permiso, PermisoPayload, Role, Usuario, UsuarioPayload } from '../../lib/types';
 import RoleForm from '../../components/seguridad/RoleForm';
 import UsuarioForm from '../../components/seguridad/UsuarioForm';
-import AuditoriaTab from '../../components/seguridad/AuditoriaTab';
 import PoliticasTab from '../../components/seguridad/PoliticasTab';
 import ReportesTab from '../../components/seguridad/ReportesTab';
 import FilterableSelect from '../../components/ui/FilterableSelect';
@@ -15,7 +14,7 @@ import { usePermiso } from '../../lib/permissions';
 import { useNotification } from '../../components/ui/NotificationContext';
 import { notifyErrorPayload } from '../../lib/errors';
 
-type TabKey = 'reportes' | 'roles' | 'permisos' | 'usuarios' | 'politicas' | 'auditoria';
+type TabKey = 'reportes' | 'roles' | 'permisos' | 'usuarios' | 'politicas';
 
 const EMPTY_PERMISSION: PermisoPayload = {
   rol_id: '',
@@ -34,6 +33,7 @@ export default function SeguridadPage() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permiso[]>([]);
   const [users, setUsers] = useState<Usuario[]>([]);
+  const [modules, setModules] = useState<Modulo[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [showRoleForm, setShowRoleForm] = useState(false);
@@ -51,15 +51,17 @@ export default function SeguridadPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [rolesData, permissionsData, usersData] = await Promise.all([
+      const [rolesData, permissionsData, usersData, modulesData] = await Promise.all([
         rolesApi.getAll() as Promise<Role[]>,
         permisosApi.getAll() as Promise<Permiso[]>,
         usuariosApi.getAll() as Promise<Usuario[]>,
+        modulosApi.getAll() as Promise<Modulo[]>,
       ]);
 
       setRoles(rolesData);
       setPermissions(permissionsData);
       setUsers(usersData);
+      setModules(modulesData);
       setPermissionForm((prev) => ({
         ...prev,
         rol_id: prev.rol_id || '',
@@ -86,17 +88,11 @@ export default function SeguridadPage() {
   );
 
   const moduleOptions = useMemo(() => {
-    const uniqueModules = new Map<string, { value: string; label: string }>();
-    permissions.forEach((permission) => {
-      if (permission.modulo?.id && permission.modulo?.nombre) {
-        uniqueModules.set(permission.modulo.id, {
-          value: permission.modulo.id,
-          label: permission.modulo.nombre,
-        });
-      }
-    });
-    return [...uniqueModules.values()].sort((a, b) => a.label.localeCompare(b.label));
-  }, [permissions]);
+    return modules
+      .filter(m => m.activo)
+      .map(m => ({ value: m.id, label: m.nombre }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [modules]);
 
   const filteredRoles = useMemo(() => {
     const term = roleSearch.trim().toLowerCase();
@@ -260,7 +256,6 @@ export default function SeguridadPage() {
             { key: 'permisos', label: 'Permisos' },
             { key: 'usuarios', label: 'Usuarios' },
             { key: 'politicas', label: 'Políticas' },
-            { key: 'auditoria', label: 'Auditoría' },
           ] as const).map((tab) => (
             <button
               key={tab.key}
@@ -522,8 +517,6 @@ export default function SeguridadPage() {
       {activeTab === 'reportes' && <ReportesTab />}
 
       {activeTab === 'politicas' && <PoliticasTab />}
-
-      {activeTab === 'auditoria' && <AuditoriaTab />}
 
       {showRoleForm && (
         <div className="modal-backdrop">

@@ -49,7 +49,7 @@ const authController = {
                         accion: 'LOGIN_FALLIDO',
                         modulo: 'AUTENTICACION',
                         descripcion: `Intento de login con usuario inexistente: ${usuario}`,
-                        ip: req.ip || req.connection.remoteAddress,
+                        ip: req.ip || req.socket.remoteAddress,
                         user_agent: req.get('User-Agent'),
                         detalles: { usuario }
                     }
@@ -64,7 +64,7 @@ const authController = {
                         accion: 'LOGIN_FALLIDO',
                         modulo: 'AUTENTICACION',
                         descripcion: `Intento de login con usuario desactivado: ${usuario}`,
-                        ip: req.ip || req.connection.remoteAddress,
+                        ip: req.ip || req.socket.remoteAddress,
                         user_agent: req.get('User-Agent'),
                         detalles: { usuario_id: user.id }
                     }
@@ -79,7 +79,7 @@ const authController = {
                         accion: 'LOGIN_FALLIDO',
                         modulo: 'AUTENTICACION',
                         descripcion: `Intento de login con usuario bloqueado: ${usuario}`,
-                        ip: req.ip || req.connection.remoteAddress,
+                        ip: req.ip || req.socket.remoteAddress,
                         user_agent: req.get('User-Agent'),
                         detalles: { usuario_id: user.id, bloqueado_hasta: user.bloqueado_hasta }
                     }
@@ -112,7 +112,7 @@ const authController = {
                         accion: 'LOGIN_FALLIDO',
                         modulo: 'AUTENTICACION',
                         descripcion: `Contraseña incorrecta para ${usuario}. Intento ${nuevosIntentos}`,
-                        ip: req.ip || req.connection.remoteAddress,
+                        ip: req.ip || req.socket.remoteAddress,
                         user_agent: req.get('User-Agent'),
                         detalles: { usuario_id: user.id, intento: nuevosIntentos, bloqueado: !!bloqueadoHasta }
                     }
@@ -152,7 +152,7 @@ const authController = {
                 data: {
                     usuario_id: user.id,
                     token,
-                    ip: req.ip || req.connection.remoteAddress,
+                    ip: req.ip || req.socket.remoteAddress,
                     user_agent: req.get('User-Agent')
                 }
             });
@@ -163,7 +163,7 @@ const authController = {
                     accion: 'LOGIN',
                     modulo: 'AUTENTICACION',
                     descripcion: `Inicio de sesión exitoso: ${usuario}`,
-                    ip: req.ip || req.connection.remoteAddress,
+                    ip: req.ip || req.socket.remoteAddress,
                     user_agent: req.get('User-Agent'),
                     detalles: { usuario_id: user.id }
                 }
@@ -202,7 +202,7 @@ const authController = {
                         accion: 'LOGOUT',
                         modulo: 'AUTENTICACION',
                         descripcion: `Cierre de sesión: ${req.usuario.usuario}`,
-                        ip: req.ip || req.connection.remoteAddress,
+                        ip: req.ip || req.socket.remoteAddress,
                         user_agent: req.get('User-Agent'),
                         detalles: { usuario_id: req.usuario.id }
                     }
@@ -253,14 +253,15 @@ const authController = {
                 return res.status(401).json({ status: "error", mensaje: "Usuario no encontrado" });
             }
 
+            if (!contrasena_actual) {
+                return res.status(400).json({ status: "error", mensaje: "Debe ingresar su contraseña actual para confirmar los cambios." });
+            }
+            const match = await bcrypt.compare(contrasena_actual, currentUser.contrasena);
+            if (!match) {
+                return res.status(400).json({ status: "error", mensaje: "La contraseña actual no es correcta." });
+            }
+
             if (contrasena) {
-                if (!contrasena_actual) {
-                    return res.status(400).json({ status: "error", mensaje: "Debe ingresar su contraseña actual para cambiarla." });
-                }
-                const match = await bcrypt.compare(contrasena_actual, currentUser.contrasena);
-                if (!match) {
-                    return res.status(400).json({ status: "error", mensaje: "La contraseña actual no es correcta." });
-                }
                 if (contrasena_actual === contrasena && contrasena === confirmar_contrasena) {
                     return res.status(400).json({ status: "error", mensaje: "La nueva contraseña no puede ser igual a la actual. Por seguridad, elige una contraseña diferente." });
                 }
@@ -281,7 +282,7 @@ const authController = {
             }
 
             if (email && email !== currentUser.email) {
-                const existe = await prisma.usuario.findUnique({ where: { email } });
+                const existe = await prisma.usuario.findFirst({ where: { email } });
                 if (existe) {
                     return res.status(400).json({ status: "error", mensaje: "El correo electrónico ya está en uso" });
                 }
@@ -322,7 +323,7 @@ const authController = {
         const { email } = req.body;
 
         try {
-            const user = await prisma.usuario.findUnique({ where: { email } });
+            const user = await prisma.usuario.findFirst({ where: { email } });
             if (!user) {
                 return res.status(404).json({ status: "error", mensaje: "No existe una cuenta con ese correo electrónico." });
             }
@@ -401,7 +402,7 @@ const authController = {
             }
 
             const hashedPassword = await bcrypt.hash(nueva_contrasena, 10);
-            await prisma.usuario.update({
+            await prisma.usuario.updateMany({
                 where: { email },
                 data: { contrasena: hashedPassword }
             });

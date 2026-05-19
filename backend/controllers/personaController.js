@@ -37,10 +37,10 @@ const personaController = {
                     _count: {
                         select: {
                             prestamos_estudiante: {
-                                where: { estado: { in: ['ACTIVO', 'PENDIENTE', 'VENCIDO'] } }
+                                where: { estado: { in: ['PENDIENTE', 'VENCIDO'] } }
                             },
                             prestamos_instructor: {
-                                where: { estado: { in: ['ACTIVO', 'PENDIENTE', 'VENCIDO'] } }
+                                where: { estado: { in: ['PENDIENTE', 'VENCIDO'] } }
                             }
                         }
                     }
@@ -109,44 +109,69 @@ const personaController = {
     debaja: async (req, res) => {
         try {
             const persona = await prisma.persona.findUnique({
-                where: { id: req.params.id },
-                include: {
-                    _count: {
-                        select: {
-                            prestamos_estudiante: {
-                                where: { estado: { in: ['ACTIVO', 'PENDIENTE', 'VENCIDO'] } }
-                            },
-                            prestamos_instructor: {
-                                where: { estado: { in: ['ACTIVO', 'PENDIENTE', 'VENCIDO'] } }
-                            }
-                        }
-                    }
-                }
+                where: { id: req.params.id }
             });
             if (!persona) return res.status(404).json({ status: "error", mensaje: "Persona no encontrada" });
 
-            const prestamosActivos = persona._count.prestamos_estudiante + persona._count.prestamos_instructor;
-            if (prestamosActivos > 0) {
+            const prestamosPersona = await prisma.prestamo.findMany({
+                where: { persona_id: persona.id },
+                select: { estado: true }
+            });
+
+            const tieneActivos = prestamosPersona.some(p =>
+                ['PENDIENTE', 'VENCIDO'].includes(p.estado)
+            );
+            if (tieneActivos) {
                 return res.status(400).json({
                     status: "error",
-                    mensaje: `No se puede dar de baja a "${persona.nombres} ${persona.apellidos}" porque tiene ${prestamosActivos} préstamo(s) pendiente(s).`
+                    mensaje: `No se puede dar de baja a "${persona.nombres} ${persona.apellidos}" porque tiene préstamos pendientes.`
                 });
             }
 
             const usuarioId = req.usuario?.id;
 
-            await prisma.personaHistorico.create({
-                data: {
-                    persona_id: persona.id,
-                    matricula: persona.matricula,
-                    nombres: persona.nombres,
-                    apellidos: persona.apellidos,
-                    tipo: persona.tipo,
-                    curso: persona.curso,
-                    telefono: persona.telefono,
-                    usuario_id_baja: usuarioId,
+            if (prestamosPersona.length === 0) {
+                await prisma.movimiento.updateMany({
+                    where: { persona_id: persona.id },
+                    data: { persona_id: null }
+                });
+                await prisma.prestamo.updateMany({
+                    where: { persona_id: persona.id },
+                    data: { persona_id: null }
+                });
+                await prisma.prestamo.updateMany({
+                    where: { instructor_id: persona.id },
+                    data: { instructor_id: null }
+                });
+                await prisma.persona.delete({
+                    where: { id: persona.id }
+                });
+                return res.json({ message: `"${persona.nombres} ${persona.apellidos}" eliminado porque nunca tuvo préstamos.` });
+            }
+
+            const yaEnHistorico = await prisma.personaHistorico.findFirst({
+                where: {
+                    OR: [
+                        { persona_id: persona.id },
+                        { matricula: persona.matricula },
+                    ]
                 }
             });
+
+            if (!yaEnHistorico) {
+                await prisma.personaHistorico.create({
+                    data: {
+                        persona_id: persona.id,
+                        matricula: persona.matricula,
+                        nombres: persona.nombres,
+                        apellidos: persona.apellidos,
+                        tipo: persona.tipo,
+                        curso: persona.curso,
+                        telefono: persona.telefono,
+                        usuario_id_baja: usuarioId,
+                    }
+                });
+            }
 
             await prisma.persona.update({
                 where: { id: req.params.id },
@@ -161,46 +186,108 @@ const personaController = {
 
     debajaEstudiantes: async (req, res) => {
         try {
+            await prisma.personaHistorico.deleteMany();
+
             const estudiantes = await prisma.persona.findMany({
                 where: { tipo: { equals: 'ESTUDIANTE', mode: 'insensitive' }, activo: true },
-                include: {
-                    _count: {
-                        select: {
-                            prestamos_estudiante: {
-                                where: { estado: { in: ['ACTIVO', 'PENDIENTE', 'VENCIDO'] } }
-                            },
-                            prestamos_instructor: {
-                                where: { estado: { in: ['ACTIVO', 'PENDIENTE', 'VENCIDO'] } }
-                            }
-                        }
-                    }
+            });
+
+            const ids = estudiantes.map(e => e.id);
+
+            const allPrestamos = await prisma.prestamo.findMany({
+                where: { persona_id: { in: ids } },
+                orderBy: { fecha_prestamo: 'desc' },
+                select: {
+                    id: true,
+                    persona_id: true,
+                    fecha_prestamo: true,
+                    estado: true,
+                    cantidad: true,
                 }
             });
+
+            const loansByPersona = {};
+            for (const p of allPrestamos) {
+                if (!loansByPersona[p.persona_id]) {
+                    loansByPersona[p.persona_id] = { count: 0, hasActive: false, lastLoan: null };
+                }
+                loansByPersona[p.persona_id].count++;
+                if (['PENDIENTE', 'VENCIDO'].includes(p.estado)) {
+                    loansByPersona[p.persona_id].hasActive = true;
+                }
+                if (!loansByPersona[p.persona_id].lastLoan) {
+                    loansByPersona[p.persona_id].lastLoan = {
+                        id: p.id,
+                        fecha_prestamo: p.fecha_prestamo,
+                        estado: p.estado,
+                        cantidad: p.cantidad,
+                    };
+                }
+            }
 
             const aHistorico = [];
             const aEliminar = [];
             const conPrestamos = [];
+            let nuevos = [];
 
             for (const est of estudiantes) {
                 const curso = (est.curso || '').toUpperCase();
-                const tienePrestamos = est._count.prestamos_estudiante > 0 || est._count.prestamos_instructor > 0;
+                if (!curso.startsWith('6TO')) continue;
 
-                if (tienePrestamos) {
+                const info = loansByPersona[est.id];
+
+                if (!info || info.count === 0) {
+                    aEliminar.push(est);
+                    continue;
+                }
+
+                if (info.hasActive) {
                     conPrestamos.push(est);
                     continue;
                 }
 
-                if (curso.startsWith('6TO')) {
-                    aHistorico.push(est);
-                } else {
-                    aEliminar.push(est);
-                }
+                aHistorico.push({ ...est, ultimo_prestamo: info.lastLoan });
             }
 
             const usuarioId = req.usuario?.id;
 
+            if (aEliminar.length > 0) {
+                const idsEliminar = aEliminar.map(e => e.id);
+                await prisma.movimiento.updateMany({
+                    where: { persona_id: { in: idsEliminar } },
+                    data: { persona_id: null }
+                });
+                await prisma.prestamo.updateMany({
+                    where: { persona_id: { in: idsEliminar } },
+                    data: { persona_id: null }
+                });
+                await prisma.prestamo.updateMany({
+                    where: { instructor_id: { in: idsEliminar } },
+                    data: { instructor_id: null }
+                });
+                await prisma.persona.deleteMany({
+                    where: { id: { in: idsEliminar } }
+                });
+            }
+
             if (aHistorico.length > 0) {
-                for (const est of aHistorico) {
+                const existentes = await prisma.personaHistorico.findMany({
+                    where: {
+                        OR: [
+                            { persona_id: { in: aHistorico.map(e => e.id) } },
+                            { matricula: { in: aHistorico.map(e => e.matricula).filter(Boolean) } },
+                        ]
+                    },
+                    select: { persona_id: true, matricula: true }
+                });
+                const idsDuplicados = new Set(existentes.map(e => e.persona_id));
+                const matsDuplicados = new Set(existentes.map(e => e.matricula).filter(Boolean));
+
+                nuevos = aHistorico.filter(est =>
+                    !idsDuplicados.has(est.id) && !matsDuplicados.has(est.matricula)
+                );
+
+                for (const est of nuevos) {
                     await prisma.personaHistorico.create({
                         data: {
                             persona_id: est.id,
@@ -214,38 +301,25 @@ const personaController = {
                         }
                     });
                 }
-                await prisma.persona.updateMany({
-                    where: { id: { in: aHistorico.map(e => e.id) } },
-                    data: { activo: false }
-                });
+                const idsAInactivar = nuevos.map(e => e.id);
+                if (idsAInactivar.length > 0) {
+                    await prisma.persona.updateMany({
+                        where: { id: { in: idsAInactivar } },
+                        data: { activo: false }
+                    });
+                }
             }
 
-            if (aEliminar.length > 0) {
-                const ids = aEliminar.map(e => e.id);
-
-                await prisma.movimiento.updateMany({
-                    where: { persona_id: { in: ids } },
-                    data: { persona_id: null }
-                });
-
-                await prisma.prestamo.updateMany({
-                    where: { persona_id: { in: ids } },
-                    data: { persona_id: null }
-                });
-
-                await prisma.prestamo.updateMany({
-                    where: { instructor_id: { in: ids } },
-                    data: { instructor_id: null }
-                });
-
-                await prisma.persona.deleteMany({
-                    where: { id: { in: ids } }
-                });
-            }
+            const msgs = [];
+            if (nuevos.length) msgs.push(`${nuevos.length} pasado(s) a histórico`);
+            if (aEliminar.length) msgs.push(`${aEliminar.length} eliminado(s) (nunca tuvieron préstamos)`);
+            if (conPrestamos.length) msgs.push(`${conPrestamos.length} omitido(s) por tener préstamos activos`);
+            const duplicados = aHistorico.length - nuevos.length;
+            if (duplicados) msgs.push(`${duplicados} omitido(s) por ya estar en histórico`);
 
             res.json({
-                message: `${aHistorico.length} estudiante(s) de 6to pasado(s) a histórico. ${aEliminar.length} estudiante(s) de 4to/5to eliminado(s). ${conPrestamos.length} estudiante(s) no se movieron por tener préstamos activos.`,
-                pasadosHistorico: aHistorico.length,
+                message: msgs.join('. ') + '.',
+                pasadosHistorico: nuevos.length,
                 eliminados: aEliminar.length,
                 omitidos: conPrestamos.length
             });
@@ -257,7 +331,7 @@ const personaController = {
 
     getHistorico: async (req, res) => {
         try {
-            const { search } = req.query;
+            const { search, curso, anio_matricula } = req.query;
             const where = {};
             if (search) {
                 where.OR = [
@@ -265,6 +339,15 @@ const personaController = {
                     { apellidos: { contains: search, mode: 'insensitive' } },
                     { matricula: { contains: search, mode: 'insensitive' } },
                 ];
+            }
+            if (curso) {
+                where.curso = { contains: curso, mode: 'insensitive' };
+            }
+            if (anio_matricula) {
+                where.matricula = {
+                    ...(where.matricula || {}),
+                    startsWith: anio_matricula,
+                };
             }
             const historico = await prisma.personaHistorico.findMany({
                 where,
@@ -275,7 +358,48 @@ const personaController = {
                 },
                 orderBy: { fecha_baja: 'desc' }
             });
-            res.json(historico);
+
+            const personaIds = historico
+                .filter(h => h.persona_id)
+                .map(h => h.persona_id);
+
+            let prestamoPorPersona = {};
+            if (personaIds.length > 0) {
+                const prestamos = await prisma.prestamo.findMany({
+                    where: { persona_id: { in: personaIds } },
+                    orderBy: { fecha_prestamo: 'desc' },
+                    select: {
+                        id: true,
+                        persona_id: true,
+                        fecha_prestamo: true,
+                        estado: true,
+                        cantidad: true,
+                        usuario: {
+                            select: { nombre: true, apellido: true }
+                        },
+                        detalles: {
+                            select: {
+                                cantidad: true,
+                                inventario: {
+                                    select: { nombre: true, codigo: true }
+                                }
+                            }
+                        }
+                    }
+                });
+                for (const p of prestamos) {
+                    if (!prestamoPorPersona[p.persona_id]) {
+                        prestamoPorPersona[p.persona_id] = p;
+                    }
+                }
+            }
+
+            const resultado = historico.map(h => ({
+                ...h,
+                ultimo_prestamo: h.persona_id ? (prestamoPorPersona[h.persona_id] || null) : null
+            }));
+
+            res.json(resultado);
         } catch (error) {
             logger.error("Error en personas.getHistorico:", error);
             res.status(500).json({ status: "error", mensaje: "Error al obtener historial" });

@@ -5,7 +5,7 @@ async function marcarVencidos() {
     try {
         await prisma.prestamo.updateMany({
             where: {
-                estado: 'ACTIVO',
+                estado: 'PENDIENTE',
                 fecha_devolucion: { lt: new Date() },
             },
             data: { estado: 'VENCIDO' }
@@ -31,7 +31,7 @@ const dashboardController = {
                 prisma.inventario.count(),
                 prisma.categoriaHerramienta.count(),
                 prisma.persona.count(),
-                prisma.prestamo.count({ where: { estado: 'ACTIVO' } }),
+                prisma.prestamo.count({ where: { estado: 'PENDIENTE' } }),
                 prisma.prestamo.count({ where: { estado: 'PENDIENTE' } }),
                 prisma.movimiento.findMany({
                     take: 5,

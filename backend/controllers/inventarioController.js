@@ -46,7 +46,7 @@ const inventarioController = {
                 by: ['inventario_id'],
                 where: {
                     inventario_id: { in: itemsIds },
-                    prestamo: { estado: { in: ['ACTIVO', 'VENCIDO'] } }
+                    prestamo: { estado: { in: ['PENDIENTE', 'VENCIDO'] } }
                 },
                 _sum: { cantidad: true }
             });
@@ -55,7 +55,7 @@ const inventarioController = {
                 by: ['inventario_id'],
                 where: {
                     inventario_id: { in: itemsIds },
-                    estado: { in: ['ACTIVO', 'VENCIDO'] }
+                    estado: { in: ['PENDIENTE', 'VENCIDO'] }
                 },
                 _sum: { cantidad: true }
             });
@@ -118,7 +118,7 @@ const inventarioController = {
             if (cantTotal < cantDanada) {
                 return res.status(400).json({ status: "error", mensaje: "La cantidad total no puede ser menor a la cantidad dañada." });
             }
-            if (cantDanada >= cantDisponible) {
+            if (cantDanada > cantDisponible) {
                 return res.status(400).json({ status: "error", mensaje: "No se pueden agregar más productos dañados que disponibles." });
             }
 
@@ -184,11 +184,11 @@ const inventarioController = {
             }
 
             const prestamosDirectos = await prisma.prestamo.aggregate({
-                where: { inventario_id: req.params.id, estado: { in: ['ACTIVO', 'VENCIDO'] } },
+                where: { inventario_id: req.params.id, estado: { in: ['PENDIENTE', 'VENCIDO'] } },
                 _sum: { cantidad: true }
             });
             const detallesActivos = await prisma.prestamoDetalle.aggregate({
-                where: { inventario_id: req.params.id, prestamo: { estado: { in: ['ACTIVO', 'VENCIDO'] } } },
+                where: { inventario_id: req.params.id, prestamo: { estado: { in: ['PENDIENTE', 'VENCIDO'] } } },
                 _sum: { cantidad: true }
             });
             const cantidadPrestada = (prestamosDirectos._sum.cantidad || 0) + (detallesActivos._sum.cantidad || 0);
@@ -210,7 +210,7 @@ const inventarioController = {
             if (nuevoTotal < nuevoDanada) {
                 return res.status(400).json({ status: "error", mensaje: "La cantidad total no puede ser menor a la cantidad dañada." });
             }
-            if (nuevoDanada >= nuevoDisponible) {
+            if (nuevoDanada > nuevoDisponible) {
                 return res.status(400).json({ status: "error", mensaje: "No se pueden agregar más productos dañados que disponibles." });
             }
 
@@ -261,10 +261,10 @@ const inventarioController = {
             if (!existente) return res.status(404).json({ status: "error", mensaje: "Artículo no encontrado" });
 
             const prestamosDirectos = await prisma.prestamo.count({
-                where: { inventario_id: req.params.id, estado: 'ACTIVO' }
+                where: { inventario_id: req.params.id, estado: 'PENDIENTE' }
             });
             const prestamosDetalles = await prisma.prestamoDetalle.count({
-                where: { inventario_id: req.params.id, prestamo: { estado: 'ACTIVO' } }
+                where: { inventario_id: req.params.id, prestamo: { estado: 'PENDIENTE' } }
             });
             if (prestamosDirectos > 0 || prestamosDetalles > 0) {
                 return res.status(400).json({

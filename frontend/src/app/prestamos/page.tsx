@@ -1,7 +1,7 @@
 ﻿'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
-import api, { prestamosApi, descargarPDFPrestamo, BASE_URL } from '../../lib/api';
+import api, { prestamosApi, descargarPDFPrestamo, getLocalStorageToken, BASE_URL } from '../../lib/api';
 import PrestamoForm from '../../components/catalogos/PrestamoForm';
 import type { Prestamo, PrestamoPayload, PrestamoDetalle } from '../../lib/types';
 import { useNotification } from '../../components/ui/NotificationContext';
@@ -11,9 +11,8 @@ import { notifyErrorPayload } from '../../lib/errors';
 const ORDEN_ESTADO: Record<string, number> = {
   VENCIDO: 0,
   ACTIVO: 1,
-  PENDIENTE: 2,
-  PERDIDO: 3,
-  DEVUELTO: 4,
+  PERDIDO: 2,
+  DEVUELTO: 3,
 };
 
 function fmt(fecha: string | null) {
@@ -173,7 +172,7 @@ export default function PrestamosPage() {
   }
 
   function abrirPdf(id: string) {
-    const token = localStorage.getItem('token') || JSON.parse(localStorage.getItem('sgp-session') || '{}')?.token || '';
+    const token = getLocalStorageToken() || '';
     const url = `${BASE_URL}/prestamos/${id}/pdf`;
     fetch(url, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.blob())
@@ -204,7 +203,7 @@ export default function PrestamosPage() {
     })
     .sort((a, b) => (ORDEN_ESTADO[a.estado] ?? 99) - (ORDEN_ESTADO[b.estado] ?? 99) || new Date(b.fecha_prestamo ?? 0).getTime() - new Date(a.fecha_prestamo ?? 0).getTime());
 
-  const activos = prestamos.filter((p: Prestamo) => p.estado === 'ACTIVO').length;
+  const activos = prestamos.filter((p: Prestamo) => p.estado === 'PENDIENTE').length;
   const vencidos = prestamos.filter((p: Prestamo) => p.estado === 'VENCIDO').length;
 
   return (
@@ -226,7 +225,7 @@ export default function PrestamosPage() {
       </div>
 
       <div className="flex gap-2 flex-wrap items-center">
-        {['todos', 'ACTIVO', 'VENCIDO', 'PENDIENTE', 'PERDIDO', 'DEVUELTO'].map(f => (
+        {['todos', 'PENDIENTE', 'VENCIDO', 'PERDIDO', 'DEVUELTO'].map(f => (
           <button key={f} onClick={() => setFiltro(f)}
             className={`filter-pill capitalize ${filtro === f ? 'active' : ''}`}>{f}</button>
         ))}

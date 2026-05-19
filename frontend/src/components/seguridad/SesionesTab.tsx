@@ -134,7 +134,7 @@ export default function SesionesTab() {
                       {revocando === sesion.id ? 'Revocando...' : 'Revocar'}
                     </button>
                     {sesion.usuario && (
-                      <button onClick={() => handleRevokeAll(sesion.usuario.id)}
+                      <button onClick={() => sesion.usuario && handleRevokeAll(sesion.usuario.id)}
                         className="text-sm font-medium text-[var(--accent-strong)]">
                         Revocar todas
                       </button>

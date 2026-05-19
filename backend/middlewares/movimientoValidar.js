@@ -24,7 +24,7 @@ const validarMovimiento = (req, res, next) => {
     }
 
     // 2. Validar tipo de movimiento
-    const tiposPermitidos = ['ENTRADA', 'SALIDA', 'TRASLADO', 'PRESTAMO'];
+    const tiposPermitidos = ['ENTRADA', 'SALIDA', 'TRASLADO', 'PRESTAMO', 'AJUSTE', 'DAÑADO', 'DEVUELTO', 'DEVUELTO_DANADO', 'PERDIDO', 'ELIMINACION', 'ACTUALIZACION_STOCK'];
     const tipoUpper = tipo?.toUpperCase();
 
     if (!tipo || !tiposPermitidos.includes(tipoUpper)) {

@@ -444,8 +444,10 @@ export default function PedidosPage() {
                       <button onClick={() => setEliminando(p.id)}
                         className="text-red-400 hover:text-red-500 text-xs font-medium">Eliminar</button>
                     )}
-                    <button onClick={() => window.open(`${BASE_URL}/pedidos/${p.id}/pdf`, '_blank')}
-                      className="text-purple-500 hover:text-purple-400 text-xs font-medium">PDF</button>
+                    {p.estado === 'PENDIENTE' && (
+                      <button onClick={() => window.open(`${BASE_URL}/pedidos/${p.id}/pdf`, '_blank')}
+                        className="text-purple-500 hover:text-purple-400 text-xs font-medium">PDF</button>
+                    )}
                   </td>
                 </tr>
               ))}

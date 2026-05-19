@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import api, { BACKEND_ORIGIN } from '../../lib/api';
+import api, { BACKEND_ORIGIN, getLocalStorageToken } from '../../lib/api';
 import type { ItemInventario } from '../../lib/types';
 import { useNotification } from '../../components/ui/NotificationContext';
 import { notifyErrorPayload } from '../../lib/errors';
@@ -64,13 +64,7 @@ export default function ReportesPage() {
     if (fechaInicio) params.set('fechaInicio', fechaInicio);
     if (fechaFin) params.set('fechaFin', fechaFin);
 
-    const token = (() => {
-      try {
-        const s = localStorage.getItem('sgp-session');
-        if (s && s !== 'undefined' && s !== 'null') return JSON.parse(s)?.token;
-        return localStorage.getItem('token') || '';
-      } catch { return ''; }
-    })();
+    const token = getLocalStorageToken() || '';
 
     const url = `${BACKEND_ORIGIN}/api/reportes/pdf?${params.toString()}`;
     fetch(url, { headers: { Authorization: `Bearer ${token}` }, credentials: 'include' })

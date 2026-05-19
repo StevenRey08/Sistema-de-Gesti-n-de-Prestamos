@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { personasApi } from '../../../lib/api';
+import { personasApi, BASE_URL, getLocalStorageToken } from '../../../lib/api';
 import api from '../../../lib/api';
 import PersonaForm from '../../../components/catalogos/PersonaForm';
 import type { Persona, PersonaPayload } from '../../../lib/types';
@@ -113,10 +113,10 @@ export default function PersonasPage() {
     const fd = new FormData();
     fd.append('file', file);
     try {
-      const res = await fetch('http://localhost:4000/api/personas/import-excel', {
+      const res = await fetch(`${BASE_URL}/personas/import-excel`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token') || JSON.parse(localStorage.getItem('sgp-session') || '{}').token || ''}`,
+          Authorization: `Bearer ${getLocalStorageToken() || ''}`,
         },
         body: fd,
       });
@@ -150,8 +150,8 @@ export default function PersonasPage() {
 
   async function handleDownloadTemplate() {
     try {
-      const token = localStorage.getItem('token') || JSON.parse(localStorage.getItem('sgp-session') || '{}').token || '';
-      const res = await fetch('http://localhost:4000/api/personas/download-template', {
+      const token = getLocalStorageToken() || '';
+      const res = await fetch(`${BASE_URL}/personas/download-template`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) { notify('error', 'Error al descargar plantilla'); return; }
@@ -386,7 +386,7 @@ export default function PersonasPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="rounded-2xl bg-white p-6 text-center shadow-2xl max-w-sm w-full space-y-4">
             <p className="font-medium text-[var(--text-main)]">¿Dar de baja a esta persona?</p>
-            <p className="text-sm text-[var(--text-muted)]">Se desactivará del sistema pero no se eliminará. No se puede dar de baja si tiene préstamos pendientes.</p>
+            <p className="text-sm text-[var(--text-muted)]">Si nunca tuvo préstamos se eliminará del sistema. Si tuvo préstamos pasará al histórico. No se puede dar de baja si tiene préstamos activos.</p>
             <div className="flex justify-center gap-3">
               <button onClick={() => setElim(null)}
                 className="soft-btn-secondary px-4 py-2 text-xs">Cancelar</button>
@@ -400,8 +400,8 @@ export default function PersonasPage() {
       {confirmarEliminarTodo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="rounded-2xl bg-white p-6 text-center shadow-2xl max-w-sm w-full space-y-4">
-            <p className="font-medium text-[var(--text-main)]">¿Dar de baja a todos los estudiantes?</p>
-            <p className="text-sm text-[var(--text-muted)]">Estudiantes de 6to sin préstamos → pasan a histórico. Estudiantes de 4to/5to sin préstamos → se eliminan del sistema. Los que tengan préstamos activos se quedan.</p>
+            <p className="font-medium text-[var(--text-main)]">¿Procesar estudiantes de 6to?</p>
+            <p className="text-sm text-[var(--text-muted)]">Los que tuvieron préstamos pasan al histórico. Los que nunca tuvieron préstamos se eliminan del sistema. Los que tengan préstamos activos se quedan.</p>
             <div className="flex justify-center gap-3">
               <button onClick={() => setConfirmarEliminarTodo(false)}
                 className="soft-btn-secondary px-4 py-2 text-xs">Cancelar</button>

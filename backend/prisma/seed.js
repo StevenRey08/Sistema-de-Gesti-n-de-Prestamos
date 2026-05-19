@@ -42,6 +42,7 @@ async function main() {
         { nombre: 'CATEGORIAS',  descripcion: 'Clasificación de herramientas' },
         { nombre: 'ROLES',       descripcion: 'Gestión de roles del sistema' },
         { nombre: 'PERMISOS',    descripcion: 'Asignación de permisos por rol' },
+        { nombre: 'PEDIDOS',     descripcion: 'Gestión de pedidos de abastecimiento' },
     ];
     for (const m of modulosData) {
         await prisma.modulo.upsert({
@@ -50,7 +51,7 @@ async function main() {
             create: m,
         });
     }
-    console.log('✅ Módulos creados (10)');
+    console.log(`✅ Módulos creados (${modulosData.length})`);
 
     // ────────────────────────────────────
     // 3. USUARIOS (5)
@@ -306,28 +307,28 @@ async function main() {
     const roberto = personaIds['PROF-001'];
     const anap = personaIds['PROF-002'];
 
-    const p1 = await prisma.prestamo.create({ data: { inventario_id: invIds['TLD-001'], persona_id: juan, usuario_id: operador.id, cantidad: 1, fecha_prestamo: new Date('2025-04-10'), fecha_devolucion: new Date('2025-04-12'), estado: 'DEVUELTO', observaciones: 'Taladro devuelto en buen estado' } });
-    const p2 = await prisma.prestamo.create({ data: { inventario_id: invIds['LLV-001'], persona_id: maria, usuario_id: operador.id, cantidad: 1, fecha_prestamo: new Date('2025-04-15'), estado: 'ACTIVO', observaciones: 'Llaves para práctica de taller' } });
-    const p3 = await prisma.prestamo.create({ data: { inventario_id: invIds['SRA-001'], persona_id: carlos, usuario_id: operador.id, cantidad: 1, fecha_prestamo: new Date('2025-04-20'), estado: 'ACTIVO', observaciones: 'Sierra para proyecto final' } });
-    const p4 = await prisma.prestamo.create({ data: { inventario_id: invIds['DST-001'], persona_id: ana, usuario_id: cmejia.id, cantidad: 3, fecha_prestamo: new Date('2025-05-02'), fecha_devolucion: new Date('2025-05-05'), estado: 'DEVUELTO', observaciones: 'Destornilladores para taller de electrónica' } });
-    const p5 = await prisma.prestamo.create({ data: { inventario_id: invIds['CAS-001'], persona_id: luis, usuario_id: rsantana.id, cantidad: 2, fecha_prestamo: new Date('2025-05-05'), estado: 'ACTIVO', observaciones: 'Cascos para visita a obra' } });
-    const p6 = await prisma.prestamo.create({ data: { inventario_id: invIds['FLEX-001'], persona_id: sofia, usuario_id: cmejia.id, cantidad: 1, fecha_prestamo: new Date('2025-05-08'), estado: 'PENDIENTE', observaciones: 'Flexómetro prestado para mediciones' } });
-    const p7 = await prisma.prestamo.create({ data: { inventario_id: invIds['MLL-001'], persona_id: pedro, usuario_id: operador.id, cantidad: 1, fecha_prestamo: new Date('2025-05-10'), estado: 'ACTIVO', observaciones: 'Martillo para trabajo de carpintería' } });
-    const p8 = await prisma.prestamo.create({ data: { inventario_id: invIds['TLD-002'], persona_id: roberto, usuario_id: operador.id, cantidad: 1, fecha_prestamo: new Date('2025-03-01'), fecha_devolucion: new Date('2025-03-05'), estado: 'DEVUELTO', observaciones: 'Taladro percutor devuelto' } });
-    const p9 = await prisma.prestamo.create({ data: { inventario_id: invIds['ESM-001'], persona_id: anap, usuario_id: rsantana.id, cantidad: 1, fecha_prestamo: new Date('2025-03-15'), fecha_devolucion: new Date('2025-03-16'), estado: 'DEVUELTO', observaciones: 'Esmeril para corte de metales' } });
-    const p10 = await prisma.prestamo.create({ data: { inventario_id: invIds['GNT-001'], persona_id: juan, usuario_id: operador.id, cantidad: 1, fecha_prestamo: new Date('2025-05-01'), estado: 'VENCIDO', observaciones: 'Guantes no devueltos aún' } });
+    const p1 = await prisma.prestamo.create({ data: { inventario_id: invIds['TLD-001'], persona_id: juan, usuario_id: operador.id, cantidad: 1, fecha_prestamo: new Date('2026-04-10'), fecha_devolucion: new Date('2026-04-12'), estado: 'DEVUELTO', observaciones: 'Taladro devuelto en buen estado' } });
+    const p2 = await prisma.prestamo.create({ data: { inventario_id: invIds['LLV-001'], persona_id: maria, usuario_id: operador.id, cantidad: 1, fecha_prestamo: new Date('2026-04-15'), estado: 'ACTIVO', observaciones: 'Llaves para práctica de taller' } });
+    const p3 = await prisma.prestamo.create({ data: { inventario_id: invIds['SRA-001'], persona_id: carlos, usuario_id: operador.id, cantidad: 1, fecha_prestamo: new Date('2026-04-20'), estado: 'ACTIVO', observaciones: 'Sierra para proyecto final' } });
+    const p4 = await prisma.prestamo.create({ data: { inventario_id: invIds['DST-001'], persona_id: ana, usuario_id: cmejia.id, cantidad: 3, fecha_prestamo: new Date('2026-05-02'), fecha_devolucion: new Date('2026-05-05'), estado: 'DEVUELTO', observaciones: 'Destornilladores para taller de electrónica' } });
+    const p5 = await prisma.prestamo.create({ data: { inventario_id: invIds['CAS-001'], persona_id: luis, usuario_id: rsantana.id, cantidad: 2, fecha_prestamo: new Date('2026-05-05'), estado: 'ACTIVO', observaciones: 'Cascos para visita a obra' } });
+    const p6 = await prisma.prestamo.create({ data: { inventario_id: invIds['FLEX-001'], persona_id: sofia, usuario_id: cmejia.id, cantidad: 1, fecha_prestamo: new Date('2026-05-08'), estado: 'PENDIENTE', observaciones: 'Flexómetro prestado para mediciones' } });
+    const p7 = await prisma.prestamo.create({ data: { inventario_id: invIds['MLL-001'], persona_id: pedro, usuario_id: operador.id, cantidad: 1, fecha_prestamo: new Date('2026-05-10'), estado: 'ACTIVO', observaciones: 'Martillo para trabajo de carpintería' } });
+    const p8 = await prisma.prestamo.create({ data: { inventario_id: invIds['TLD-002'], persona_id: roberto, usuario_id: operador.id, cantidad: 1, fecha_prestamo: new Date('2026-03-01'), fecha_devolucion: new Date('2026-03-05'), estado: 'DEVUELTO', observaciones: 'Taladro percutor devuelto' } });
+    const p9 = await prisma.prestamo.create({ data: { inventario_id: invIds['ESM-001'], persona_id: anap, usuario_id: rsantana.id, cantidad: 1, fecha_prestamo: new Date('2026-03-15'), fecha_devolucion: new Date('2026-03-16'), estado: 'DEVUELTO', observaciones: 'Esmeril para corte de metales' } });
+    const p10 = await prisma.prestamo.create({ data: { inventario_id: invIds['GNT-001'], persona_id: juan, usuario_id: operador.id, cantidad: 1, fecha_prestamo: new Date('2026-05-01'), estado: 'VENCIDO', observaciones: 'Guantes no devueltos aún' } });
 
     // Prestamos adicionales (para que algunos items tengan multiples prestamos)
-    const p11 = await prisma.prestamo.create({ data: { inventario_id: invIds['TLD-001'], persona_id: ana, usuario_id: operador.id, cantidad: 1, fecha_prestamo: new Date('2025-02-10'), fecha_devolucion: new Date('2025-02-12'), estado: 'DEVUELTO', observaciones: 'Taladro prestado para proyecto de electrónica' } });
-    const p12 = await prisma.prestamo.create({ data: { inventario_id: invIds['TLD-001'], persona_id: roberto, usuario_id: cmejia.id, cantidad: 1, fecha_prestamo: new Date('2025-01-20'), fecha_devolucion: new Date('2025-01-22'), estado: 'DEVUELTO', observaciones: 'Taladro usado en taller de mantenimiento' } });
-    const p13 = await prisma.prestamo.create({ data: { inventario_id: invIds['DST-001'], persona_id: carlos, usuario_id: rsantana.id, cantidad: 2, fecha_prestamo: new Date('2025-04-01'), fecha_devolucion: new Date('2025-04-03'), estado: 'DEVUELTO', observaciones: 'Destornilladores para feria tecnica' } });
-    const p14 = await prisma.prestamo.create({ data: { inventario_id: invIds['DST-001'], persona_id: luis, usuario_id: operador.id, cantidad: 1, fecha_prestamo: new Date('2025-03-10'), fecha_devolucion: new Date('2025-03-11'), estado: 'DEVUELTO', observaciones: 'Destornillador para reparacion' } });
-    const p15 = await prisma.prestamo.create({ data: { inventario_id: invIds['DST-002'], persona_id: juan, usuario_id: operador.id, cantidad: 2, fecha_prestamo: new Date('2025-05-01'), estado: 'ACTIVO', observaciones: 'Destornilladores estrella para taller' } });
-    const p16 = await prisma.prestamo.create({ data: { inventario_id: invIds['DST-002'], persona_id: maria, usuario_id: cmejia.id, cantidad: 1, fecha_prestamo: new Date('2025-04-20'), fecha_devolucion: new Date('2025-04-22'), estado: 'DEVUELTO', observaciones: 'Destornillador estrella devuelto' } });
-    const p17 = await prisma.prestamo.create({ data: { inventario_id: invIds['LLV-001'], persona_id: sofia, usuario_id: operador.id, cantidad: 1, fecha_prestamo: new Date('2025-05-12'), estado: 'ACTIVO', observaciones: 'Llaves Allen para practica' } });
-    const p18 = await prisma.prestamo.create({ data: { inventario_id: invIds['MLL-001'], persona_id: anap, usuario_id: rsantana.id, cantidad: 1, fecha_prestamo: new Date('2025-04-25'), fecha_devolucion: new Date('2025-04-26'), estado: 'DEVUELTO', observaciones: 'Martillo para exposicion' } });
-    const p19 = await prisma.prestamo.create({ data: { inventario_id: invIds['CAS-001'], persona_id: pedro, usuario_id: operador.id, cantidad: 1, fecha_prestamo: new Date('2025-05-08'), estado: 'ACTIVO', observaciones: 'Casco para obra externa' } });
-    const p20 = await prisma.prestamo.create({ data: { inventario_id: invIds['LNT-001'], persona_id: luis, usuario_id: cmejia.id, cantidad: 2, fecha_prestamo: new Date('2025-05-10'), estado: 'PENDIENTE', observaciones: 'Lentes para grupo de trabajo' } });
+    const p11 = await prisma.prestamo.create({ data: { inventario_id: invIds['TLD-001'], persona_id: ana, usuario_id: operador.id, cantidad: 1, fecha_prestamo: new Date('2026-02-10'), fecha_devolucion: new Date('2026-02-12'), estado: 'DEVUELTO', observaciones: 'Taladro prestado para proyecto de electrónica' } });
+    const p12 = await prisma.prestamo.create({ data: { inventario_id: invIds['TLD-001'], persona_id: roberto, usuario_id: cmejia.id, cantidad: 1, fecha_prestamo: new Date('2026-01-20'), fecha_devolucion: new Date('2026-01-22'), estado: 'DEVUELTO', observaciones: 'Taladro usado en taller de mantenimiento' } });
+    const p13 = await prisma.prestamo.create({ data: { inventario_id: invIds['DST-001'], persona_id: carlos, usuario_id: rsantana.id, cantidad: 2, fecha_prestamo: new Date('2026-04-01'), fecha_devolucion: new Date('2026-04-03'), estado: 'DEVUELTO', observaciones: 'Destornilladores para feria tecnica' } });
+    const p14 = await prisma.prestamo.create({ data: { inventario_id: invIds['DST-001'], persona_id: luis, usuario_id: operador.id, cantidad: 1, fecha_prestamo: new Date('2026-03-10'), fecha_devolucion: new Date('2026-03-11'), estado: 'DEVUELTO', observaciones: 'Destornillador para reparacion' } });
+    const p15 = await prisma.prestamo.create({ data: { inventario_id: invIds['DST-002'], persona_id: juan, usuario_id: operador.id, cantidad: 2, fecha_prestamo: new Date('2026-05-01'), estado: 'ACTIVO', observaciones: 'Destornilladores estrella para taller' } });
+    const p16 = await prisma.prestamo.create({ data: { inventario_id: invIds['DST-002'], persona_id: maria, usuario_id: cmejia.id, cantidad: 1, fecha_prestamo: new Date('2026-04-20'), fecha_devolucion: new Date('2026-04-22'), estado: 'DEVUELTO', observaciones: 'Destornillador estrella devuelto' } });
+    const p17 = await prisma.prestamo.create({ data: { inventario_id: invIds['LLV-001'], persona_id: sofia, usuario_id: operador.id, cantidad: 1, fecha_prestamo: new Date('2026-05-12'), estado: 'ACTIVO', observaciones: 'Llaves Allen para practica' } });
+    const p18 = await prisma.prestamo.create({ data: { inventario_id: invIds['MLL-001'], persona_id: anap, usuario_id: rsantana.id, cantidad: 1, fecha_prestamo: new Date('2026-04-25'), fecha_devolucion: new Date('2026-04-26'), estado: 'DEVUELTO', observaciones: 'Martillo para exposicion' } });
+    const p19 = await prisma.prestamo.create({ data: { inventario_id: invIds['CAS-001'], persona_id: pedro, usuario_id: operador.id, cantidad: 1, fecha_prestamo: new Date('2026-05-08'), estado: 'ACTIVO', observaciones: 'Casco para obra externa' } });
+    const p20 = await prisma.prestamo.create({ data: { inventario_id: invIds['LNT-001'], persona_id: luis, usuario_id: cmejia.id, cantidad: 2, fecha_prestamo: new Date('2026-05-10'), estado: 'PENDIENTE', observaciones: 'Lentes para grupo de trabajo' } });
 
     const prestamos = [p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16, p17, p18, p19, p20];
     console.log('✅ Préstamos creados (20)');
@@ -338,67 +339,67 @@ async function main() {
     await prisma.movimiento.createMany({
         data: [
             // Entradas iniciales (carga de inventario)
-            { inventario_id: invIds['LLV-001'], usuario_id: admin.id, cantidad: 18, tipo: 'ENTRADA', observaciones: 'Carga inicial de inventario', fecha: new Date('2025-01-15') },
-            { inventario_id: invIds['DST-001'], usuario_id: admin.id, cantidad: 28, tipo: 'ENTRADA', observaciones: 'Carga inicial de inventario', fecha: new Date('2025-01-15') },
-            { inventario_id: invIds['CBL-001'], usuario_id: admin.id, cantidad: 50, tipo: 'ENTRADA', observaciones: 'Carga inicial de inventario', fecha: new Date('2025-01-15') },
-            { inventario_id: invIds['SOL-001'], usuario_id: admin.id, cantidad: 2,  tipo: 'ENTRADA', observaciones: 'Compra nueva soldadora', fecha: new Date('2025-02-01') },
-            { inventario_id: invIds['COM-001'], usuario_id: admin.id, cantidad: 1,  tipo: 'ENTRADA', observaciones: 'Compra compresor usado', fecha: new Date('2025-02-01') },
+            { inventario_id: invIds['LLV-001'], usuario_id: admin.id, cantidad: 18, tipo: 'ENTRADA', observaciones: 'Carga inicial de inventario', fecha: new Date('2026-01-15') },
+            { inventario_id: invIds['DST-001'], usuario_id: admin.id, cantidad: 28, tipo: 'ENTRADA', observaciones: 'Carga inicial de inventario', fecha: new Date('2026-01-15') },
+            { inventario_id: invIds['CBL-001'], usuario_id: admin.id, cantidad: 50, tipo: 'ENTRADA', observaciones: 'Carga inicial de inventario', fecha: new Date('2026-01-15') },
+            { inventario_id: invIds['SOL-001'], usuario_id: admin.id, cantidad: 2,  tipo: 'ENTRADA', observaciones: 'Compra nueva soldadora', fecha: new Date('2026-02-01') },
+            { inventario_id: invIds['COM-001'], usuario_id: admin.id, cantidad: 1,  tipo: 'ENTRADA', observaciones: 'Compra compresor usado', fecha: new Date('2026-02-01') },
             // p1: TLD-001 devuelto
-            { inventario_id: invIds['TLD-001'], persona_id: juan, usuario_id: operador.id, prestamo_id: p1.id, cantidad: 1, tipo: 'SALIDA',  observaciones: 'Salida prestamo - Taladro', fecha: new Date('2025-04-10') },
-            { inventario_id: invIds['TLD-001'], persona_id: juan, usuario_id: operador.id, prestamo_id: p1.id, cantidad: 1, tipo: 'ENTRADA', observaciones: 'Devolucion - Taladro', fecha: new Date('2025-04-12') },
+            { inventario_id: invIds['TLD-001'], persona_id: juan, usuario_id: operador.id, prestamo_id: p1.id, cantidad: 1, tipo: 'SALIDA',  observaciones: 'Salida prestamo - Taladro', fecha: new Date('2026-04-10') },
+            { inventario_id: invIds['TLD-001'], persona_id: juan, usuario_id: operador.id, prestamo_id: p1.id, cantidad: 1, tipo: 'ENTRADA', observaciones: 'Devolucion - Taladro', fecha: new Date('2026-04-12') },
             // p2: LLV-001 activo
-            { inventario_id: invIds['LLV-001'], persona_id: maria, usuario_id: operador.id, prestamo_id: p2.id, cantidad: 1, tipo: 'SALIDA',  observaciones: 'Salida - Llaves Allen', fecha: new Date('2025-04-15') },
+            { inventario_id: invIds['LLV-001'], persona_id: maria, usuario_id: operador.id, prestamo_id: p2.id, cantidad: 1, tipo: 'SALIDA',  observaciones: 'Salida - Llaves Allen', fecha: new Date('2026-04-15') },
             // p3: SRA-001 activo
-            { inventario_id: invIds['SRA-001'], persona_id: carlos, usuario_id: operador.id, prestamo_id: p3.id, cantidad: 1, tipo: 'SALIDA',  observaciones: 'Salida - Sierra Circular', fecha: new Date('2025-04-20') },
+            { inventario_id: invIds['SRA-001'], persona_id: carlos, usuario_id: operador.id, prestamo_id: p3.id, cantidad: 1, tipo: 'SALIDA',  observaciones: 'Salida - Sierra Circular', fecha: new Date('2026-04-20') },
             // p4: DST-001 devuelto
-            { inventario_id: invIds['DST-001'], persona_id: ana, usuario_id: cmejia.id, prestamo_id: p4.id, cantidad: 3, tipo: 'SALIDA',  observaciones: 'Salida - Destornilladores', fecha: new Date('2025-05-02') },
-            { inventario_id: invIds['DST-001'], persona_id: ana, usuario_id: cmejia.id, prestamo_id: p4.id, cantidad: 3, tipo: 'ENTRADA', observaciones: 'Devolucion - Destornilladores', fecha: new Date('2025-05-05') },
+            { inventario_id: invIds['DST-001'], persona_id: ana, usuario_id: cmejia.id, prestamo_id: p4.id, cantidad: 3, tipo: 'SALIDA',  observaciones: 'Salida - Destornilladores', fecha: new Date('2026-05-02') },
+            { inventario_id: invIds['DST-001'], persona_id: ana, usuario_id: cmejia.id, prestamo_id: p4.id, cantidad: 3, tipo: 'ENTRADA', observaciones: 'Devolucion - Destornilladores', fecha: new Date('2026-05-05') },
             // p5: CAS-001 activo
-            { inventario_id: invIds['CAS-001'], persona_id: luis, usuario_id: rsantana.id, prestamo_id: p5.id, cantidad: 2, tipo: 'SALIDA',  observaciones: 'Salida - Cascos', fecha: new Date('2025-05-05') },
+            { inventario_id: invIds['CAS-001'], persona_id: luis, usuario_id: rsantana.id, prestamo_id: p5.id, cantidad: 2, tipo: 'SALIDA',  observaciones: 'Salida - Cascos', fecha: new Date('2026-05-05') },
             // p6: FLEX-001 pendiente
-            { inventario_id: invIds['FLEX-001'], persona_id: sofia, usuario_id: cmejia.id, prestamo_id: p6.id, cantidad: 1, tipo: 'SALIDA',  observaciones: 'Salida - Flexometro', fecha: new Date('2025-05-08') },
+            { inventario_id: invIds['FLEX-001'], persona_id: sofia, usuario_id: cmejia.id, prestamo_id: p6.id, cantidad: 1, tipo: 'SALIDA',  observaciones: 'Salida - Flexometro', fecha: new Date('2026-05-08') },
             // p7: MLL-001 activo
-            { inventario_id: invIds['MLL-001'], persona_id: pedro, usuario_id: operador.id, prestamo_id: p7.id, cantidad: 1, tipo: 'SALIDA',  observaciones: 'Salida - Martillo', fecha: new Date('2025-05-10') },
+            { inventario_id: invIds['MLL-001'], persona_id: pedro, usuario_id: operador.id, prestamo_id: p7.id, cantidad: 1, tipo: 'SALIDA',  observaciones: 'Salida - Martillo', fecha: new Date('2026-05-10') },
             // p8: TLD-002 devuelto
-            { inventario_id: invIds['TLD-002'], persona_id: roberto, usuario_id: operador.id, prestamo_id: p8.id, cantidad: 1, tipo: 'SALIDA',  observaciones: 'Salida - Taladro Percutor', fecha: new Date('2025-03-01') },
-            { inventario_id: invIds['TLD-002'], persona_id: roberto, usuario_id: operador.id, prestamo_id: p8.id, cantidad: 1, tipo: 'ENTRADA', observaciones: 'Devolucion - Taladro Percutor', fecha: new Date('2025-03-05') },
+            { inventario_id: invIds['TLD-002'], persona_id: roberto, usuario_id: operador.id, prestamo_id: p8.id, cantidad: 1, tipo: 'SALIDA',  observaciones: 'Salida - Taladro Percutor', fecha: new Date('2026-03-01') },
+            { inventario_id: invIds['TLD-002'], persona_id: roberto, usuario_id: operador.id, prestamo_id: p8.id, cantidad: 1, tipo: 'ENTRADA', observaciones: 'Devolucion - Taladro Percutor', fecha: new Date('2026-03-05') },
             // p9: ESM-001 devuelto
-            { inventario_id: invIds['ESM-001'], persona_id: anap, usuario_id: rsantana.id, prestamo_id: p9.id, cantidad: 1, tipo: 'SALIDA',  observaciones: 'Salida - Esmeril', fecha: new Date('2025-03-15') },
-            { inventario_id: invIds['ESM-001'], persona_id: anap, usuario_id: rsantana.id, prestamo_id: p9.id, cantidad: 1, tipo: 'ENTRADA', observaciones: 'Devolucion - Esmeril', fecha: new Date('2025-03-16') },
+            { inventario_id: invIds['ESM-001'], persona_id: anap, usuario_id: rsantana.id, prestamo_id: p9.id, cantidad: 1, tipo: 'SALIDA',  observaciones: 'Salida - Esmeril', fecha: new Date('2026-03-15') },
+            { inventario_id: invIds['ESM-001'], persona_id: anap, usuario_id: rsantana.id, prestamo_id: p9.id, cantidad: 1, tipo: 'ENTRADA', observaciones: 'Devolucion - Esmeril', fecha: new Date('2026-03-16') },
             // p10: GNT-001 vencido
-            { inventario_id: invIds['GNT-001'], persona_id: juan, usuario_id: operador.id, prestamo_id: p10.id, cantidad: 1, tipo: 'SALIDA',  observaciones: 'Salida - Guantes', fecha: new Date('2025-05-01') },
+            { inventario_id: invIds['GNT-001'], persona_id: juan, usuario_id: operador.id, prestamo_id: p10.id, cantidad: 1, tipo: 'SALIDA',  observaciones: 'Salida - Guantes', fecha: new Date('2026-05-01') },
             // p11: TLD-001 devuelto (2do prestamo del mismo item)
-            { inventario_id: invIds['TLD-001'], persona_id: ana, usuario_id: operador.id, prestamo_id: p11.id, cantidad: 1, tipo: 'SALIDA',  observaciones: 'Salida - Taladro (2da vez)', fecha: new Date('2025-02-10') },
-            { inventario_id: invIds['TLD-001'], persona_id: ana, usuario_id: operador.id, prestamo_id: p11.id, cantidad: 1, tipo: 'ENTRADA', observaciones: 'Devolucion - Taladro (2da vez)', fecha: new Date('2025-02-12') },
+            { inventario_id: invIds['TLD-001'], persona_id: ana, usuario_id: operador.id, prestamo_id: p11.id, cantidad: 1, tipo: 'SALIDA',  observaciones: 'Salida - Taladro (2da vez)', fecha: new Date('2026-02-10') },
+            { inventario_id: invIds['TLD-001'], persona_id: ana, usuario_id: operador.id, prestamo_id: p11.id, cantidad: 1, tipo: 'ENTRADA', observaciones: 'Devolucion - Taladro (2da vez)', fecha: new Date('2026-02-12') },
             // p12: TLD-001 devuelto (3er prestamo del mismo item)
-            { inventario_id: invIds['TLD-001'], persona_id: roberto, usuario_id: cmejia.id, prestamo_id: p12.id, cantidad: 1, tipo: 'SALIDA',  observaciones: 'Salida - Taladro (3ra vez)', fecha: new Date('2025-01-20') },
-            { inventario_id: invIds['TLD-001'], persona_id: roberto, usuario_id: cmejia.id, prestamo_id: p12.id, cantidad: 1, tipo: 'ENTRADA', observaciones: 'Devolucion - Taladro (3ra vez)', fecha: new Date('2025-01-22') },
+            { inventario_id: invIds['TLD-001'], persona_id: roberto, usuario_id: cmejia.id, prestamo_id: p12.id, cantidad: 1, tipo: 'SALIDA',  observaciones: 'Salida - Taladro (3ra vez)', fecha: new Date('2026-01-20') },
+            { inventario_id: invIds['TLD-001'], persona_id: roberto, usuario_id: cmejia.id, prestamo_id: p12.id, cantidad: 1, tipo: 'ENTRADA', observaciones: 'Devolucion - Taladro (3ra vez)', fecha: new Date('2026-01-22') },
             // p13: DST-001 devuelto (2do prestamo)
-            { inventario_id: invIds['DST-001'], persona_id: carlos, usuario_id: rsantana.id, prestamo_id: p13.id, cantidad: 2, tipo: 'SALIDA',  observaciones: 'Salida - Destornilladores (2da vez)', fecha: new Date('2025-04-01') },
-            { inventario_id: invIds['DST-001'], persona_id: carlos, usuario_id: rsantana.id, prestamo_id: p13.id, cantidad: 2, tipo: 'ENTRADA', observaciones: 'Devolucion - Destornilladores (2da vez)', fecha: new Date('2025-04-03') },
+            { inventario_id: invIds['DST-001'], persona_id: carlos, usuario_id: rsantana.id, prestamo_id: p13.id, cantidad: 2, tipo: 'SALIDA',  observaciones: 'Salida - Destornilladores (2da vez)', fecha: new Date('2026-04-01') },
+            { inventario_id: invIds['DST-001'], persona_id: carlos, usuario_id: rsantana.id, prestamo_id: p13.id, cantidad: 2, tipo: 'ENTRADA', observaciones: 'Devolucion - Destornilladores (2da vez)', fecha: new Date('2026-04-03') },
             // p14: DST-001 devuelto (3er prestamo)
-            { inventario_id: invIds['DST-001'], persona_id: luis, usuario_id: operador.id, prestamo_id: p14.id, cantidad: 1, tipo: 'SALIDA',  observaciones: 'Salida - Destornilladores (3ra vez)', fecha: new Date('2025-03-10') },
-            { inventario_id: invIds['DST-001'], persona_id: luis, usuario_id: operador.id, prestamo_id: p14.id, cantidad: 1, tipo: 'ENTRADA', observaciones: 'Devolucion - Destornilladores (3ra vez)', fecha: new Date('2025-03-11') },
+            { inventario_id: invIds['DST-001'], persona_id: luis, usuario_id: operador.id, prestamo_id: p14.id, cantidad: 1, tipo: 'SALIDA',  observaciones: 'Salida - Destornilladores (3ra vez)', fecha: new Date('2026-03-10') },
+            { inventario_id: invIds['DST-001'], persona_id: luis, usuario_id: operador.id, prestamo_id: p14.id, cantidad: 1, tipo: 'ENTRADA', observaciones: 'Devolucion - Destornilladores (3ra vez)', fecha: new Date('2026-03-11') },
             // p15: DST-002 activo
-            { inventario_id: invIds['DST-002'], persona_id: juan, usuario_id: operador.id, prestamo_id: p15.id, cantidad: 2, tipo: 'SALIDA',  observaciones: 'Salida - Destornilladores Estrella', fecha: new Date('2025-05-01') },
+            { inventario_id: invIds['DST-002'], persona_id: juan, usuario_id: operador.id, prestamo_id: p15.id, cantidad: 2, tipo: 'SALIDA',  observaciones: 'Salida - Destornilladores Estrella', fecha: new Date('2026-05-01') },
             // p16: DST-002 devuelto
-            { inventario_id: invIds['DST-002'], persona_id: maria, usuario_id: cmejia.id, prestamo_id: p16.id, cantidad: 1, tipo: 'SALIDA',  observaciones: 'Salida - Destornillador Estrella', fecha: new Date('2025-04-20') },
-            { inventario_id: invIds['DST-002'], persona_id: maria, usuario_id: cmejia.id, prestamo_id: p16.id, cantidad: 1, tipo: 'ENTRADA', observaciones: 'Devolucion - Destornillador Estrella', fecha: new Date('2025-04-22') },
+            { inventario_id: invIds['DST-002'], persona_id: maria, usuario_id: cmejia.id, prestamo_id: p16.id, cantidad: 1, tipo: 'SALIDA',  observaciones: 'Salida - Destornillador Estrella', fecha: new Date('2026-04-20') },
+            { inventario_id: invIds['DST-002'], persona_id: maria, usuario_id: cmejia.id, prestamo_id: p16.id, cantidad: 1, tipo: 'ENTRADA', observaciones: 'Devolucion - Destornillador Estrella', fecha: new Date('2026-04-22') },
             // p17: LLV-001 activo (2do prestamo)
-            { inventario_id: invIds['LLV-001'], persona_id: sofia, usuario_id: operador.id, prestamo_id: p17.id, cantidad: 1, tipo: 'SALIDA',  observaciones: 'Salida - Llaves (2da vez)', fecha: new Date('2025-05-12') },
+            { inventario_id: invIds['LLV-001'], persona_id: sofia, usuario_id: operador.id, prestamo_id: p17.id, cantidad: 1, tipo: 'SALIDA',  observaciones: 'Salida - Llaves (2da vez)', fecha: new Date('2026-05-12') },
             // p18: MLL-001 devuelto (2do prestamo)
-            { inventario_id: invIds['MLL-001'], persona_id: anap, usuario_id: rsantana.id, prestamo_id: p18.id, cantidad: 1, tipo: 'SALIDA',  observaciones: 'Salida - Martillo (2da vez)', fecha: new Date('2025-04-25') },
-            { inventario_id: invIds['MLL-001'], persona_id: anap, usuario_id: rsantana.id, prestamo_id: p18.id, cantidad: 1, tipo: 'ENTRADA', observaciones: 'Devolucion - Martillo (2da vez)', fecha: new Date('2025-04-26') },
+            { inventario_id: invIds['MLL-001'], persona_id: anap, usuario_id: rsantana.id, prestamo_id: p18.id, cantidad: 1, tipo: 'SALIDA',  observaciones: 'Salida - Martillo (2da vez)', fecha: new Date('2026-04-25') },
+            { inventario_id: invIds['MLL-001'], persona_id: anap, usuario_id: rsantana.id, prestamo_id: p18.id, cantidad: 1, tipo: 'ENTRADA', observaciones: 'Devolucion - Martillo (2da vez)', fecha: new Date('2026-04-26') },
             // p19: CAS-001 activo (2do prestamo)
-            { inventario_id: invIds['CAS-001'], persona_id: pedro, usuario_id: operador.id, prestamo_id: p19.id, cantidad: 1, tipo: 'SALIDA',  observaciones: 'Salida - Casco (2da vez)', fecha: new Date('2025-05-08') },
+            { inventario_id: invIds['CAS-001'], persona_id: pedro, usuario_id: operador.id, prestamo_id: p19.id, cantidad: 1, tipo: 'SALIDA',  observaciones: 'Salida - Casco (2da vez)', fecha: new Date('2026-05-08') },
             // p20: LNT-001 pendiente
-            { inventario_id: invIds['LNT-001'], persona_id: luis, usuario_id: cmejia.id, prestamo_id: p20.id, cantidad: 2, tipo: 'SALIDA',  observaciones: 'Salida - Lentes', fecha: new Date('2025-05-10') },
+            { inventario_id: invIds['LNT-001'], persona_id: luis, usuario_id: cmejia.id, prestamo_id: p20.id, cantidad: 2, tipo: 'SALIDA',  observaciones: 'Salida - Lentes', fecha: new Date('2026-05-10') },
             // Traslados
-            { inventario_id: invIds['ESM-001'], usuario_id: admin.id, cantidad: 2, tipo: 'TRASLADO', ubicacion_origen_id: ubiIds['TALL-01'], ubicacion_destino_id: ubiIds['TALL-02'], observaciones: 'Reubicacion de esmeriles', fecha: new Date('2025-04-01') },
-            { inventario_id: invIds['TLD-001'], usuario_id: admin.id, cantidad: 3, tipo: 'TRASLADO', ubicacion_origen_id: ubiIds['TALL-02'], ubicacion_destino_id: ubiIds['TALL-01'], observaciones: 'Reubicacion de taladros al taller principal', fecha: new Date('2025-03-01') },
+            { inventario_id: invIds['ESM-001'], usuario_id: admin.id, cantidad: 2, tipo: 'TRASLADO', ubicacion_origen_id: ubiIds['TALL-01'], ubicacion_destino_id: ubiIds['TALL-02'], observaciones: 'Reubicacion de esmeriles', fecha: new Date('2026-04-01') },
+            { inventario_id: invIds['TLD-001'], usuario_id: admin.id, cantidad: 3, tipo: 'TRASLADO', ubicacion_origen_id: ubiIds['TALL-02'], ubicacion_destino_id: ubiIds['TALL-01'], observaciones: 'Reubicacion de taladros al taller principal', fecha: new Date('2026-03-01') },
             // Ajustes
-            { inventario_id: invIds['LIM-001'], usuario_id: admin.id, cantidad: 1, tipo: 'AJUSTE', observaciones: 'Ajuste por rotura de lima', fecha: new Date('2025-05-12') },
-            { inventario_id: invIds['PUL-001'], usuario_id: admin.id, cantidad: 1, tipo: 'AJUSTE', observaciones: 'Pulidora dañada en accidente', fecha: new Date('2025-04-20') },
+            { inventario_id: invIds['LIM-001'], usuario_id: admin.id, cantidad: 1, tipo: 'AJUSTE', observaciones: 'Ajuste por rotura de lima', fecha: new Date('2026-05-12') },
+            { inventario_id: invIds['PUL-001'], usuario_id: admin.id, cantidad: 1, tipo: 'AJUSTE', observaciones: 'Pulidora dañada en accidente', fecha: new Date('2026-04-20') },
         ],
     });
     console.log('✅ Movimientos creados (40+)');

@@ -37,6 +37,7 @@ const movimientoController = {
 
         const usuario_id = req.usuario?.id || req.body.usuario_id;
         const cantMovimiento = parseInt(cantidad);
+        if (!tipo) throw new Error('El tipo de movimiento es requerido');
         const tipoUpper = tipo.toUpperCase();
 
         try {
@@ -66,7 +67,7 @@ const movimientoController = {
                         nuevaDisponible -= cantMovimiento;
                         nuevaTotal -= cantMovimiento;
                     }
-                } else if (tipoUpper === 'DAÑADO') {
+                } else if (tipoUpper === 'DAÑADO' || tipoUpper === 'DANADO') {
                     if (articulo.cantidad_disponible < cantMovimiento) {
                         throw new Error(`Stock insuficiente para marcar como dañado. Disponible: ${articulo.cantidad_disponible}`);
                     }

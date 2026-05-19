@@ -5,7 +5,8 @@ const validarPrestamo = (req, res, next) => {
     const errores = [];
 
     if (!inventario_id || !esUUID(inventario_id)) errores.push("Falta el artículo (inventario_id) válido.");
-    if (!persona_id || !esUUID(persona_id)) errores.push("Falta la persona (persona_id) válida.");
+    if (!persona_id && !instructor_id) errores.push("Debes proporcionar al menos persona_id o instructor_id.");
+    if (persona_id && !esUUID(persona_id)) errores.push("La persona_id no es un UUID válido.");
     if (instructor_id && !esUUID(instructor_id)) errores.push("El instructor_id no es un UUID válido.");
 
     const cantInt = parseInt(cantidad);

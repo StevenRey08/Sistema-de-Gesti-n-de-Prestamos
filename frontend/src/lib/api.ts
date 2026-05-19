@@ -6,7 +6,7 @@ function isFormData(body: unknown): body is FormData {
   return typeof FormData !== 'undefined' && body instanceof FormData;
 }
 
-function getLocalStorageToken(): string | null {
+export function getLocalStorageToken(): string | null {
   try {
     if (typeof window === 'undefined' || typeof window.localStorage?.getItem !== 'function') {
       return null;

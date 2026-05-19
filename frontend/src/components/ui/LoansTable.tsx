@@ -4,9 +4,9 @@ import api from '../../lib/api';
 import type { Prestamo } from '../../lib/types';
 
 const BADGE: Record<string, string> = {
-  ACTIVO:   'bg-[var(--surface-2)] text-yellow-500',
-  DEVUELTO: 'bg-[var(--surface-2)] text-sky-500',
-  VENCIDO:  'bg-[var(--surface-2)] text-red-500',
+  PENDIENTE: 'bg-[var(--surface-2)] text-yellow-500',
+  DEVUELTO:  'bg-[var(--surface-2)] text-sky-500',
+  VENCIDO:   'bg-[var(--surface-2)] text-red-500',
 };
 
 export default function LoansTable() {

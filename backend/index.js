@@ -1,10 +1,10 @@
 const express = require('express');
+require('dotenv').config();
 const logger = require('./utils/logger');
 const cors = require('cors');
 const morgan = require('morgan');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
-const { pool } = require('./db');
 const app = express();
 
 // Validar variables de entorno críticas al inicio

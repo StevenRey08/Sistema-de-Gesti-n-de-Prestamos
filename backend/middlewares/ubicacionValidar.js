@@ -14,10 +14,10 @@ const validarUbicacion = (req, res, next) => {
     const esCreacion = !req.params || !req.params.id;
 
     // 2. Validar tipo (Obligatorio solo en creación)
-    const tiposPermitidos = ['ESTANTE', 'CAJA'];
+    const tiposPermitidos = ['ESTANTE', 'CAJA', 'TALLER', 'ALMACEN'];
     if (!tipo || tipo.trim() === "") {
         if (esCreacion) {
-            errores.push("El tipo de ubicación es obligatorio (ESTANTE, CAJA).");
+            errores.push("El tipo de ubicación es obligatorio (ESTANTE, CAJA, TALLER, ALMACEN).");
         }
     } else if (!tiposPermitidos.includes(tipo.toUpperCase())) {
         errores.push(`Tipo no válido. Debe ser uno de los siguientes: ${tiposPermitidos.join(', ')}.`);

@@ -11,7 +11,7 @@ const logAuditoria = (modulo, accion) => {
                     accion,
                     modulo,
                     descripcion: `${accion} en ${modulo}`,
-                    ip: req.ip || req.connection.remoteAddress,
+                    ip: req.ip || req.socket.remoteAddress,
                     user_agent: req.get('User-Agent') || null,
                     detalles: {
                         method: req.method,
@@ -50,7 +50,7 @@ const logAuditoriaDetalle = (modulo, accion, getDescripcion) => {
                     accion,
                     modulo,
                     descripcion,
-                    ip: req.ip || req.connection.remoteAddress,
+                    ip: req.ip || req.socket.remoteAddress,
                     user_agent: req.get('User-Agent') || null,
                     detalles: {
                         method: req.method,

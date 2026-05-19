@@ -6,7 +6,7 @@ async function marcarVencidos() {
     try {
         await prisma.prestamo.updateMany({
             where: {
-                estado: 'ACTIVO',
+                estado: 'PENDIENTE',
                 fecha_devolucion: { lt: new Date() },
             },
             data: { estado: 'VENCIDO' }
@@ -106,13 +106,13 @@ const prestamoController = {
                 const nuevoPrestamo = await tx.prestamo.create({
                     data: {
                         inventario: { connect: { id: inventario_id } },
-                        persona: { connect: { id: persona_id } },
-                        instructor: { connect: { id: instructor_id } },
+                        ...(persona_id && { persona: { connect: { id: persona_id } } }),
+                        ...(instructor_id && { instructor: { connect: { id: instructor_id } } }),
                         usuario: { connect: { id: usuario_id } },
                         cantidad: cantSolicitada,
                         fecha_devolucion: new Date(fecha_devolucion),
                         observaciones,
-                        estado: 'ACTIVO'
+                        estado: 'PENDIENTE'
                     }
                 });
 
@@ -180,7 +180,7 @@ const prestamoController = {
                         cantidad: 0,
                         fecha_devolucion: new Date(fecha_devolucion),
                         observaciones,
-                        estado: 'ACTIVO',
+                        estado: 'PENDIENTE',
                         detalles: {
                             create: items.map(item => ({
                                 inventario_id: item.inventario_id,
@@ -198,20 +198,19 @@ const prestamoController = {
                             cantidad_disponible: { decrement: detalle.cantidad },
                         }
                     });
-                }
 
-                await tx.movimiento.create({
-                    data: {
-                        inventario_id: detalle.inventario_id,
-                        tipo: 'PRESTAMO',
-                        cantidad: detalle.cantidad,
-                        persona_id,
-                        usuario_id,
-                        prestamo_id: prestamo.id,
-                        observaciones: `Préstamo múltiple. ID: ${prestamo.id}`
-                    }
-                });
-            }
+                    await tx.movimiento.create({
+                        data: {
+                            inventario_id: detalle.inventario_id,
+                            tipo: 'PRESTAMO',
+                            cantidad: detalle.cantidad,
+                            persona_id,
+                            usuario_id,
+                            prestamo_id: prestamo.id,
+                            observaciones: `Préstamo múltiple. ID: ${prestamo.id}`
+                        }
+                    });
+                }
 
                 return prestamo;
         });
@@ -436,8 +435,8 @@ const prestamoController = {
                     const payload = {};
                     if (observaciones !== undefined) payload.observaciones = observaciones;
                     if (estado !== undefined) payload.estado = estado;
-                    if (persona_id !== undefined) payload.persona = { connect: { id: persona_id } };
-                    if (instructor_id !== undefined) payload.instructor = { connect: { id: instructor_id } };
+                    if (persona_id !== undefined) payload.persona = persona_id ? { connect: { id: persona_id } } : { disconnect: true };
+                    if (instructor_id !== undefined) payload.instructor = instructor_id ? { connect: { id: instructor_id } } : { disconnect: true };
                     if (usuario_id !== undefined) payload.usuario = { connect: { id: usuario_id } };
                     if (fecha_devolucion !== undefined) {
                         payload.fecha_devolucion = fecha_devolucion ? new Date(fecha_devolucion) : null;
@@ -448,8 +447,9 @@ const prestamoController = {
                         const diff = nuevaCantidad - prestamoActual.cantidad;
                         payload.cantidad = nuevaCantidad;
 
-                        if (prestamoActual.estado === 'ACTIVO') {
+                        if (prestamoActual.estado === 'PENDIENTE' && prestamoActual.inventario_id) {
                             const articulo = await tx.inventario.findUnique({ where: { id: prestamoActual.inventario_id } });
+                            if (!articulo) throw new Error("Artículo del préstamo no encontrado");
                             if (diff > 0 && articulo.cantidad_disponible < diff) {
                                 throw new Error(`Stock insuficiente. Disponible: ${articulo.cantidad_disponible}, necesita: ${diff} más.`);
                             }
@@ -502,7 +502,7 @@ const prestamoController = {
                         if (!prestamo) return res.status(404).json({ status: "error", mensaje: "Préstamo no encontrado" });
 
                         await prisma.$transaction(async (tx) => {
-                            if (prestamo.estado === 'ACTIVO') {
+                            if (prestamo.estado === 'PENDIENTE') {
                                 if (prestamo.detalles && prestamo.detalles.length > 0) {
                                     for (const detalle of prestamo.detalles) {
                                         await tx.inventario.update({
