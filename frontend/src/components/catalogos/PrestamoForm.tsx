@@ -51,12 +51,19 @@ export default function PrestamoForm({ prestamo = null, onGuardar, onCancelar, o
   const [agregando, setAgregando] = useState(false);
   const [nuevoItemId, setNuevoItemId] = useState('');
 
+  function toDatetimeLocal(iso: string | null | undefined): string {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
   const [form, setForm] = useState<PrestamoFormState>({
     inventario_id: prestamo?.inventario_id ? String(prestamo.inventario_id) : '',
     persona_id: prestamo?.persona_id ? String(prestamo.persona_id) : '',
     instructor_id: prestamo?.instructor_id ? String(prestamo.instructor_id) : '',
     cantidad: prestamo?.cantidad || 1,
-    fecha_devolucion: prestamo?.fecha_devolucion ? prestamo.fecha_devolucion.slice(0, 10) : '',
+    fecha_devolucion: toDatetimeLocal(prestamo?.fecha_devolucion ?? null),
     estado: prestamo?.estado || 'ACTIVO',
     observaciones: prestamo?.observaciones || '',
   });
@@ -104,7 +111,11 @@ export default function PrestamoForm({ prestamo = null, onGuardar, onCancelar, o
       if (!form.cantidad || Number(form.cantidad) < 1) e.cantidad = 'Mínimo 1';
       if (!form.persona_id && !form.instructor_id) e.persona_id = 'Selecciona estudiante o profesor';
     }
-    if (!form.fecha_devolucion) e.fecha_devolucion = 'Selecciona la fecha de devolución';
+    if (!form.fecha_devolucion) {
+      e.fecha_devolucion = 'Selecciona la fecha de devolución';
+    } else if (new Date(form.fecha_devolucion) <= new Date()) {
+      e.fecha_devolucion = 'La fecha debe ser posterior a la actual';
+    }
     for (const item of items) {
       const cant = Number(item.cantidad);
       if (!item.cantidad || cant < 1) e[`cant_${item.inventario_id}`] = `"${item.nombre}": mínimo 1`;
@@ -313,7 +324,7 @@ export default function PrestamoForm({ prestamo = null, onGuardar, onCancelar, o
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
           <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Fecha devolución *</label>
-          <input type="date" name="fecha_devolucion" value={form.fecha_devolucion ? form.fecha_devolucion.slice(0, 10) : ''} onChange={handleChange} className="soft-input" />
+          <input type="datetime-local" name="fecha_devolucion" value={form.fecha_devolucion} onChange={handleChange} className="soft-input" />
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Estado</label>

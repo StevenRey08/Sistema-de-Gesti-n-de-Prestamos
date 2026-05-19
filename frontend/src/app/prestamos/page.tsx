@@ -1,5 +1,6 @@
 ﻿'use client';
 import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import api, { prestamosApi, descargarPDFPrestamo, BASE_URL } from '../../lib/api';
 import PrestamoForm from '../../components/catalogos/PrestamoForm';
 import type { Prestamo, PrestamoPayload, PrestamoDetalle } from '../../lib/types';
@@ -38,11 +39,14 @@ interface ItemDevolucion {
 }
 
 export default function PrestamosPage() {
+  const searchParams = useSearchParams();
+  const vencidoId = searchParams.get('vencido');
   const { notify } = useNotification();
   const { puedeIngresar, puedeActualizar } = usePermiso('PRESTAMOS');
   const [prestamos, setPrestamos] = useState<Prestamo[]>([]);
-  const [filtro, setFiltro]       = useState('todos');
+  const [filtro, setFiltro]       = useState(vencidoId ? 'VENCIDO' : 'todos');
   const [cargando, setCargando]   = useState(true);
+  const [destacarId, setDestacarId] = useState<string | null>(vencidoId);
   const [showForm, setShowForm]   = useState(false);
   const [editando, setEditando]   = useState<Prestamo | null>(null);
 
@@ -53,6 +57,7 @@ export default function PrestamosPage() {
 
   const [showPdf, setShowPdf] = useState(false);
   const [pdfUrl, setPdfUrl] = useState('');
+  const [searchText, setSearchText] = useState('');
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -186,8 +191,17 @@ export default function PrestamosPage() {
     setPdfUrl('');
   }
 
-  const lista = (filtro === 'todos' ? prestamos
-    : prestamos.filter((p: Prestamo) => p.estado === filtro))
+  const lista = prestamos
+    .filter((p: Prestamo) => filtro === 'todos' || p.estado === filtro)
+    .filter(p => {
+      if (!searchText) return true;
+      const s = searchText.toLowerCase();
+      const estudiante = p.persona ? `${p.persona.nombres} ${p.persona.apellidos}`.toLowerCase() : '';
+      const instructor = p.instructor ? `${p.instructor.nombres} ${p.instructor.apellidos}`.toLowerCase() : '';
+      const articulos = p.detalles?.map(d => d.inventario?.nombre?.toLowerCase() || '') || [];
+      if (p.inventario?.nombre?.toLowerCase().includes(s)) return true;
+      return estudiante.includes(s) || instructor.includes(s) || articulos.some(n => n.includes(s));
+    })
     .sort((a, b) => (ORDEN_ESTADO[a.estado] ?? 99) - (ORDEN_ESTADO[b.estado] ?? 99) || new Date(b.fecha_prestamo ?? 0).getTime() - new Date(a.fecha_prestamo ?? 0).getTime());
 
   const activos = prestamos.filter((p: Prestamo) => p.estado === 'ACTIVO').length;
@@ -211,11 +225,14 @@ export default function PrestamosPage() {
         )}
       </div>
 
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-2 flex-wrap items-center">
         {['todos', 'ACTIVO', 'VENCIDO', 'PENDIENTE', 'PERDIDO', 'DEVUELTO'].map(f => (
           <button key={f} onClick={() => setFiltro(f)}
             className={`filter-pill capitalize ${filtro === f ? 'active' : ''}`}>{f}</button>
         ))}
+        <input type="text" placeholder="Buscar por estudiante, instructor o artículo..."
+          value={searchText} onChange={e => setSearchText(e.target.value)}
+          className="soft-input ml-auto max-w-xs text-sm" />
       </div>
 
       {showForm && (
@@ -370,16 +387,16 @@ export default function PrestamosPage() {
         ) : (
           <table className="w-full text-sm">
             <thead>
-               <tr>
-                 <th className="px-4 py-3 text-left">Herramienta</th>
-                  <th className="px-4 py-3 text-left">Destinatario</th>
-                  <th className="px-4 py-3 text-left">Instructor</th>
-                 <th className="px-4 py-3 text-left">Cant.</th>
-                 <th className="px-4 py-3 text-left">Registrado por</th>
-                 <th className="px-4 py-3 text-left">Préstamo</th>
-                 <th className="px-4 py-3 text-left">Devolución</th>
-                 <th className="px-4 py-3 text-right">Acciones</th>
-               </tr>
+              <tr>
+                <th className="px-4 py-3 text-left">Artículo</th>
+                <th className="px-4 py-3 text-left">Destinatario</th>
+                <th className="px-4 py-3 text-left">Instructor</th>
+                <th className="px-4 py-3 text-left">Cant.</th>
+                <th className="px-4 py-3 text-left">Registrado por</th>
+                <th className="px-4 py-3 text-left">Préstamo</th>
+                <th className="px-4 py-3 text-left">Devolución</th>
+                <th className="px-4 py-3 text-right">Acciones</th>
+              </tr>
             </thead>
             <tbody>
               {lista.map((p: Prestamo) => {
@@ -388,6 +405,7 @@ export default function PrestamosPage() {
                   : p.inventario ? [{ nombre: p.inventario.nombre, cantidad: p.cantidad }] : [{ nombre: '—', cantidad: 0 }];
                 return (
                   <tr key={p.id} className={
+                    p.id === destacarId ? 'ring-2 ring-red-500 bg-red-50' :
                     p.estado === 'VENCIDO' ? 'bg-red-50' :
                     p.estado === 'PERDIDO' ? 'bg-gray-100' : ''
                   }>
@@ -411,7 +429,9 @@ export default function PrestamosPage() {
                       {p.usuario ? `${p.usuario.nombre} ${p.usuario.apellido}` : '—'}
                     </td>
                     <td className="px-4 py-3 text-[var(--text-muted)]">{fmt(p.fecha_prestamo)}</td>
-                    <td className="px-4 py-3 font-bold text-[var(--text-main)]">{fmtCorta(p.fecha_devolucion)}</td>
+                    <td className="px-4 py-3">
+                      <span className="font-bold text-[var(--text-main)]">{fmt(p.fecha_devolucion)}</span>
+                    </td>
                     <td className="px-4 py-3 text-right space-x-2">
                       {puedeActualizar && (
                         <button onClick={() => { setEditando(p); setShowForm(true); }}
@@ -421,8 +441,8 @@ export default function PrestamosPage() {
                         <button onClick={() => abrirDevolucion(p)}
                           className="text-green-500 hover:text-green-400 text-xs font-medium">DEVOLVER</button>
                       )}
-                      <button onClick={() => abrirPdf(p.id)}
-                        className="text-orange-400 hover:text-orange-300 text-xs font-medium">PDF</button>
+<button onClick={() => abrirPdf(p.id)}
+                         className="text-orange-400 hover:text-orange-300 text-xs font-medium">Factura</button>
                     </td>
                   </tr>
                 );

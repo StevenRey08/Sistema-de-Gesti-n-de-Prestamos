@@ -109,16 +109,17 @@ model Usuario {
   email            String?      @db.VarChar(100)
   rol_id           String?      @db.Uuid
   activo           Boolean      @default(true)
-  ultimo_acceso    DateTime?    @db.Timestamp(6)
-  intentos_fallidos Int         @default(0)
-  bloqueado_hasta  DateTime?    @db.Timestamp(6)
-  movimientos      Movimiento[]
-  prestamos        Prestamo[]
-  pedidos          Pedido[]
-  auditoria_logs   AuditoriaLog[]
-  sesiones         Sesion[]
-  politicas_mod    PoliticaSeguridad[] @relation("PoliticaModificador")
-  rol              Role?        @relation(fields: [rol_id], references: [id], onDelete: Restrict)
+  ultimo_acceso     DateTime?     @db.Timestamp(6)
+  intentos_fallidos  Int          @default(0)
+  bloqueado_hasta   DateTime?     @db.Timestamp(6)
+  movimientos       Movimiento[]
+  prestamos         Prestamo[]
+  pedidos           Pedido[]
+  personas_historico PersonaHistorico[]
+  auditoria_logs    AuditoriaLog[]
+  sesiones          Sesion[]
+  politicas_mod     PoliticaSeguridad[] @relation("PoliticaModificador")
+  rol               Role?         @relation(fields: [rol_id], references: [id], onDelete: Restrict)
 
   @@index([rol_id])
   @@map("usuarios")
@@ -134,7 +135,7 @@ model Persona {
   nombres          String?      @db.VarChar(100)
   apellidos        String?      @db.VarChar(100)
   tipo             String?      @db.VarChar(50) // Estudiante, Profesor, etc.
-  curso            String?      @db.VarChar(100) // <--- Nuevo campo para el curso
+  curso            String?      @db.VarChar(100)
   telefono         String?      @db.VarChar(20)
   activo           Boolean      @default(true)
   movimientos             Movimiento[]
@@ -142,6 +143,24 @@ model Persona {
   prestamos_instructor    Prestamo[]   @relation("InstructorPrestamo")
 
   @@map("personas")
+}
+
+model PersonaHistorico {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  persona_id     String?  @db.Uuid
+  matricula      String?  @db.VarChar(50)
+  nombres        String?  @db.VarChar(100)
+  apellidos      String?  @db.VarChar(100)
+  tipo           String?  @db.VarChar(50)
+  curso          String?  @db.VarChar(100)
+  telefono       String?  @db.VarChar(20)
+  fecha_baja     DateTime @default(now()) @db.Timestamp(6)
+  usuario_id_baja String? @db.Uuid
+  usuario_baja   Usuario? @relation(fields: [usuario_id_baja], references: [id])
+
+  @@index([persona_id])
+  @@index([fecha_baja])
+  @@map("personas_historico")
 }
 
 model CategoriaHerramienta {
@@ -235,6 +254,7 @@ model DetallePedido {
 
 model Prestamo {
   id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  veces_impreso    Int          @default(0)
   inventario_id    String?      @db.Uuid
 
   // 1. Quién recibe la herramienta (Estudiante)

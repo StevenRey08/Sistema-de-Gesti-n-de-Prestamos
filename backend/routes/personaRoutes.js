@@ -15,6 +15,7 @@ router.get('/', checkPermiso('PERSONAS', 'leer'), personaController.getAll);
 router.post('/', checkPermiso('PERSONAS', 'ingresar'), validarPersona, logAuditoriaDetalle('PERSONAS', 'CREAR', (req, res) => `Creó persona: ${req.body.nombres} ${req.body.apellidos}`), personaController.create);
 router.get('/download-template', checkPermiso('PERSONAS', 'leer'), personaController.downloadTemplate);
 router.post('/import-excel', checkPermiso('PERSONAS', 'ingresar'), excelUpload.single('file'), logAuditoria('PERSONAS', 'IMPORTAR_EXCEL'), personaController.importExcel);
+router.get('/historico', checkPermiso('PERSONAS', 'leer'), personaController.getHistorico);
 router.patch('/estudiantes/debaja', checkPermiso('PERSONAS', 'eliminar'), logAuditoria('PERSONAS', 'BAJA_MASIVA'), personaController.debajaEstudiantes);
 router.post('/delete-bulk', checkPermiso('PERSONAS', 'eliminar'), logAuditoria('PERSONAS', 'ELIMINAR_MASIVO'), personaController.deleteBulk);
 router.get('/:id', checkPermiso('PERSONAS', 'leer'), personaController.getById);

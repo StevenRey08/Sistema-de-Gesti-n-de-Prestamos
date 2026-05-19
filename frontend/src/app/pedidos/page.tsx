@@ -185,7 +185,6 @@ export default function PedidosPage() {
   async function handleEnviarConfirmar() {
     if (!enviando) return;
     try {
-      window.open(`${BASE_URL}/pedidos/${enviando.id}/pdf`, '_blank');
       await pedidosApi.update(enviando.id, { estado: 'PENDIENTE' });
       notify('success', 'Pedido Confirmado');
       setEnviando(null);
@@ -329,10 +328,10 @@ export default function PedidosPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full text-center space-y-4">
             <p className="font-medium">Confirmar pedido {enviando.numero_orden}</p>
-            <p className="text-sm text-gray-500">Se generará un PDF con los datos del pedido y cambiará el estado a Pendiente.</p>
+            <p className="text-sm text-gray-500">El pedido cambiará al estado Pendiente.</p>
             <div className="flex justify-center gap-3">
               <button onClick={() => setEnviando(null)} className="px-4 py-2 border rounded-lg text-sm">Cancelar</button>
-              <button onClick={handleEnviarConfirmar} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Generar PDF y Confirmar</button>
+              <button onClick={handleEnviarConfirmar} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Confirmar Pedido</button>
             </div>
           </div>
         </div>
@@ -445,6 +444,8 @@ export default function PedidosPage() {
                       <button onClick={() => setEliminando(p.id)}
                         className="text-red-400 hover:text-red-500 text-xs font-medium">Eliminar</button>
                     )}
+                    <button onClick={() => window.open(`${BASE_URL}/pedidos/${p.id}/pdf`, '_blank')}
+                      className="text-purple-500 hover:text-purple-400 text-xs font-medium">PDF</button>
                   </td>
                 </tr>
               ))}

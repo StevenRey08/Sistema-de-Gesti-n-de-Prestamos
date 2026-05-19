@@ -198,29 +198,30 @@ const prestamoController = {
                             cantidad_disponible: { decrement: detalle.cantidad },
                         }
                     });
-
-                    await tx.movimiento.create({
-                        data: {
-                            inventario_id: detalle.inventario_id,
-                            tipo: 'PRESTAMO',
-                            cantidad: detalle.cantidad,
-                            ...(persona_id && { persona_id }),
-                            usuario_id,
-                            prestamo_id: prestamo.id,
-                            observaciones: `Préstamo múltiple. ID: ${prestamo.id}`
-                        }
-                    });
                 }
 
-                return prestamo;
-            });
+                await tx.movimiento.create({
+                    data: {
+                        inventario_id: detalle.inventario_id,
+                        tipo: 'PRESTAMO',
+                        cantidad: detalle.cantidad,
+                        persona_id,
+                        usuario_id,
+                        prestamo_id: prestamo.id,
+                        observaciones: `Préstamo múltiple. ID: ${prestamo.id}`
+                    }
+                });
+            }
 
-            res.status(201).json({ status: "success", data: resultado });
-        } catch (error) {
-            logger.error("Error en prestamos.createLote:", error);
-            res.status(400).json({ status: "error", mensaje: error.message || "Error al procesar los préstamos" });
-        }
-    },
+                return prestamo;
+        });
+
+        res.status(201).json({ status: "success", data: resultado });
+    } catch(error) {
+        logger.error("Error en prestamos.createLote:", error);
+        res.status(400).json({ status: "error", mensaje: error.message || "Error al procesar los préstamos" });
+    }
+},
 
     registrarDevolucion: async (req, res) => {
         const { id } = req.params;
@@ -424,279 +425,287 @@ const prestamoController = {
         }
     },
 
-    update: async (req, res) => {
-        try {
-            const { cantidad, observaciones, fecha_devolucion, estado, persona_id, instructor_id, usuario_id } = req.body;
+        update: async (req, res) => {
+            try {
+                const { cantidad, observaciones, fecha_devolucion, estado, persona_id, instructor_id, usuario_id } = req.body;
 
-            const prestamoActual = await prisma.prestamo.findUnique({ where: { id: req.params.id } });
-            if (!prestamoActual) return res.status(404).json({ status: "error", mensaje: "Préstamo no encontrado" });
+                const prestamoActual = await prisma.prestamo.findUnique({ where: { id: req.params.id } });
+                if (!prestamoActual) return res.status(404).json({ status: "error", mensaje: "Préstamo no encontrado" });
 
-            const resultado = await prisma.$transaction(async (tx) => {
-                const payload = {};
-                if (observaciones !== undefined) payload.observaciones = observaciones;
-                if (estado !== undefined) payload.estado = estado;
-                if (persona_id !== undefined) payload.persona = { connect: { id: persona_id } };
-                if (instructor_id !== undefined) payload.instructor = { connect: { id: instructor_id } };
-                if (usuario_id !== undefined) payload.usuario = { connect: { id: usuario_id } };
-                if (fecha_devolucion !== undefined) {
-                    payload.fecha_devolucion = fecha_devolucion ? new Date(fecha_devolucion) : null;
-                }
-
-                if (cantidad !== undefined && Number(cantidad) !== prestamoActual.cantidad) {
-                    const nuevaCantidad = Number(cantidad);
-                    const diff = nuevaCantidad - prestamoActual.cantidad;
-                    payload.cantidad = nuevaCantidad;
-
-                    if (prestamoActual.estado === 'ACTIVO') {
-                        const articulo = await tx.inventario.findUnique({ where: { id: prestamoActual.inventario_id } });
-                        if (diff > 0 && articulo.cantidad_disponible < diff) {
-                            throw new Error(`Stock insuficiente. Disponible: ${articulo.cantidad_disponible}, necesita: ${diff} más.`);
-                        }
-                        await tx.inventario.update({
-                            where: { id: prestamoActual.inventario_id },
-                            data: {
-                                cantidad_disponible: { decrement: diff },
-                            }
-                        });
+                const resultado = await prisma.$transaction(async (tx) => {
+                    const payload = {};
+                    if (observaciones !== undefined) payload.observaciones = observaciones;
+                    if (estado !== undefined) payload.estado = estado;
+                    if (persona_id !== undefined) payload.persona = { connect: { id: persona_id } };
+                    if (instructor_id !== undefined) payload.instructor = { connect: { id: instructor_id } };
+                    if (usuario_id !== undefined) payload.usuario = { connect: { id: usuario_id } };
+                    if (fecha_devolucion !== undefined) {
+                        payload.fecha_devolucion = fecha_devolucion ? new Date(fecha_devolucion) : null;
                     }
-                }
 
-                if (Object.keys(payload).length === 0) {
-                    throw new Error("No hay campos para actualizar");
-                }
+                    if (cantidad !== undefined && Number(cantidad) !== prestamoActual.cantidad) {
+                        const nuevaCantidad = Number(cantidad);
+                        const diff = nuevaCantidad - prestamoActual.cantidad;
+                        payload.cantidad = nuevaCantidad;
 
-                return await tx.prestamo.update({
-                    where: { id: req.params.id },
-                    data: payload,
-                });
-            });
-
-            res.json(resultado);
-        } catch (error) {
-            logger.error("Error al actualizar préstamo:", { error: error.message, stack: error.stack, id: req.params.id, body: req.body });
-            const status = error.message.includes("No hay campos") || error.message.includes("Stock insuficiente") ? 400 : 500;
-            res.status(status).json({ status: "error", mensaje: error.message });
-        }
-    },
-
-    getById: async (req, res) => {
-        try {
-            const prestamo = await prisma.prestamo.findUnique({
-                where: { id: req.params.id },
-                include: includeDetalles()
-            });
-            if (!prestamo) return res.status(404).json({ status: "error", mensaje: "Préstamo no encontrado" });
-            res.json(prestamo);
-        } catch (error) {
-            res.status(500).json({ status: "error", mensaje: "Error al buscar el préstamo" });
-        }
-    },
-
-    delete: async (req, res) => {
-        try {
-            const prestamo = await prisma.prestamo.findUnique({
-                where: { id: req.params.id },
-                include: { movimientos: true, detalles: true }
-            });
-            if (!prestamo) return res.status(404).json({ status: "error", mensaje: "Préstamo no encontrado" });
-
-            await prisma.$transaction(async (tx) => {
-                if (prestamo.estado === 'ACTIVO') {
-                    if (prestamo.detalles && prestamo.detalles.length > 0) {
-                        for (const detalle of prestamo.detalles) {
+                        if (prestamoActual.estado === 'ACTIVO') {
+                            const articulo = await tx.inventario.findUnique({ where: { id: prestamoActual.inventario_id } });
+                            if (diff > 0 && articulo.cantidad_disponible < diff) {
+                                throw new Error(`Stock insuficiente. Disponible: ${articulo.cantidad_disponible}, necesita: ${diff} más.`);
+                            }
                             await tx.inventario.update({
-                                where: { id: detalle.inventario_id },
+                                where: { id: prestamoActual.inventario_id },
                                 data: {
-                                    cantidad_disponible: { increment: detalle.cantidad },
+                                    cantidad_disponible: { decrement: diff },
                                 }
                             });
                         }
-                    } else if (prestamo.inventario_id) {
-                        await tx.inventario.update({
-                            where: { id: prestamo.inventario_id },
-                            data: {
-                                cantidad_disponible: { increment: prestamo.cantidad },
-                            }
-                        });
                     }
-                }
-                if (prestamo.movimientos?.length > 0) {
-                    await tx.movimiento.deleteMany({ where: { prestamo_id: prestamo.id } });
-                }
-                await tx.prestamo.delete({ where: { id: prestamo.id } });
-            });
-            res.json({ message: "Préstamo eliminado correctamente. Stock restaurado." });
-        } catch (error) {
-            res.status(500).json({ status: "error", mensaje: "Error al eliminar el préstamo" });
-        }
-    },
 
-    generarPDF: async (req, res) => {
-        try {
-            const prestamo = await prisma.prestamo.findUnique({
-                where: { id: req.params.id },
-                include: {
-                    inventario: { include: { categoria: true } },
-                    detalles: {
-                        include: {
-                            inventario: { include: { categoria: true } }
-                        }
-                    },
-                    persona: true,
-                    instructor: { select: { id: true, nombres: true, apellidos: true } },
-                    usuario: { select: { id: true, usuario: true, nombre: true, apellido: true } }
-                }
-            });
-            if (!prestamo) return res.status(404).json({ status: "error", mensaje: "Préstamo no encontrado" });
-
-            const doc = new PDFDocument({ size: 'A4', margin: 50 });
-            res.setHeader('Content-Type', 'application/pdf');
-            res.setHeader('Content-Disposition', `inline; filename=prestamo-${prestamo.id}.pdf`);
-            doc.pipe(res);
-
-            doc.fontSize(22).font('Helvetica-Bold').text('COMPROBANTE DE PRÉSTAMO', { align: 'center' });
-            doc.moveDown();
-            doc.fontSize(10).font('Helvetica').fillColor('#666').text(`Fecha: ${new Date().toLocaleDateString('es-DO')}`, { align: 'right' });
-            doc.text(`ID: ${prestamo.id}`, { align: 'right' });
-            doc.moveDown(2);
-
-            doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#ccc').stroke();
-            doc.moveDown();
-
-            doc.fontSize(14).font('Helvetica-Bold').fillColor('#333').text('DATOS DEL PRÉSTAMO');
-            doc.moveDown(0.5);
-            const startX = 50;
-            let currentY = doc.y;
-
-            doc.fontSize(10).font('Helvetica').fillColor('#555');
-            doc.text('Estado:', startX, currentY, { continued: true });
-            doc.fillColor('#333').text(` ${prestamo.estado}`, { continued: false });
-
-            currentY = doc.y;
-            doc.fillColor('#555').text('Fecha de préstamo:', startX, currentY, { continued: true });
-            doc.fillColor('#333').text(` ${prestamo.fecha_prestamo ? new Date(prestamo.fecha_prestamo).toLocaleDateString('es-DO') : 'N/A'}`, { continued: false });
-
-            if (prestamo.fecha_devolucion) {
-                currentY = doc.y;
-                doc.fillColor('#555').text('Fecha de devolución:', startX, currentY, { continued: true });
-                doc.fillColor('#333').text(` ${new Date(prestamo.fecha_devolucion).toLocaleDateString('es-DO')}`, { continued: false });
-            }
-
-            doc.moveDown(2);
-            doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#ccc').stroke();
-            doc.moveDown();
-
-            doc.fontSize(14).font('Helvetica-Bold').fillColor('#333').text('ESTUDIANTE');
-            doc.moveDown(0.5);
-            doc.fontSize(10).font('Helvetica').fillColor('#555').text(`Nombre: `, { continued: true });
-            doc.fillColor('#333').text(`${prestamo.persona?.nombres || ''} ${prestamo.persona?.apellidos || ''}`);
-            doc.fillColor('#555').text(`Matrícula: `, { continued: true });
-            doc.fillColor('#333').text(`${prestamo.persona?.matricula || 'N/A'}`);
-            doc.fillColor('#555').text(`Curso: `, { continued: true });
-            doc.fillColor('#333').text(`${prestamo.persona?.curso || 'N/A'}`);
-
-            if (prestamo.instructor) {
-                doc.moveDown();
-                doc.fontSize(14).font('Helvetica-Bold').fillColor('#333').text('INSTRUCTOR / PROFESOR');
-                doc.moveDown(0.5);
-                doc.fontSize(10).font('Helvetica').fillColor('#555').text(`Nombre: `, { continued: true });
-                doc.fillColor('#333').text(`${prestamo.instructor.nombres} ${prestamo.instructor.apellidos}`);
-            }
-
-            doc.moveDown(2);
-            doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#ccc').stroke();
-            doc.moveDown();
-
-            const articulos = prestamo.detalles && prestamo.detalles.length > 0
-                ? prestamo.detalles
-                : prestamo.inventario
-                    ? [{ inventario: prestamo.inventario, cantidad: prestamo.cantidad }]
-                    : [];
-
-            if (articulos.length === 1) {
-                doc.fontSize(14).font('Helvetica-Bold').fillColor('#333').text('HERRAMIENTA');
-                doc.moveDown(0.5);
-                const art = articulos[0];
-                doc.fontSize(10).font('Helvetica').fillColor('#555').text(`Artículo: `, { continued: true });
-                doc.fillColor('#333').text(`${art.inventario?.nombre || ''}`);
-                doc.fillColor('#555').text(`Código: `, { continued: true });
-                doc.fillColor('#333').text(`${art.inventario?.codigo || ''}`);
-                doc.fillColor('#555').text(`Categoría: `, { continued: true });
-                doc.fillColor('#333').text(`${art.inventario?.categoria?.nombre || 'N/A'}`);
-                doc.fillColor('#555').text(`Cantidad: `, { continued: true });
-                doc.fillColor('#333').text(`${art.cantidad}`);
-
-                if (art.estado_devolucion) {
-                    doc.fillColor('#555').text(`Estado devolución: `, { continued: true });
-                    const estadoLabel = art.estado_devolucion === 'BUEN_ESTADO' ? 'Buen estado' :
-                                       art.estado_devolucion === 'MAL_ESTADO' ? 'Dañado' : 'Perdido';
-                    doc.fillColor('#333').text(`${estadoLabel}`);
-                }
-                if (art.cantidad_devuelta_buena > 0) {
-                    doc.fillColor('#555').text(`Devuelta buena: `, { continued: true });
-                    doc.fillColor('#333').text(`${art.cantidad_devuelta_buena}`);
-                }
-                if (art.cantidad_devuelta_danada > 0) {
-                    doc.fillColor('#555').text(`Devuelta dañada: `, { continued: true });
-                    doc.fillColor('#333').text(`${art.cantidad_devuelta_danada}`);
-                }
-                if (art.cantidad_perdida > 0) {
-                    doc.fillColor('#555').text(`Perdida: `, { continued: true });
-                    doc.fillColor('#333').text(`${art.cantidad_perdida}`);
-                }
-            } else {
-                doc.fontSize(14).font('Helvetica-Bold').fillColor('#333').text('HERRAMIENTAS');
-                doc.moveDown(0.5);
-                articulos.forEach((art, idx) => {
-                    doc.fontSize(10).font('Helvetica').fillColor('#555').text(`${idx + 1}. `, { continued: true });
-                    doc.fillColor('#333').text(`${art.inventario?.nombre || ''}`, { continued: true });
-                    doc.fillColor('#555').text(` x`, { continued: true });
-                    doc.fillColor('#333').text(`${art.cantidad}`);
-
-                    if (art.estado_devolucion) {
-                        const estadoLabel = art.estado_devolucion === 'BUEN_ESTADO' ? '✓Buena' :
-                                           art.estado_devolucion === 'MAL_ESTADO' ? '⚠Dañada' : '✕Perdida';
-                        doc.fillColor('#333').text(` (${estadoLabel})`);
+                    if (Object.keys(payload).length === 0) {
+                        throw new Error("No hay campos para actualizar");
                     }
-                    doc.moveDown(0.3);
 
-                    if (art.cantidad_devuelta_buena > 0) {
-                        doc.fontSize(8).font('Helvetica').fillColor('#333').text(`   Buena: ${art.cantidad_devuelta_buena}`);
-                    }
-                    if (art.cantidad_devuelta_danada > 0) {
-                        doc.fontSize(8).font('Helvetica').fillColor('#333').text(`   Dañada: ${art.cantidad_devuelta_danada}`);
-                    }
-                    if (art.cantidad_perdida > 0) {
-                        doc.fontSize(8).font('Helvetica').fillColor('#333').text(`   Perdida: ${art.cantidad_perdida}`);
-                    }
-                    if (art.observaciones_devolucion) {
-                        doc.fontSize(8).font('Helvetica').fillColor('#666').text(`   Obs: ${art.observaciones_devolucion}`);
-                    }
-                    doc.moveDown(0.2);
-                    doc.fontSize(10);
+                    return await tx.prestamo.update({
+                        where: { id: req.params.id },
+                        data: payload,
+                    });
                 });
+
+                res.json(resultado);
+            } catch (error) {
+                logger.error("Error al actualizar préstamo:", { error: error.message, stack: error.stack, id: req.params.id, body: req.body });
+                const status = error.message.includes("No hay campos") || error.message.includes("Stock insuficiente") ? 400 : 500;
+                res.status(status).json({ status: "error", mensaje: error.message });
             }
+        },
 
-            if (prestamo.observaciones) {
-                doc.moveDown();
-                doc.fontSize(10).font('Helvetica').fillColor('#555').text('Observaciones:', { continued: true });
-                doc.fillColor('#333').text(` ${prestamo.observaciones}`);
-            }
+            getById: async (req, res) => {
+                try {
+                    const prestamo = await prisma.prestamo.findUnique({
+                        where: { id: req.params.id },
+                        include: includeDetalles()
+                    });
+                    if (!prestamo) return res.status(404).json({ status: "error", mensaje: "Préstamo no encontrado" });
+                    res.json(prestamo);
+                } catch (error) {
+                    res.status(500).json({ status: "error", mensaje: "Error al buscar el préstamo" });
+                }
+            },
 
-            doc.moveDown(3);
-            doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#ccc').stroke();
-            doc.moveDown(1.5);
+                delete: async (req, res) => {
+                    try {
+                        const prestamo = await prisma.prestamo.findUnique({
+                            where: { id: req.params.id },
+                            include: { movimientos: true, detalles: true }
+                        });
+                        if (!prestamo) return res.status(404).json({ status: "error", mensaje: "Préstamo no encontrado" });
 
-            doc.fontSize(8).font('Helvetica').fillColor('#999').text('Este documento es un comprobante de préstamo de herramientas.', { align: 'center' });
-            doc.text('Debe presentarse al momento de la devolución.', { align: 'center' });
-            doc.text(`Generado por: ${prestamo.usuario?.nombre || prestamo.usuario?.usuario || 'Sistema'}`, { align: 'center' });
+                        await prisma.$transaction(async (tx) => {
+                            if (prestamo.estado === 'ACTIVO') {
+                                if (prestamo.detalles && prestamo.detalles.length > 0) {
+                                    for (const detalle of prestamo.detalles) {
+                                        await tx.inventario.update({
+                                            where: { id: detalle.inventario_id },
+                                            data: {
+                                                cantidad_disponible: { increment: detalle.cantidad },
+                                            }
+                                        });
+                                    }
+                                } else if (prestamo.inventario_id) {
+                                    await tx.inventario.update({
+                                        where: { id: prestamo.inventario_id },
+                                        data: {
+                                            cantidad_disponible: { increment: prestamo.cantidad },
+                                        }
+                                    });
+                                }
+                            }
+                            if (prestamo.movimientos?.length > 0) {
+                                await tx.movimiento.deleteMany({ where: { prestamo_id: prestamo.id } });
+                            }
+                            await tx.prestamo.delete({ where: { id: prestamo.id } });
+                        });
+                        res.json({ message: "Préstamo eliminado correctamente. Stock restaurado." });
+                    } catch (error) {
+                        res.status(500).json({ status: "error", mensaje: "Error al eliminar el préstamo" });
+                    }
+                },
 
-            doc.end();
-        } catch (error) {
-            logger.error("Error al generar PDF:", error);
-            res.status(500).json({ status: "error", mensaje: "Error al generar el PDF" });
-        }
-    }
+                    generarPDF: async (req, res) => {
+                        try {
+                            const prestamo = await prisma.prestamo.findUnique({
+                                where: { id: req.params.id },
+                                include: {
+                                    inventario: { include: { categoria: true } },
+                                    detalles: {
+                                        include: {
+                                            inventario: { include: { categoria: true } }
+                                        }
+                                    },
+                                    persona: true,
+                                    instructor: { select: { id: true, nombres: true, apellidos: true } },
+                                    usuario: { select: { id: true, usuario: true, nombre: true, apellido: true } }
+                                }
+                            });
+                            if (!prestamo) return res.status(404).json({ status: "error", mensaje: "Préstamo no encontrado" });
+
+                            await prisma.prestamo.update({
+                                where: { id: prestamo.id },
+                                data: { veces_impreso: { increment: 1 } }
+                            });
+                            const esDuplicado = prestamo.veces_impreso > 0;
+
+                            const doc = new PDFDocument({ size: 'A4', margin: 50 });
+                            res.setHeader('Content-Type', 'application/pdf');
+                            res.setHeader('Content-Disposition', `inline; filename=prestamo-${prestamo.id}.pdf`);
+                            doc.pipe(res);
+
+                            doc.fontSize(22).font('Helvetica-Bold').fillColor('#333').text('COMPROBANTE DE PRÉSTAMO', { align: 'center' });
+                            if (esDuplicado) {
+                                doc.moveDown(0.3);
+                                doc.fontSize(14).font('Helvetica-Bold').fillColor('#cc0000').text('** DUPLICADO **', { align: 'center' });
+                            }
+                            doc.moveDown();
+                            doc.fontSize(10).font('Helvetica').fillColor('#666').text(`Fecha: ${new Date().toLocaleDateString('es-DO')}`, { align: 'right' });
+                            doc.text(`ID: ${prestamo.id}`, { align: 'right' });
+                            doc.moveDown(2);
+
+                            doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#ccc').stroke();
+                            doc.moveDown();
+
+                            doc.fontSize(14).font('Helvetica-Bold').fillColor('#333').text('DATOS DEL PRÉSTAMO');
+                            doc.moveDown(0.5);
+                            const startX = 50;
+                            let currentY = doc.y;
+
+                            doc.fontSize(10).font('Helvetica').fillColor('#555');
+                            doc.text('Fecha de préstamo:', startX, currentY, { continued: true });
+                            doc.fillColor('#333').text(` ${prestamo.fecha_prestamo ? new Date(prestamo.fecha_prestamo).toLocaleString('es-DO', { dateStyle: 'long', timeStyle: 'short' }) : 'N/A'}`, { continued: false });
+
+                            doc.moveDown(2);
+                            doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#ccc').stroke();
+                            doc.moveDown();
+
+                            doc.fontSize(14).font('Helvetica-Bold').fillColor('#333').text('ESTUDIANTE');
+                            doc.moveDown(0.5);
+                            doc.fontSize(10).font('Helvetica').fillColor('#555').text(`Nombre: `, { continued: true });
+                            doc.fillColor('#333').text(`${prestamo.persona?.nombres || ''} ${prestamo.persona?.apellidos || ''}`);
+                            doc.fillColor('#555').text(`Matrícula: `, { continued: true });
+                            doc.fillColor('#333').text(`${prestamo.persona?.matricula || 'N/A'}`);
+                            doc.fillColor('#555').text(`Curso: `, { continued: true });
+                            doc.fillColor('#333').text(`${prestamo.persona?.curso || 'N/A'}`);
+
+                            if (prestamo.instructor) {
+                                doc.moveDown();
+                                doc.fontSize(14).font('Helvetica-Bold').fillColor('#333').text('INSTRUCTOR / PROFESOR');
+                                doc.moveDown(0.5);
+                                doc.fontSize(10).font('Helvetica').fillColor('#555').text(`Nombre: `, { continued: true });
+                                doc.fillColor('#333').text(`${prestamo.instructor.nombres} ${prestamo.instructor.apellidos}`);
+                            }
+
+                            doc.moveDown(2);
+                            doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#ccc').stroke();
+                            doc.moveDown();
+
+                            const articulos = prestamo.detalles && prestamo.detalles.length > 0
+                                ? prestamo.detalles
+                                : prestamo.inventario
+                                    ? [{ inventario: prestamo.inventario, cantidad: prestamo.cantidad }]
+                                    : [];
+
+                            if (articulos.length === 1) {
+                                doc.fontSize(14).font('Helvetica-Bold').fillColor('#333').text('ARTÍCULO');
+                                doc.moveDown(0.5);
+                                const art = articulos[0];
+                                doc.fontSize(10).font('Helvetica').fillColor('#555').text(`Artículo: `, { continued: true });
+                                doc.fillColor('#333').text(`${art.inventario?.nombre || ''}`);
+                                doc.fillColor('#555').text(`Código: `, { continued: true });
+                                doc.fillColor('#333').text(`${art.inventario?.codigo || ''}`);
+                                doc.fillColor('#555').text(`Categoría: `, { continued: true });
+                                doc.fillColor('#333').text(`${art.inventario?.categoria?.nombre || 'N/A'}`);
+                                doc.fillColor('#555').text(`Cantidad: `, { continued: true });
+                                doc.fillColor('#333').text(`${art.cantidad}`);
+
+                                if (art.estado_devolucion) {
+                                    doc.fillColor('#555').text(`Estado devolución: `, { continued: true });
+                                    const estadoLabel = art.estado_devolucion === 'BUEN_ESTADO' ? 'Buen estado' :
+                                        art.estado_devolucion === 'MAL_ESTADO' ? 'Dañado' : 'Perdido';
+                                    doc.fillColor('#333').text(`${estadoLabel}`);
+                                }
+                                if (art.cantidad_devuelta_buena > 0) {
+                                    doc.fillColor('#555').text(`Devuelta buena: `, { continued: true });
+                                    doc.fillColor('#333').text(`${art.cantidad_devuelta_buena}`);
+                                }
+                                if (art.cantidad_devuelta_danada > 0) {
+                                    doc.fillColor('#555').text(`Devuelta dañada: `, { continued: true });
+                                    doc.fillColor('#333').text(`${art.cantidad_devuelta_danada}`);
+                                }
+                                if (art.cantidad_perdida > 0) {
+                                    doc.fillColor('#555').text(`Perdida: `, { continued: true });
+                                    doc.fillColor('#333').text(`${art.cantidad_perdida}`);
+                                }
+                            } else {
+                                doc.fontSize(14).font('Helvetica-Bold').fillColor('#333').text('ARTÍCULOS');
+                                doc.moveDown(0.5);
+                                articulos.forEach((art, idx) => {
+                                    doc.fontSize(10).font('Helvetica').fillColor('#555').text(`${idx + 1}. `, { continued: true });
+                                    doc.fillColor('#333').text(`${art.inventario?.nombre || ''}`, { continued: true });
+                                    doc.fillColor('#555').text(` x`, { continued: true });
+                                    doc.fillColor('#333').text(`${art.cantidad}`);
+
+                                    if (art.estado_devolucion) {
+                                        const estadoLabel = art.estado_devolucion === 'BUEN_ESTADO' ? '✓Buena' :
+                                            art.estado_devolucion === 'MAL_ESTADO' ? '⚠Dañada' : '✕Perdida';
+                                        doc.fillColor('#333').text(` (${estadoLabel})`);
+                                    }
+                                    doc.moveDown(0.3);
+
+                                    if (art.cantidad_devuelta_buena > 0) {
+                                        doc.fontSize(8).font('Helvetica').fillColor('#333').text(`   Buena: ${art.cantidad_devuelta_buena}`);
+                                    }
+                                    if (art.cantidad_devuelta_danada > 0) {
+                                        doc.fontSize(8).font('Helvetica').fillColor('#333').text(`   Dañada: ${art.cantidad_devuelta_danada}`);
+                                    }
+                                    if (art.cantidad_perdida > 0) {
+                                        doc.fontSize(8).font('Helvetica').fillColor('#333').text(`   Perdida: ${art.cantidad_perdida}`);
+                                    }
+                                    if (art.observaciones_devolucion) {
+                                        doc.fontSize(8).font('Helvetica').fillColor('#666').text(`   Obs: ${art.observaciones_devolucion}`);
+                                    }
+                                    doc.moveDown(0.2);
+                                    doc.fontSize(10);
+                                });
+                            }
+
+                            if (prestamo.observaciones) {
+                                doc.moveDown();
+                                doc.fontSize(10).font('Helvetica').fillColor('#555').text('Observaciones:', { continued: true });
+                                doc.fillColor('#333').text(` ${prestamo.observaciones}`);
+                            }
+
+                            doc.moveDown(2);
+                            doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#ccc').stroke();
+                            doc.moveDown(1.5);
+
+                            if (prestamo.fecha_devolucion) {
+                                doc.fontSize(12).font('Helvetica-Bold').fillColor('#333').text(
+                                    `Fecha de devolución: ${new Date(prestamo.fecha_devolucion).toLocaleString('es-DO', { dateStyle: 'long', timeStyle: 'short' })}`,
+                                    { align: 'center' }
+                                );
+                                doc.moveDown(2);
+                            }
+
+                            doc.fontSize(8).font('Helvetica').fillColor('#999').text('Este documento es un comprobante de préstamo.', { align: 'center' });
+                            doc.text('Debe presentarse al momento de la devolución.', { align: 'center' });
+                            doc.text(`Generado por: ${prestamo.usuario?.nombre || prestamo.usuario?.usuario || 'Sistema'}`, { align: 'center' });
+
+                            doc.end();
+                        } catch (error) {
+                            logger.error("Error al generar PDF:", error);
+                            res.status(500).json({ status: "error", mensaje: "Error al generar el PDF" });
+                        }
+                    }
 };
 
 module.exports = prestamoController;

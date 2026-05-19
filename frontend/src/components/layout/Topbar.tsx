@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '../auth/AuthProvider';
+import { useNotification } from '../ui/NotificationContext';
 import api from '../../lib/api';
 
 const TITLES: Record<string, { title: string; subtitle: string }> = {
@@ -52,14 +53,21 @@ export default function Topbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, signOut } = useAuth();
+  const { notify } = useNotification();
   const [vencidos, setVencidos] = useState<any[]>([]);
   const [showAlerts, setShowAlerts] = useState(false);
+  const prevCount = useRef(0);
 
   useEffect(() => {
     const cargarVencidos = async () => {
       try {
         const data = await api.get('/prestamos/vencidos') as any;
-        setVencidos(Array.isArray(data) ? data : []);
+        const lista = Array.isArray(data) ? data : [];
+        if (lista.length > prevCount.current && prevCount.current > 0) {
+          notify('warning', `Alerta: ${lista.length - prevCount.current} préstamo(s) vencido(s) detectado(s)`);
+        }
+        prevCount.current = lista.length;
+        setVencidos(lista);
       } catch {
         setVencidos([]);
       }
@@ -67,8 +75,9 @@ export default function Topbar() {
     cargarVencidos();
     const handler = () => cargarVencidos();
     window.addEventListener('refresh-alertas', handler);
-    return () => window.removeEventListener('refresh-alertas', handler);
-  }, []);
+    const interval = setInterval(cargarVencidos, 30000);
+    return () => { window.removeEventListener('refresh-alertas', handler); clearInterval(interval); };
+  }, [notify]);
 
   useEffect(() => {
     if (!showAlerts) return;
@@ -132,12 +141,13 @@ export default function Topbar() {
                   {vencidos.length === 0 ? (
                     <p className="px-4 py-6 text-center text-sm text-[var(--text-muted)]">No hay préstamos vencidos</p>
                   ) : (
-                    vencidos.map((v) => {
+                    [...vencidos].sort((a, b) => new Date(b.fecha_devolucion).getTime() - new Date(a.fecha_devolucion).getTime()).map((v) => {
                       const estudiante = v.persona ? `${v.persona.nombres} ${v.persona.apellidos}` : '—';
                       const items = (v.detalles as any[])?.map((d: any) => `${d.inventario.nombre} (x${d.cantidad})`).join(', ') || '';
                       const fecha = v.fecha_devolucion ? new Date(v.fecha_devolucion).toLocaleDateString('es-DO') : '';
                       return (
-                        <div key={v.id} className="border-b border-[var(--border)] px-4 py-3 last:border-0">
+                        <div key={v.id} onClick={() => { setShowAlerts(false); router.push(`/prestamos?vencido=${v.id}`); }}
+                          className="cursor-pointer border-b border-[var(--border)] px-4 py-3 last:border-0 hover:bg-[var(--surface-2)] transition-colors">
                           <p className="text-sm font-medium text-[var(--text-main)]">{estudiante}</p>
                           {items && <p className="text-xs text-[var(--text-muted)]">{items}</p>}
                           <p className="mt-1 text-xs text-red-500">Venció: {fecha}</p>
