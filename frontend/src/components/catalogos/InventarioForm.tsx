@@ -69,6 +69,11 @@ export default function InventarioForm({ item = null, onGuardar, onCancelar }: I
   function validar() {
     const e: FormErrors<InventarioFormState> = {};
     if (!form.nombre.trim()) e.nombre = 'Nombre obligatorio';
+    const total = Number(form.cantidad_total);
+    const disponible = Number(form.cantidad_disponible);
+    const danada = Number(form.cantidad_danada);
+    if (total < danada) e.cantidad_total = 'El total no puede ser menor a la cantidad dañada';
+    if (danada >= disponible) e.cantidad_danada = 'No puede haber más dañados que disponibles';
     setErrores(e);
     const detalles = Object.entries(e).map(([campo, mensaje]) => `${campo}: ${mensaje}`);
     if (detalles.length > 0) notify('error', 'Revisa los datos del inventario', detalles);
@@ -130,7 +135,8 @@ export default function InventarioForm({ item = null, onGuardar, onCancelar }: I
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <div>
           <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Total</label>
-          <input type="number" name="cantidad_total" value={form.cantidad_total} onChange={handleChange} min={0} className="soft-input" />
+          <input type="number" name="cantidad_total" value={form.cantidad_total} onChange={handleChange} min={0} className={`soft-input ${errores.cantidad_total ? 'border-red-500' : ''}`} />
+          {errores.cantidad_total && <p className="mt-1 text-xs text-red-500">{errores.cantidad_total}</p>}
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Disponible</label>
@@ -138,7 +144,8 @@ export default function InventarioForm({ item = null, onGuardar, onCancelar }: I
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Dañado</label>
-          <input type="number" name="cantidad_danada" value={form.cantidad_danada} onChange={handleChange} min={0} className="soft-input" />
+          <input type="number" name="cantidad_danada" value={form.cantidad_danada} onChange={handleChange} min={0} className={`soft-input ${errores.cantidad_danada ? 'border-red-500' : ''}`} />
+          {errores.cantidad_danada && <p className="mt-1 text-xs text-red-500">{errores.cantidad_danada}</p>}
         </div>
       </div>
 

@@ -3,6 +3,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const logger = require('../utils/logger');
 const nodemailer = require('nodemailer');
+const { getMaxIntentosFallidos, getDuracionBloqueo, getTimeoutSesionHoras, validarPasswordConPoliticas } = require('../utils/politicasSeguridad');
 
 const COOKIE_OPTIONS = {
     httpOnly: true,
@@ -43,25 +44,130 @@ const authController = {
             });
 
             if (!user) {
+                await prisma.auditoriaLog.create({
+                    data: {
+                        accion: 'LOGIN_FALLIDO',
+                        modulo: 'AUTENTICACION',
+                        descripcion: `Intento de login con usuario inexistente: ${usuario}`,
+                        ip: req.ip || req.connection.remoteAddress,
+                        user_agent: req.get('User-Agent'),
+                        detalles: { usuario }
+                    }
+                });
                 return res.status(401).json({ status: "error", mensaje: "Credenciales inválidas" });
             }
 
             if (!user.activo) {
+                await prisma.auditoriaLog.create({
+                    data: {
+                        usuario_id: user.id,
+                        accion: 'LOGIN_FALLIDO',
+                        modulo: 'AUTENTICACION',
+                        descripcion: `Intento de login con usuario desactivado: ${usuario}`,
+                        ip: req.ip || req.connection.remoteAddress,
+                        user_agent: req.get('User-Agent'),
+                        detalles: { usuario_id: user.id }
+                    }
+                });
                 return res.status(403).json({ status: "error", mensaje: "El usuario está desactivado" });
+            }
+
+            if (user.bloqueado_hasta && new Date(user.bloqueado_hasta) > new Date()) {
+                await prisma.auditoriaLog.create({
+                    data: {
+                        usuario_id: user.id,
+                        accion: 'LOGIN_FALLIDO',
+                        modulo: 'AUTENTICACION',
+                        descripcion: `Intento de login con usuario bloqueado: ${usuario}`,
+                        ip: req.ip || req.connection.remoteAddress,
+                        user_agent: req.get('User-Agent'),
+                        detalles: { usuario_id: user.id, bloqueado_hasta: user.bloqueado_hasta }
+                    }
+                });
+                return res.status(403).json({ status: "error", mensaje: `Usuario bloqueado hasta ${user.bloqueado_hasta.toLocaleString()}` });
             }
 
             const match = await bcrypt.compare(contrasena, user.contrasena);
             if (!match) {
-                return res.status(401).json({ status: "error", mensaje: "Credenciales inválidas" });
+                const nuevosIntentos = user.intentos_fallidos + 1;
+                const maxIntentos = await getMaxIntentosFallidos();
+                let bloqueadoHasta = null;
+                
+                if (nuevosIntentos >= maxIntentos) {
+                    const lockoutMinutes = await getDuracionBloqueo();
+                    bloqueadoHasta = new Date(Date.now() + lockoutMinutes * 60 * 1000);
+                }
+
+                await prisma.usuario.update({
+                    where: { id: user.id },
+                    data: {
+                        intentos_fallidos: nuevosIntentos,
+                        bloqueado_hasta: bloqueadoHasta
+                    }
+                });
+
+                await prisma.auditoriaLog.create({
+                    data: {
+                        usuario_id: user.id,
+                        accion: 'LOGIN_FALLIDO',
+                        modulo: 'AUTENTICACION',
+                        descripcion: `Contraseña incorrecta para ${usuario}. Intento ${nuevosIntentos}`,
+                        ip: req.ip || req.connection.remoteAddress,
+                        user_agent: req.get('User-Agent'),
+                        detalles: { usuario_id: user.id, intento: nuevosIntentos, bloqueado: !!bloqueadoHasta }
+                    }
+                });
+
+                const lockoutDuration = await getDuracionBloqueo();
+                return res.status(401).json({ 
+                    status: "error", 
+                    mensaje: bloqueadoHasta 
+                        ? `Usuario bloqueado por ${lockoutDuration} minutos`
+                        : "Credenciales inválidas" 
+                });
             }
 
+            await prisma.usuario.update({
+                where: { id: user.id },
+                data: {
+                    intentos_fallidos: 0,
+                    bloqueado_hasta: null,
+                    ultimo_acceso: new Date()
+                }
+            });
+
+            const timeoutHoras = await getTimeoutSesionHoras();
             const token = jwt.sign(
                 { id: user.id, usuario: user.usuario, rol_id: user.rol_id },
                 process.env.JWT_SECRET,
-                { expiresIn: '8h' }
+                { expiresIn: `${timeoutHoras}h` }
             );
 
-            res.cookie('sgp_token', token, COOKIE_OPTIONS);
+            res.cookie('sgp_token', token, {
+                ...COOKIE_OPTIONS,
+                maxAge: timeoutHoras * 60 * 60 * 1000
+            });
+
+            await prisma.sesion.create({
+                data: {
+                    usuario_id: user.id,
+                    token,
+                    ip: req.ip || req.connection.remoteAddress,
+                    user_agent: req.get('User-Agent')
+                }
+            });
+
+            await prisma.auditoriaLog.create({
+                data: {
+                    usuario_id: user.id,
+                    accion: 'LOGIN',
+                    modulo: 'AUTENTICACION',
+                    descripcion: `Inicio de sesión exitoso: ${usuario}`,
+                    ip: req.ip || req.connection.remoteAddress,
+                    user_agent: req.get('User-Agent'),
+                    detalles: { usuario_id: user.id }
+                }
+            });
 
             const { contrasena: _, ...datosUsuario } = user;
             res.json({
@@ -77,6 +183,35 @@ const authController = {
     },
 
     logout: async (req, res) => {
+        try {
+            if (req.usuario) {
+                await prisma.sesion.updateMany({
+                    where: {
+                        usuario_id: req.usuario.id,
+                        activa: true
+                    },
+                    data: {
+                        activa: false,
+                        fecha_logout: new Date()
+                    }
+                });
+
+                await prisma.auditoriaLog.create({
+                    data: {
+                        usuario_id: req.usuario.id,
+                        accion: 'LOGOUT',
+                        modulo: 'AUTENTICACION',
+                        descripcion: `Cierre de sesión: ${req.usuario.usuario}`,
+                        ip: req.ip || req.connection.remoteAddress,
+                        user_agent: req.get('User-Agent'),
+                        detalles: { usuario_id: req.usuario.id }
+                    }
+                });
+            }
+        } catch (error) {
+            logger.error("Error al registrar logout:", error);
+        }
+        
         res.clearCookie('sgp_token', { path: '/' });
         res.json({ status: "ok", mensaje: "Sesión cerrada" });
     },
@@ -131,6 +266,10 @@ const authController = {
                 }
                 if (contrasena !== confirmar_contrasena) {
                     return res.status(400).json({ status: "error", mensaje: "Las contraseñas nuevas no coinciden." });
+                }
+                const erroresPassword = await validarPasswordConPoliticas(contrasena);
+                if (erroresPassword.length > 0) {
+                    return res.status(400).json({ status: "error", mensaje: "La contraseña no cumple con las políticas de seguridad", detalles: erroresPassword });
                 }
             }
 
@@ -254,6 +393,11 @@ const authController = {
             }
             if (stored.codigo !== codigo) {
                 return res.status(400).json({ status: "error", mensaje: "El código ingresado no es correcto." });
+            }
+
+            const erroresPassword = await validarPasswordConPoliticas(nueva_contrasena);
+            if (erroresPassword.length > 0) {
+                return res.status(400).json({ status: "error", mensaje: "La contraseña no cumple con las políticas de seguridad", detalles: erroresPassword });
             }
 
             const hashedPassword = await bcrypt.hash(nueva_contrasena, 10);

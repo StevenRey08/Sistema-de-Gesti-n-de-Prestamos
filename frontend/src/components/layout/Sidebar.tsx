@@ -19,8 +19,8 @@ const menuItems: MenuItem[] = [
   { label: 'Inventario', icon: '◫', href: '/inventario', modulo: 'INVENTARIO' },
   { label: 'Préstamos', icon: '↗', href: '/prestamos', modulo: 'PRESTAMOS' },
   { label: 'Movimientos', icon: '↺', href: '/movimientos', modulo: 'MOVIMIENTOS' },
-  { label: 'Pedidos', icon: '☰', href: '/pedidos', modulo: 'INVENTARIO' },
-  { label: 'Reportes', icon: '▣', href: '/reportes' },
+  { label: 'Pedidos', icon: '☰', href: '/pedidos', modulo: 'PEDIDOS' },
+  { label: 'Reportes', icon: '▣', href: '/reportes', modulo: 'REPORTES' },
   { label: 'Seguridad', icon: '◈', href: '/seguridad', modulo: 'USUARIOS' },
 ];
 

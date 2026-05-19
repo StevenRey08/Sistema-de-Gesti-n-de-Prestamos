@@ -1,6 +1,7 @@
 const { prisma } = require('../db');
 const bcrypt = require('bcrypt');
 const { buildUniqueConstraintError } = require('../utils/prismaErrors');
+const { validarPasswordConPoliticas } = require('../utils/politicasSeguridad');
 
 const usuarioController = {
     // Listar y buscar usuarios
@@ -32,15 +33,17 @@ const usuarioController = {
         try {
             const data = { ...req.body };
             
-            // Hashear la contraseña si existe
             if (data.contrasena) {
+                const erroresPassword = await validarPasswordConPoliticas(data.contrasena);
+                if (erroresPassword.length > 0) {
+                    return res.status(400).json({ status: "error", mensaje: "La contraseña no cumple con las políticas de seguridad", detalles: erroresPassword });
+                }
                 const salt = await bcrypt.genSalt(12);
                 data.contrasena = await bcrypt.hash(data.contrasena, salt);
             }
 
             const nuevo = await prisma.usuario.create({ data });
             
-            // No devolver la contraseña en la respuesta
             const { contrasena, ...usuarioSinPass } = nuevo;
             res.status(201).json(usuarioSinPass);
         } catch (error) {
@@ -72,8 +75,11 @@ const usuarioController = {
         try {
             const data = { ...req.body };
 
-            // Si se envía una nueva contraseña, la hasheamos
             if (data.contrasena) {
+                const erroresPassword = await validarPasswordConPoliticas(data.contrasena);
+                if (erroresPassword.length > 0) {
+                    return res.status(400).json({ status: "error", mensaje: "La contraseña no cumple con las políticas de seguridad", detalles: erroresPassword });
+                }
                 const salt = await bcrypt.genSalt(12);
                 data.contrasena = await bcrypt.hash(data.contrasena, salt);
             }

@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { movimientosApi, inventarioApi } from '../../lib/api';
+import { inventarioApi } from '../../lib/api';
 import { useAuth } from '../auth/AuthProvider';
 import type { ItemInventario, FormErrors } from '../../lib/types';
 import { notifyErrorPayload } from '../../lib/errors';
@@ -33,6 +33,7 @@ export default function SalidaForm({ item, onSuccess, onCancelar }: SalidaFormPr
   });
   const [errores, setErrores] = useState<FormErrors<SalidaFormState>>({});
   const [cargando, setCargando] = useState(false);
+  const [confirmarEliminarTodo, setConfirmarEliminarTodo] = useState(false);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
     const { name, value } = e.target;
@@ -59,13 +60,11 @@ export default function SalidaForm({ item, onSuccess, onCancelar }: SalidaFormPr
     setCargando(true);
     try {
       const desdeDanado = form.origen === 'danado';
-      await movimientosApi.create({
+      await inventarioApi.registrarSalida({
         inventario_id: item.id,
-        tipo: 'SALIDA',
         cantidad: Number(form.cantidad),
+        motivo: form.motivo.trim(),
         desde_danado: desdeDanado,
-        usuario_id: user?.id,
-        observaciones: form.motivo.trim(),
       });
       notify('success', 'Salida registrada correctamente');
       onSuccess();
@@ -80,7 +79,11 @@ export default function SalidaForm({ item, onSuccess, onCancelar }: SalidaFormPr
   const max = maxOrigen(form.origen);
 
   async function handleEliminarTodo() {
-    if (!confirm(`¿Eliminar "${item.nombre}" del inventario permanentemente?`)) return;
+    setConfirmarEliminarTodo(true);
+  }
+
+  async function ejecutarEliminarTodo() {
+    setConfirmarEliminarTodo(false);
     setCargando(true);
     try {
       await inventarioApi.delete(item.id);
@@ -139,6 +142,26 @@ export default function SalidaForm({ item, onSuccess, onCancelar }: SalidaFormPr
           </button>
         </div>
       </form>
+
+      {confirmarEliminarTodo && (
+        <div className="modal-backdrop">
+          <div className="modal-panel max-w-sm space-y-4 p-6 text-center">
+            <p className="text-lg font-semibold text-[var(--text-main)]">¿Eliminar permanentemente?</p>
+            <p className="text-sm text-[var(--text-muted)]">
+              Se eliminará <strong className="text-[var(--text-main)]">"{item.nombre}"</strong> del inventario. Esta acción no se puede deshacer.
+            </p>
+            <div className="flex justify-center gap-3 pt-2">
+              <button onClick={() => setConfirmarEliminarTodo(false)} className="soft-btn-secondary px-5 py-2 text-sm">
+                Cancelar
+              </button>
+              <button onClick={ejecutarEliminarTodo}
+                className="rounded-full bg-red-600 px-5 py-2 text-sm font-medium text-white hover:bg-red-700">
+                Sí, eliminar todo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

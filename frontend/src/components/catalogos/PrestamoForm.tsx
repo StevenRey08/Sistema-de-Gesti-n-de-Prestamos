@@ -43,6 +43,9 @@ export default function PrestamoForm({ prestamo = null, onGuardar, onCancelar, o
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [errores, setErrores] = useState<Record<string, string>>({});
   const [cargando, setCargando] = useState(false);
+  const [tipoPrestamo, setTipoPrestamo] = useState<'ESTUDIANTE' | 'PROFESOR'>(
+    prestamo?.persona_id ? 'ESTUDIANTE' : prestamo?.instructor_id ? 'PROFESOR' : 'ESTUDIANTE'
+  );
 
   const [items, setItems] = useState<ItemPrestamo[]>([]);
   const [agregando, setAgregando] = useState(false);
@@ -93,14 +96,14 @@ export default function PrestamoForm({ prestamo = null, onGuardar, onCancelar, o
 
   function validar() {
     const e: Record<string, string> = {};
-    if (esEdicion) {
+    if (!esEdicion) {
+      if (tipoPrestamo === 'ESTUDIANTE' && !form.persona_id) e.persona_id = 'Selecciona el estudiante';
+      if (tipoPrestamo === 'PROFESOR' && !form.instructor_id) e.instructor_id = 'Selecciona el profesor';
+    } else {
       if (!form.inventario_id) e.inventario_id = 'Selecciona el artículo';
       if (!form.cantidad || Number(form.cantidad) < 1) e.cantidad = 'Mínimo 1';
-    } else if (items.length === 0) {
-      e.items = 'Agrega al menos una herramienta';
+      if (!form.persona_id && !form.instructor_id) e.persona_id = 'Selecciona estudiante o profesor';
     }
-    if (!form.persona_id) e.persona_id = 'Selecciona el estudiante';
-    if (!form.instructor_id) e.instructor_id = 'Selecciona el instructor';
     if (!form.fecha_devolucion) e.fecha_devolucion = 'Selecciona la fecha de devolución';
     for (const item of items) {
       const cant = Number(item.cantidad);
@@ -121,7 +124,7 @@ export default function PrestamoForm({ prestamo = null, onGuardar, onCancelar, o
       if (esEdicion) {
         const body: PrestamoPayload = {
           inventario_id: form.inventario_id,
-          persona_id: form.persona_id,
+          persona_id: tipoPrestamo === 'ESTUDIANTE' ? form.persona_id : undefined,
           instructor_id: form.instructor_id,
           usuario_id: user?.id || '',
           cantidad: Number(form.cantidad),
@@ -136,8 +139,8 @@ export default function PrestamoForm({ prestamo = null, onGuardar, onCancelar, o
             inventario_id: i.inventario_id,
             cantidad: Number(i.cantidad),
           })),
-          persona_id: form.persona_id,
-          instructor_id: form.instructor_id,
+          persona_id: tipoPrestamo === 'ESTUDIANTE' ? form.persona_id : undefined,
+          instructor_id: tipoPrestamo === 'PROFESOR' ? form.instructor_id : form.instructor_id || undefined,
           usuario_id: user?.id,
           fecha_devolucion: form.fecha_devolucion ? new Date(form.fecha_devolucion).toISOString() : null,
           observaciones: form.observaciones.trim() || undefined,
@@ -241,21 +244,37 @@ export default function PrestamoForm({ prestamo = null, onGuardar, onCancelar, o
             </div>
           )}
 
+          <div>
+            <label className="mb-2 block text-sm font-medium text-[var(--text-main)]">Tipo de préstamo *</label>
+            <div className="flex gap-4">
+              <label className={`flex items-center gap-2 px-4 py-2 rounded-lg border cursor-pointer transition-all ${tipoPrestamo === 'ESTUDIANTE' ? 'border-[var(--accent)] bg-[var(--accent)]/10' : 'border-[var(--border)] hover:border-[var(--accent)]/50'}`}>
+                <input type="radio" name="tipo_prestamo" value="ESTUDIANTE" checked={tipoPrestamo === 'ESTUDIANTE'} onChange={() => setTipoPrestamo('ESTUDIANTE')} className="hidden" />
+                <span className="text-sm font-medium">Para Estudiante</span>
+              </label>
+              <label className={`flex items-center gap-2 px-4 py-2 rounded-lg border cursor-pointer transition-all ${tipoPrestamo === 'PROFESOR' ? 'border-[var(--accent)] bg-[var(--accent)]/10' : 'border-[var(--border)] hover:border-[var(--accent)]/50'}`}>
+                <input type="radio" name="tipo_prestamo" value="PROFESOR" checked={tipoPrestamo === 'PROFESOR'} onChange={() => setTipoPrestamo('PROFESOR')} className="hidden" />
+                <span className="text-sm font-medium">Para Profesor</span>
+              </label>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {tipoPrestamo === 'ESTUDIANTE' && (
+              <FilterableSelect
+                label="Estudiante *"
+                value={form.persona_id}
+                onChange={(value) => { setForm((prev) => ({ ...prev, persona_id: value })); if (errores.persona_id) setErrores((prev) => ({ ...prev, persona_id: '' })); }}
+                options={personas.filter(p => p.tipo === 'ESTUDIANTE').map((persona) => ({
+                  value: persona.id,
+                  label: `${persona.nombres} ${persona.apellidos}`,
+                  searchText: `${persona.matricula} ${persona.curso ?? ''}`,
+                }))}
+                placeholder="Buscar estudiante..."
+                emptyLabel="Sin estudiantes coincidentes"
+              />
+            )}
             <FilterableSelect
-              label="Estudiante *"
-              value={form.persona_id}
-              onChange={(value) => { setForm((prev) => ({ ...prev, persona_id: value })); if (errores.persona_id) setErrores((prev) => ({ ...prev, persona_id: '' })); }}
-              options={personas.filter(p => p.tipo === 'ESTUDIANTE').map((persona) => ({
-                value: persona.id,
-                label: `${persona.nombres} ${persona.apellidos}`,
-                searchText: `${persona.matricula} ${persona.curso ?? ''}`,
-              }))}
-              placeholder="Buscar estudiante..."
-              emptyLabel="Sin estudiantes coincidentes"
-            />
-            <FilterableSelect
-              label="Instructor / Profesor *"
+              label={tipoPrestamo === 'PROFESOR' ? "Profesor *" : "Instructor / Profesor"}
               value={form.instructor_id}
               onChange={(value) => { setForm((prev) => ({ ...prev, instructor_id: value })); if (errores.instructor_id) setErrores((prev) => ({ ...prev, instructor_id: '' })); }}
               options={personas.filter(p => p.tipo === 'PROFESOR').map((persona) => ({
@@ -263,8 +282,8 @@ export default function PrestamoForm({ prestamo = null, onGuardar, onCancelar, o
                 label: `${persona.nombres} ${persona.apellidos}`,
                 searchText: persona.matricula,
               }))}
-              placeholder="Buscar instructor..."
-              emptyLabel="Sin instructores"
+              placeholder="Buscar profesor..."
+              emptyLabel="Sin profesores"
             />
           </div>
         </div>
@@ -273,7 +292,7 @@ export default function PrestamoForm({ prestamo = null, onGuardar, onCancelar, o
       {esEdicion && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <FilterableSelect
-            label="Instructor / Profesor *"
+            label="Instructor / Profesor"
             value={form.instructor_id}
             onChange={(value) => setForm((prev) => ({ ...prev, instructor_id: value }))}
             options={personas.filter(p => p.tipo === 'PROFESOR').map((persona) => ({

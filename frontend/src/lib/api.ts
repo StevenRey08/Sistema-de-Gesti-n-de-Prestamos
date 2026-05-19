@@ -63,13 +63,45 @@ export const categoriasApi  = buildCrud('categorias');
 export const personasApi    = buildCrud('personas');
 export const ubicacionesApi = buildCrud('ubicaciones');
 export const herramientasApi = buildCrud('inventario');
-export const inventarioApi   = buildCrud('inventario');
+export const inventarioApi   = { ...buildCrud('inventario'), registrarSalida: (body: unknown) => request('/inventario/salida', { method: 'POST', body: JSON.stringify(body) }) };
 export const prestamosApi    = { ...buildCrud('prestamos'), createLote: (body: unknown) => request('/prestamos/lote', { method: 'POST', body: JSON.stringify(body) }) };
 export const movimientosApi  = { ...buildCrud('movimientos') };
 export const rolesApi    = buildCrud('roles');
 export const usuariosApi = buildCrud('usuarios');
 export const permisosApi = buildCrud('permisos');
 export const pedidosApi  = buildCrud('pedidos');
+export const modulosApi  = buildCrud('modulos');
+export const auditoriaApi = {
+  getAll: (params = {}) => {
+    const qs = new URLSearchParams(params as Record<string, string>).toString();
+    return request(`/auditoria${qs ? `?${qs}` : ''}`);
+  },
+  getStats: () => request('/auditoria/stats'),
+  exportLogs: () => request('/auditoria/export'),
+  cleanOldLogs: (body: unknown) => request('/auditoria/clean', { method: 'POST', body: JSON.stringify(body) }),
+};
+export const sesionesApi = {
+  getAll: (params = {}) => {
+    const qs = new URLSearchParams(params as Record<string, string>).toString();
+    return request(`/sesiones${qs ? `?${qs}` : ''}`);
+  },
+  getMisSesiones: () => request('/sesiones/mis-sesiones'),
+  cleanExpired: () => request('/sesiones/clean', { method: 'POST' }),
+  revoke: (id: string) => request(`/sesiones/${id}`, { method: 'DELETE' }),
+  revokeAllByUser: (usuario_id: string) => request(`/sesiones/revoke-all/${usuario_id}`, { method: 'POST' }),
+};
+export const politicasApi = {
+  getAll: () => request('/politicas'),
+  getByKey: (clave: string) => request(`/politicas/${clave}`),
+  update: (id: string, body: unknown) => request(`/politicas/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  seed: () => request('/politicas/seed', { method: 'POST' }),
+};
+export const reportesSeguridadApi = {
+  getDashboard: () => request('/reportes-seguridad/dashboard'),
+  getActividad: (usuario_id: string, dias = 30) => request(`/reportes-seguridad/actividad/${usuario_id}?dias=${dias}`),
+  getUsuariosRiesgo: () => request('/reportes-seguridad/usuarios-riesgo'),
+  resetIntentos: (usuario_id: string) => request(`/reportes-seguridad/reset-intentos/${usuario_id}`, { method: 'POST' }),
+};
 
 export function descargarPDFPrestamo(id: string): void {
   const token = getLocalStorageToken();

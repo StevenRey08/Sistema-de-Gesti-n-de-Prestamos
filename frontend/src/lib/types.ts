@@ -258,4 +258,122 @@ export interface UsuarioPayload {
   activo: boolean;
 }
 
+export interface Usuario {
+  id: string;
+  nombre: string;
+  apellido: string;
+  usuario: string;
+  email?: string | null;
+  rol_id?: string | null;
+  tipo_documento?: string | null;
+  numero_documento?: string | null;
+  activo: boolean;
+  ultimo_acceso?: string | null;
+  intentos_fallidos?: number;
+  bloqueado_hasta?: string | null;
+  rol?: Role | null;
+}
+
+export interface AuditoriaLog {
+  id: string;
+  usuario_id?: string | null;
+  accion: string;
+  modulo: string;
+  descripcion?: string | null;
+  ip?: string | null;
+  user_agent?: string | null;
+  detalles?: Record<string, unknown> | null;
+  fecha: string;
+  usuario?: {
+    id: string;
+    nombre: string;
+    apellido: string;
+    usuario: string;
+    rol?: { nombre_rol: string } | null;
+  } | null;
+}
+
+export interface Sesion {
+  id: string;
+  usuario_id: string;
+  token: string;
+  ip?: string | null;
+  user_agent?: string | null;
+  fecha_login: string;
+  fecha_logout?: string | null;
+  activa: boolean;
+  usuario?: {
+    id: string;
+    nombre: string;
+    apellido: string;
+    usuario: string;
+    rol?: { nombre_rol: string } | null;
+    activo: boolean;
+  } | null;
+}
+
+export interface Modulo {
+  id: string;
+  nombre: string;
+  descripcion?: string | null;
+  ruta?: string | null;
+  icono?: string | null;
+  orden: number;
+  activo: boolean;
+  _count?: { permisos: number };
+}
+
+export interface ModuloPayload {
+  nombre: string;
+  descripcion?: string;
+  ruta?: string;
+  icono?: string;
+  orden?: number;
+}
+
+export interface PoliticaSeguridad {
+  id: string;
+  clave: string;
+  valor: string;
+  descripcion?: string | null;
+  ultima_modificacion: string;
+  modificado_por?: {
+    id: string;
+    nombre: string;
+    apellido: string;
+    usuario: string;
+  } | null;
+}
+
+export interface PoliticaPayload {
+  valor: string;
+  descripcion?: string;
+}
+
+export interface SeguridadDashboard {
+  totalUsuarios: number;
+  usuariosActivos: number;
+  usuariosInactivos: number;
+  sesionesActivas: number;
+  totalRoles: number;
+  totalPermisos: number;
+  logsHoy: number;
+  loginFallidosHoy: number;
+  usuariosBloqueados: number;
+  topAcciones: { accion: string; _count: number }[];
+  usuariosPorRol: { rol: string; count: number }[];
+}
+
+export interface UsuarioRiesgo {
+  id: string;
+  nombre: string;
+  usuario: string;
+  email?: string | null;
+  rol: string;
+  activo: boolean;
+  intentos_fallidos: number;
+  bloqueado_hasta?: string | null;
+  nivel_riesgo: 'alto' | 'medio' | 'bajo';
+}
+
 export type FormErrors<T> = Partial<Record<keyof T, string>>;

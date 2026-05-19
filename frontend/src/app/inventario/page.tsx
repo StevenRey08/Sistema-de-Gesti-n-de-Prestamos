@@ -32,6 +32,7 @@ export default function InventarioPage() {
   const [salidaItem, setSalidaItem] = useState<ItemInventario | null>(null);
   const [showPrestamo, setShowPrestamo] = useState(false);
   const [prestamoItem, setPrestamoItem] = useState<ItemInventario | null>(null);
+  const [confirmarEliminar, setConfirmarEliminar] = useState<ItemInventario | null>(null);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -182,15 +183,15 @@ export default function InventarioPage() {
                         <button onClick={() => { setPrestamoItem(item); setShowPrestamo(true); }}
                           className="text-xs font-medium text-[var(--warning)] hover:opacity-80">Préstamo</button>
                       )}
-                      {(puedeSalida || puedeEliminar) && (
-                        item.cantidad_disponible === 0 && item.cantidad_danada === 0 ? (
-                          <button onClick={() => { if (confirm(`¿Eliminar "${item.nombre}" permanentemente?`)) handleEliminarTodo(item); }}
-                            className="ml-auto text-xs font-medium text-[var(--danger)] hover:opacity-80">Eliminar</button>
-                        ) : (
-                          <button onClick={() => { setSalidaItem(item); setShowSalida(true); }}
-                            className="ml-auto text-xs font-medium text-[var(--danger)] hover:opacity-80">Eliminar</button>
-                        )
-                      )}
+                       {(puedeSalida || puedeEliminar) && (
+                         item.cantidad_disponible === 0 && item.cantidad_danada === 0 ? (
+                           <button onClick={() => setConfirmarEliminar(item)}
+                             className="ml-auto text-xs font-medium text-[var(--danger)] hover:opacity-80">Eliminar</button>
+                         ) : (
+                           <button onClick={() => { setSalidaItem(item); setShowSalida(true); }}
+                             className="ml-auto text-xs font-medium text-[var(--danger)] hover:opacity-80">Eliminar</button>
+                         )
+                       )}
                     </div>
                   </div>
                 </div>
@@ -232,6 +233,26 @@ export default function InventarioPage() {
               onSuccess={() => { setShowPrestamo(false); setPrestamoItem(null); cargar(); }}
               onCancelar={() => { setShowPrestamo(false); setPrestamoItem(null); }}
             />
+          </div>
+        </div>
+      )}
+
+      {confirmarEliminar && (
+        <div className="modal-backdrop">
+          <div className="modal-panel max-w-sm space-y-4 p-6 text-center">
+            <p className="text-lg font-semibold text-[var(--text-main)]">¿Eliminar permanentemente?</p>
+            <p className="text-sm text-[var(--text-muted)]">
+              Se eliminará <strong className="text-[var(--text-main)]">"{confirmarEliminar.nombre}"</strong> del inventario. Esta acción no se puede deshacer.
+            </p>
+            <div className="flex justify-center gap-3 pt-2">
+              <button onClick={() => setConfirmarEliminar(null)} className="soft-btn-secondary px-5 py-2 text-sm">
+                Cancelar
+              </button>
+              <button onClick={() => { handleEliminarTodo(confirmarEliminar); setConfirmarEliminar(null); }}
+                className="rounded-full bg-red-600 px-5 py-2 text-sm font-medium text-white hover:bg-red-700">
+                Sí, eliminar
+              </button>
+            </div>
           </div>
         </div>
       )}

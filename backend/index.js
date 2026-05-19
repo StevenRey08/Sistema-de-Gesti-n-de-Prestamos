@@ -33,6 +33,11 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 const reportesRoutes = require('./routes/reportesRoutes');
 const pedidoRoutes = require('./routes/pedidoRoutes');
 const seedRoutes = require('./routes/seedRoutes');
+const auditoriaRoutes = require('./routes/auditoriaRoutes');
+const sesionRoutes = require('./routes/sesionRoutes');
+const moduloRoutes = require('./routes/moduloRoutes');
+const politicasRoutes = require('./routes/politicasRoutes');
+const reportesSeguridadRoutes = require('./routes/reportesSeguridadRoutes');
 
 // Middlewares
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
@@ -64,6 +69,11 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reportes', reportesRoutes);
 app.use('/api/pedidos', pedidoRoutes);
 app.use('/api/seed', seedRoutes);
+app.use('/api/auditoria', auditoriaRoutes);
+app.use('/api/sesiones', sesionRoutes);
+app.use('/api/modulos', moduloRoutes);
+app.use('/api/politicas', politicasRoutes);
+app.use('/api/reportes-seguridad', reportesSeguridadRoutes);
 
 // Manejo de errores global (incluyendo JSON malformado)
 app.use((err, req, res, next) => {

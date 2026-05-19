@@ -109,6 +109,19 @@ const inventarioController = {
             data.cantidad_disponible = cantDisponible;
             data.cantidad_danada = cantDanada;
 
+            if (cantDanada < 0) {
+                return res.status(400).json({ status: "error", mensaje: "La cantidad dañada no puede ser negativa." });
+            }
+            if (cantDisponible < 0) {
+                return res.status(400).json({ status: "error", mensaje: "La cantidad disponible no puede ser negativa." });
+            }
+            if (cantTotal < cantDanada) {
+                return res.status(400).json({ status: "error", mensaje: "La cantidad total no puede ser menor a la cantidad dañada." });
+            }
+            if (cantDanada >= cantDisponible) {
+                return res.status(400).json({ status: "error", mensaje: "No se pueden agregar más productos dañados que disponibles." });
+            }
+
             const nuevo = await prisma.inventario.create({
                 data,
                 include: { categoria: true }
@@ -194,6 +207,12 @@ const inventarioController = {
             if (nuevoDisponible < 0) {
                 return res.status(400).json({ status: "error", mensaje: "La cantidad disponible no puede ser negativa." });
             }
+            if (nuevoTotal < nuevoDanada) {
+                return res.status(400).json({ status: "error", mensaje: "La cantidad total no puede ser menor a la cantidad dañada." });
+            }
+            if (nuevoDanada >= nuevoDisponible) {
+                return res.status(400).json({ status: "error", mensaje: "No se pueden agregar más productos dañados que disponibles." });
+            }
 
             data.cantidad_danada = nuevoDanada;
             data.cantidad_disponible = nuevoDisponible;
@@ -253,7 +272,24 @@ const inventarioController = {
                 });
             }
 
-            await prisma.inventario.delete({ where: { id: req.params.id } });
+            const totalEliminado = existente.cantidad_total;
+
+            await prisma.$transaction(async (tx) => {
+                if (totalEliminado > 0) {
+                    await tx.movimiento.create({
+                        data: {
+                            inventario_id: req.params.id,
+                            tipo: 'ELIMINACION',
+                            cantidad: totalEliminado,
+                            usuario_id: req.usuario?.id,
+                            observaciones: `Artículo "${existente.nombre}" eliminado del sistema. Stock total eliminado: ${totalEliminado}`
+                        }
+                    });
+                }
+
+                await tx.inventario.delete({ where: { id: req.params.id } });
+            });
+
             res.json({ message: "Artículo eliminado correctamente" });
         } catch (error) {
             logger.error("Error en inventario.delete:", error);
@@ -263,6 +299,59 @@ const inventarioController = {
                 });
             }
             res.status(500).json({ status: "error", mensaje: "Error al eliminar el artículo" });
+        }
+    },
+
+    registrarSalida: async (req, res) => {
+        try {
+            const { inventario_id, cantidad, motivo, desde_danado } = req.body;
+            const usuario_id = req.usuario?.id;
+            const cant = parseInt(cantidad);
+
+            if (!inventario_id || !cant || cant < 1) {
+                return res.status(400).json({ status: "error", mensaje: "Datos de salida inválidos." });
+            }
+
+            const articulo = await prisma.inventario.findUnique({ where: { id: inventario_id } });
+            if (!articulo) {
+                return res.status(404).json({ status: "error", mensaje: "Artículo no encontrado." });
+            }
+
+            const esDesdeDanado = desde_danado === true || desde_danado === 'true';
+            const stockOrigen = esDesdeDanado ? articulo.cantidad_danada : articulo.cantidad_disponible;
+
+            if (stockOrigen < cant) {
+                return res.status(400).json({ 
+                    status: "error", 
+                    mensaje: `Stock insuficiente. ${esDesdeDanado ? 'Dañado' : 'Disponible'}: ${stockOrigen}` 
+                });
+            }
+
+            await prisma.$transaction(async (tx) => {
+                await tx.movimiento.create({
+                    data: {
+                        inventario_id,
+                        tipo: 'SALIDA',
+                        cantidad: cant,
+                        usuario_id,
+                        observaciones: motivo || 'Salida de inventario'
+                    }
+                });
+
+                const updateData = esDesdeDanado
+                    ? { cantidad_danada: articulo.cantidad_danada - cant, cantidad_total: articulo.cantidad_total - cant }
+                    : { cantidad_disponible: articulo.cantidad_disponible - cant, cantidad_total: articulo.cantidad_total - cant };
+
+                await tx.inventario.update({
+                    where: { id: inventario_id },
+                    data: updateData
+                });
+            });
+
+            res.json({ status: "ok", mensaje: "Salida registrada correctamente" });
+        } catch (error) {
+            logger.error("Error en inventario.registrarSalida:", error);
+            res.status(500).json({ status: "error", mensaje: "Error al registrar la salida" });
         }
     }
 };

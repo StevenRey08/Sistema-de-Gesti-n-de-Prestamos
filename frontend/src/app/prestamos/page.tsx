@@ -233,7 +233,11 @@ export default function PrestamosPage() {
           <div className="rounded-2xl bg-white p-6 shadow-2xl max-w-2xl w-full space-y-5 max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg font-bold text-[var(--text-main)]">Registrar Devolución</h2>
             <p className="text-sm text-[var(--text-muted)]">
-              {prestamoDevolucion.persona?.nombres} {prestamoDevolucion.persona?.apellidos}
+              {prestamoDevolucion.persona
+                ? `${prestamoDevolucion.persona.nombres} ${prestamoDevolucion.persona.apellidos}`
+                : prestamoDevolucion.instructor
+                ? `${prestamoDevolucion.instructor.nombres} ${prestamoDevolucion.instructor.apellidos} (Prof.)`
+                : '—'}
             </p>
 
             <div className="space-y-3">
@@ -366,17 +370,16 @@ export default function PrestamosPage() {
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr>
-                <th className="px-4 py-3 text-left">Herramienta</th>
-                <th className="px-4 py-3 text-left">Estudiante</th>
-                <th className="px-4 py-3 text-left">Instructor</th>
-                <th className="px-4 py-3 text-left">Cant.</th>
-                <th className="px-4 py-3 text-left">Devolucion</th>
-                <th className="px-4 py-3 text-left">Registrado por</th>
-                <th className="px-4 py-3 text-left">Prestamo</th>
-                <th className="px-4 py-3 text-left">Devolucion</th>
-                <th className="px-4 py-3 text-right">Acciones</th>
-              </tr>
+               <tr>
+                 <th className="px-4 py-3 text-left">Herramienta</th>
+                  <th className="px-4 py-3 text-left">Destinatario</th>
+                  <th className="px-4 py-3 text-left">Instructor</th>
+                 <th className="px-4 py-3 text-left">Cant.</th>
+                 <th className="px-4 py-3 text-left">Registrado por</th>
+                 <th className="px-4 py-3 text-left">Préstamo</th>
+                 <th className="px-4 py-3 text-left">Devolución</th>
+                 <th className="px-4 py-3 text-right">Acciones</th>
+               </tr>
             </thead>
             <tbody>
               {lista.map((p: Prestamo) => {
@@ -396,51 +399,19 @@ export default function PrestamosPage() {
                       ))}
                     </td>
                     <td className="px-4 py-3 text-[var(--text-main)]">
-                      {p.persona ? `${p.persona.nombres} ${p.persona.apellidos}` : '—'}
+                      {p.persona ? `${p.persona.nombres} ${p.persona.apellidos}` : p.instructor ? `${p.instructor.nombres} ${p.instructor.apellidos} (Prof.)` : '—'}
                     </td>
                     <td className="px-4 py-3 text-[var(--text-muted)]">
-                      {p.instructor ? `${p.instructor.nombres} ${p.instructor.apellidos}` : '—'}
+                      {p.instructor && p.persona ? `${p.instructor.nombres} ${p.instructor.apellidos}` : '—'}
                     </td>
                     <td className="px-4 py-3 font-bold text-[var(--accent-strong)]">
                       {articulos.reduce((s, a) => s + a.cantidad, 0)}
-                    </td>
-                    <td className="px-4 py-3 text-xs">
-                      {p.estado === 'DEVUELTO' || p.estado === 'PERDIDO' ? (
-                        p.detalles && p.detalles.length > 0 ? (
-                          <div className="space-y-1">
-                            {p.detalles.map((d, i) => {
-                              const buena = d.cantidad_devuelta_buena || 0;
-                              const danada = d.cantidad_devuelta_danada || 0;
-                              const perdida = d.cantidad_perdida || 0;
-                              const nombre = d.inventario?.nombre || 'Articulo';
-                              return (
-                                <div key={i} className="flex flex-col gap-0.5">
-                                  <span className="font-medium text-[var(--text-main)]">{nombre}</span>
-                                  <div className="flex gap-2 text-[10px]">
-                                    {buena > 0 && <span className="text-green-600">✓ Buena: {buena}</span>}
-                                    {danada > 0 && <span className="text-amber-600">⚠ Danada: {danada}</span>}
-                                    {perdida > 0 && <span className="text-red-600">✕ Perdida: {perdida}</span>}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div className="flex gap-2 text-[10px]">
-                            <span className="text-green-600">✓ Buena: {p.cantidad}</span>
-                          </div>
-                        )
-                      ) : (
-                        <span className="text-[var(--text-muted)]">—</span>
-                      )}
                     </td>
                     <td className="px-4 py-3 text-[var(--text-muted)]">
                       {p.usuario ? `${p.usuario.nombre} ${p.usuario.apellido}` : '—'}
                     </td>
                     <td className="px-4 py-3 text-[var(--text-muted)]">{fmt(p.fecha_prestamo)}</td>
-                    <td className="px-4 py-3">
-                      <span className="font-bold text-[var(--text-main)]">{fmtCorta(p.fecha_devolucion)}</span>
-                    </td>
+                    <td className="px-4 py-3 font-bold text-[var(--text-main)]">{fmtCorta(p.fecha_devolucion)}</td>
                     <td className="px-4 py-3 text-right space-x-2">
                       {puedeActualizar && (
                         <button onClick={() => { setEditando(p); setShowForm(true); }}

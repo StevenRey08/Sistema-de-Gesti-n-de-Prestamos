@@ -25,9 +25,62 @@ model Modulo {
   id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   nombre      String    @unique @db.VarChar(100)
   descripcion String?
+  ruta        String?   @db.VarChar(200)
+  icono       String?   @db.VarChar(50)
+  orden       Int       @default(0)
+  activo      Boolean   @default(true)
   permisos    Permiso[]
 
   @@map("modulos")
+}
+
+model AuditoriaLog {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuario_id  String?  @db.Uuid
+  accion      String   @db.VarChar(50)
+  modulo      String   @db.VarChar(100)
+  descripcion String?  @db.Text
+  ip          String?  @db.VarChar(45)
+  user_agent  String?  @db.Text
+  detalles    Json?
+  fecha       DateTime @default(now()) @db.Timestamp(6)
+  
+  usuario     Usuario? @relation(fields: [usuario_id], references: [id], onDelete: SetNull)
+
+  @@index([usuario_id])
+  @@index([fecha])
+  @@index([accion])
+  @@map("auditoria_logs")
+}
+
+model Sesion {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuario_id    String   @db.Uuid
+  token         String   @unique @db.Text
+  ip            String?  @db.VarChar(45)
+  user_agent    String?  @db.Text
+  fecha_login   DateTime @default(now()) @db.Timestamp(6)
+  fecha_logout  DateTime? @db.Timestamp(6)
+  activa        Boolean  @default(true)
+  
+  usuario       Usuario  @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+
+  @@index([usuario_id])
+  @@index([activa])
+  @@map("sesiones")
+}
+
+model PoliticaSeguridad {
+  id                          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clave                       String   @unique @db.VarChar(100)
+  valor                       String   @db.Text
+  descripcion                 String?  @db.Text
+  ultima_modificacion         DateTime @default(now()) @db.Timestamp(6)
+  modificado_por_id           String?  @db.Uuid
+  
+  modificado_por              Usuario? @relation("PoliticaModificador", fields: [modificado_por_id], references: [id], onDelete: SetNull)
+
+  @@map("politicas_seguridad")
 }
 
 model Permiso {
@@ -56,9 +109,15 @@ model Usuario {
   email            String?      @db.VarChar(100)
   rol_id           String?      @db.Uuid
   activo           Boolean      @default(true)
+  ultimo_acceso    DateTime?    @db.Timestamp(6)
+  intentos_fallidos Int         @default(0)
+  bloqueado_hasta  DateTime?    @db.Timestamp(6)
   movimientos      Movimiento[]
   prestamos        Prestamo[]
-  pedidos          Pedido[]     // Relación con los pedidos que realiza el usuario
+  pedidos          Pedido[]
+  auditoria_logs   AuditoriaLog[]
+  sesiones         Sesion[]
+  politicas_mod    PoliticaSeguridad[] @relation("PoliticaModificador")
   rol              Role?        @relation(fields: [rol_id], references: [id], onDelete: Restrict)
 
   @@index([rol_id])

@@ -90,8 +90,7 @@ const prestamoController = {
         const cantSolicitada = parseInt(cantidad);
 
         if (!inventario_id) return res.status(400).json({ status: "error", mensaje: "Debes seleccionar un artículo." });
-        if (!persona_id) return res.status(400).json({ status: "error", mensaje: "Debes seleccionar un estudiante." });
-        if (!instructor_id) return res.status(400).json({ status: "error", mensaje: "Debes seleccionar un instructor." });
+        if (!persona_id && !instructor_id) return res.status(400).json({ status: "error", mensaje: "Debes seleccionar un estudiante o profesor." });
         if (!fecha_devolucion) return res.status(400).json({ status: "error", mensaje: "Debes ingresar una fecha de devolución." });
 
         try {
@@ -155,8 +154,7 @@ const prestamoController = {
         if (!items || !Array.isArray(items) || items.length === 0) {
             return res.status(400).json({ status: "error", mensaje: "Debes incluir al menos un artículo." });
         }
-        if (!persona_id) return res.status(400).json({ status: "error", mensaje: "Debes seleccionar un estudiante." });
-        if (!instructor_id) return res.status(400).json({ status: "error", mensaje: "Debes seleccionar un instructor." });
+        if (!persona_id && !instructor_id) return res.status(400).json({ status: "error", mensaje: "Debes seleccionar un estudiante o profesor." });
         if (!fecha_devolucion) return res.status(400).json({ status: "error", mensaje: "Debes ingresar una fecha de devolución." });
 
         try {
@@ -176,8 +174,8 @@ const prestamoController = {
 
                 const prestamo = await tx.prestamo.create({
                     data: {
-                        persona: { connect: { id: persona_id } },
-                        instructor: { connect: { id: instructor_id } },
+                        ...(persona_id && { persona: { connect: { id: persona_id } } }),
+                        ...(instructor_id && { instructor: { connect: { id: instructor_id } } }),
                         usuario: { connect: { id: usuario_id } },
                         cantidad: 0,
                         fecha_devolucion: new Date(fecha_devolucion),
@@ -206,7 +204,7 @@ const prestamoController = {
                             inventario_id: detalle.inventario_id,
                             tipo: 'PRESTAMO',
                             cantidad: detalle.cantidad,
-                            persona_id,
+                            ...(persona_id && { persona_id }),
                             usuario_id,
                             prestamo_id: prestamo.id,
                             observaciones: `Préstamo múltiple. ID: ${prestamo.id}`

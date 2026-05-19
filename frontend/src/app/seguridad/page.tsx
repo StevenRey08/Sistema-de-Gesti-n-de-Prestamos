@@ -5,6 +5,9 @@ import { permisosApi, rolesApi, usuariosApi } from '../../lib/api';
 import type { Permiso, PermisoPayload, Role, Usuario, UsuarioPayload } from '../../lib/types';
 import RoleForm from '../../components/seguridad/RoleForm';
 import UsuarioForm from '../../components/seguridad/UsuarioForm';
+import AuditoriaTab from '../../components/seguridad/AuditoriaTab';
+import PoliticasTab from '../../components/seguridad/PoliticasTab';
+import ReportesTab from '../../components/seguridad/ReportesTab';
 import FilterableSelect from '../../components/ui/FilterableSelect';
 import { useAuth } from '../../components/auth/AuthProvider';
 import { toSessionUser } from '../../lib/auth';
@@ -12,7 +15,7 @@ import { usePermiso } from '../../lib/permissions';
 import { useNotification } from '../../components/ui/NotificationContext';
 import { notifyErrorPayload } from '../../lib/errors';
 
-type TabKey = 'roles' | 'permisos' | 'usuarios';
+type TabKey = 'reportes' | 'roles' | 'permisos' | 'usuarios' | 'politicas' | 'auditoria';
 
 const EMPTY_PERMISSION: PermisoPayload = {
   rol_id: '',
@@ -248,16 +251,23 @@ export default function SeguridadPage() {
       <div className="page-heading">
         <div>
           <h1 className="page-title">Seguridad</h1>
-          <p className="page-subtitle">Administra roles, permisos y usuarios desde el backend real del sistema.</p>
+          <p className="page-subtitle">Administra roles, permisos, usuarios, políticas y auditoría del sistema.</p>
         </div>
-        <div className="flex gap-2">
-          {(['roles', 'permisos', 'usuarios'] as const).map((tab) => (
+        <div className="flex gap-2 flex-wrap">
+          {([
+            { key: 'reportes', label: 'Reportes' },
+            { key: 'roles', label: 'Roles' },
+            { key: 'permisos', label: 'Permisos' },
+            { key: 'usuarios', label: 'Usuarios' },
+            { key: 'politicas', label: 'Políticas' },
+            { key: 'auditoria', label: 'Auditoría' },
+          ] as const).map((tab) => (
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`filter-pill ${activeTab === tab ? 'active' : ''}`}
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`filter-pill ${activeTab === tab.key ? 'active' : ''}`}
             >
-              {tab}
+              {tab.label}
             </button>
           ))}
         </div>
@@ -508,6 +518,12 @@ export default function SeguridadPage() {
           </div>
         </section>
       )}
+
+      {activeTab === 'reportes' && <ReportesTab />}
+
+      {activeTab === 'politicas' && <PoliticasTab />}
+
+      {activeTab === 'auditoria' && <AuditoriaTab />}
 
       {showRoleForm && (
         <div className="modal-backdrop">
