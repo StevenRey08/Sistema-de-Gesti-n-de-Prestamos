@@ -148,6 +148,11 @@ const authController = {
                 maxAge: timeoutHoras * 60 * 60 * 1000
             });
 
+            const sesionActiva = await prisma.sesion.findFirst({ where: { activa: true } });
+            if (sesionActiva) {
+                return res.status(409).json({ status: "error", mensaje: "Ya hay una sesión activa en el sistema. Cierre esa sesión antes de iniciar una nueva." });
+            }
+
             await prisma.sesion.create({
                 data: {
                     usuario_id: user.id,

@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
+const { prisma } = require('../db');
 
-const verificarToken = (req, res, next) => {
-    // Intentar obtener token de: 1. Cookie httpOnly, 2. Authorization header
+const verificarToken = async (req, res, next) => {
     let token = req.cookies?.sgp_token;
 
     if (!token) {
@@ -15,6 +15,10 @@ const verificarToken = (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const sesion = await prisma.sesion.findUnique({ where: { token } });
+        if (!sesion || !sesion.activa) {
+            return res.status(401).json({ status: "error", mensaje: "Sesión inválida o cerrada" });
+        }
         req.usuario = decoded;
         next();
     } catch (error) {
