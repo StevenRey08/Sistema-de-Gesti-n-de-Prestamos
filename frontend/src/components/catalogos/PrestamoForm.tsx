@@ -7,8 +7,6 @@ import type { Prestamo, PrestamoPayload, EstadoPrestamo, ItemInventario, Persona
 import { notifyErrorPayload } from '../../lib/errors';
 import { useNotification } from '../ui/NotificationContext';
 
-const ESTADOS: EstadoPrestamo[] = ['PENDIENTE', 'DEVUELTO', 'VENCIDO'];
-
 interface ItemPrestamo {
   inventario_id: string;
   nombre: string;
@@ -161,6 +159,28 @@ export default function PrestamoForm({ prestamo = null, onGuardar, onCancelar, o
       }
     } catch (err: unknown) {
       const { message, details } = notifyErrorPayload(err, 'Error al guardar');
+      notify('error', message, details);
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  async function handleMarcarDevuelto() {
+    setCargando(true);
+    try {
+      const body: PrestamoPayload = {
+        inventario_id: form.inventario_id,
+        persona_id: tipoPrestamo === 'ESTUDIANTE' ? form.persona_id : undefined,
+        instructor_id: form.instructor_id,
+        usuario_id: user?.id || '',
+        cantidad: Number(form.cantidad),
+        fecha_devolucion: new Date().toISOString(),
+        estado: 'DEVUELTO',
+        observaciones: form.observaciones.trim() || undefined,
+      };
+      await onGuardar(body);
+    } catch (err: unknown) {
+      const { message, details } = notifyErrorPayload(err, 'Error al marcar devolución');
       notify('error', message, details);
     } finally {
       setCargando(false);
@@ -321,18 +341,19 @@ export default function PrestamoForm({ prestamo = null, onGuardar, onCancelar, o
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Fecha devolución *</label>
-          <input type="datetime-local" name="fecha_devolucion" value={form.fecha_devolucion} onChange={handleChange} className="soft-input" />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Estado</label>
-          <select name="estado" value={form.estado} onChange={handleChange} className="soft-select">
-            {ESTADOS.map((estado) => <option key={estado} value={estado}>{estado}</option>)}
-          </select>
-        </div>
+      <div>
+        <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Fecha devolución *</label>
+        <input type="datetime-local" name="fecha_devolucion" value={form.fecha_devolucion} onChange={handleChange} className="soft-input" />
       </div>
+
+      {esEdicion && form.estado !== 'DEVUELTO' && (
+        <div className="flex justify-end">
+          <button type="button" onClick={handleMarcarDevuelto}
+            className="rounded-full bg-green-600 px-6 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-green-700 active:scale-[0.97] transition-all">
+            ✓ Marcar como devuelto
+          </button>
+        </div>
+      )}
 
       <div>
         <label className="mb-1 block text-sm font-medium text-[var(--text-main)]">Observaciones</label>

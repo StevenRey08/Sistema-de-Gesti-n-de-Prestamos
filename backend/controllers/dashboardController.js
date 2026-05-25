@@ -31,7 +31,7 @@ const dashboardController = {
                 prisma.inventario.count(),
                 prisma.categoriaHerramienta.count(),
                 prisma.persona.count(),
-                prisma.prestamo.count({ where: { estado: 'PENDIENTE' } }),
+                prisma.prestamo.count({ where: { estado: 'VENCIDO' } }),
                 prisma.prestamo.count({ where: { estado: 'PENDIENTE' } }),
                 prisma.movimiento.findMany({
                     take: 5,

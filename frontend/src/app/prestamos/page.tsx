@@ -201,7 +201,13 @@ export default function PrestamosPage() {
       if (p.inventario?.nombre?.toLowerCase().includes(s)) return true;
       return estudiante.includes(s) || instructor.includes(s) || articulos.some(n => n.includes(s));
     })
-    .sort((a, b) => (ORDEN_ESTADO[a.estado] ?? 99) - (ORDEN_ESTADO[b.estado] ?? 99) || new Date(b.fecha_prestamo ?? 0).getTime() - new Date(a.fecha_prestamo ?? 0).getTime());
+    .sort((a, b) => {
+      const estadoOrd = (ORDEN_ESTADO[a.estado] ?? 99) - (ORDEN_ESTADO[b.estado] ?? 99);
+      if (estadoOrd !== 0) return estadoOrd;
+      if (!a.fecha_devolucion) return 1;
+      if (!b.fecha_devolucion) return -1;
+      return new Date(a.fecha_devolucion).getTime() - new Date(b.fecha_devolucion).getTime();
+    });
 
   const activos = prestamos.filter((p: Prestamo) => p.estado === 'PENDIENTE').length;
   const vencidos = prestamos.filter((p: Prestamo) => p.estado === 'VENCIDO').length;

@@ -65,7 +65,7 @@ export default function DashboardPage() {
   }
 
   const cards = [
-    { label: 'Préstamos activos', value: counts.prestamos_activos, color: 'from-blue-600 to-blue-800', icon: '' },
+    { label: 'Préstamos vencidos', value: counts.prestamos_activos, color: 'from-blue-600 to-blue-800', icon: '' },
     { label: 'Préstamos pendientes', value: counts.prestamos_pendientes, color: 'from-red-600 to-red-800', icon: '' },
     { label: 'En inventario', value: counts.articulos, color: 'from-emerald-600 to-emerald-800', icon: '' },
     { label: 'Personas', value: counts.personas, color: 'from-violet-600 to-violet-800', icon: '' },

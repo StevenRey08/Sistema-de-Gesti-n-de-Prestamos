@@ -17,7 +17,13 @@ export default function LoansTable() {
     api.get('/prestamos')
       .then((data: Prestamo[] | unknown) => {
         const arr = Array.isArray(data) ? data : [];
-        // Mostramos solo los últimos 8
+        // Ordenar por fecha de devolución más cercana primero
+        arr.sort((a, b) => {
+          if (!a.fecha_devolucion) return 1;
+          if (!b.fecha_devolucion) return -1;
+          return new Date(a.fecha_devolucion).getTime() - new Date(b.fecha_devolucion).getTime();
+        });
+        // Mostramos solo los primeros 8
         setPrestamos(arr.slice(0, 8));
       })
       .catch(() => setPrestamos([]))
