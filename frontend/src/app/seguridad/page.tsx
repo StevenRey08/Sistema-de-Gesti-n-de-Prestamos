@@ -6,7 +6,6 @@ import type { Modulo, Permiso, PermisoPayload, Role, Usuario, UsuarioPayload } f
 import RoleForm from '../../components/seguridad/RoleForm';
 import UsuarioForm from '../../components/seguridad/UsuarioForm';
 import PoliticasTab from '../../components/seguridad/PoliticasTab';
-import ReportesTab from '../../components/seguridad/ReportesTab';
 import FilterableSelect from '../../components/ui/FilterableSelect';
 import { useAuth } from '../../components/auth/AuthProvider';
 import { toSessionUser } from '../../lib/auth';
@@ -14,7 +13,7 @@ import { usePermiso } from '../../lib/permissions';
 import { useNotification } from '../../components/ui/NotificationContext';
 import { notifyErrorPayload } from '../../lib/errors';
 
-type TabKey = 'reportes' | 'roles' | 'permisos' | 'usuarios' | 'politicas';
+type TabKey = 'roles' | 'permisos' | 'usuarios' | 'politicas';
 
 const EMPTY_PERMISSION: PermisoPayload = {
   rol_id: '',
@@ -251,7 +250,6 @@ export default function SeguridadPage() {
         </div>
         <div className="flex gap-2 flex-wrap">
           {([
-            { key: 'reportes', label: 'Reportes' },
             { key: 'roles', label: 'Roles' },
             { key: 'permisos', label: 'Permisos' },
             { key: 'usuarios', label: 'Usuarios' },
@@ -513,8 +511,6 @@ export default function SeguridadPage() {
           </div>
         </section>
       )}
-
-      {activeTab === 'reportes' && <ReportesTab />}
 
       {activeTab === 'politicas' && <PoliticasTab />}
 

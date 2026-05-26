@@ -419,11 +419,11 @@ const personaController = {
             XLSX.utils.book_append_sheet(wb, wsEstudiantes, 'ESTUDIANTES');
 
             const docentesData = [
-                { DNI: '000-0000000-0', NOMBRES: 'Roberto', APELLIDOS: 'Martínez' },
-                { DNI: '000-0000000-1', NOMBRES: 'Ana', APELLIDOS: 'López' },
+                { NOMBRES: 'Roberto', APELLIDOS: 'Martínez' },
+                { NOMBRES: 'Ana', APELLIDOS: 'López' },
             ];
             const wsDocentes = XLSX.utils.json_to_sheet(docentesData);
-            wsDocentes['!cols'] = [{ wch: 16 }, { wch: 20 }, { wch: 20 }];
+            wsDocentes['!cols'] = [{ wch: 20 }, { wch: 20 }];
             XLSX.utils.book_append_sheet(wb, wsDocentes, 'DOCENTES');
 
             const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });

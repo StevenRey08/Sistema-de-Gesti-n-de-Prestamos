@@ -195,14 +195,14 @@ const reportesController = {
         take: parseInt(limite),
       });
 
-      const ids = resultados.map(r => r.inventario_id);
+      const ids = resultados.map(r => r.inventario_id).filter(Boolean);
       const inventarios = await prisma.inventario.findMany({
         where: { id: { in: ids } },
         include: { categoria: true }
       });
       const mapa = Object.fromEntries(inventarios.map(i => [i.id, i]));
 
-      const data = resultados.map(r => ({
+      const data = resultados.filter(r => r.inventario_id).map(r => ({
         ...mapa[r.inventario_id],
         total_prestamos: r._count.id,
         total_prestado: r._sum.cantidad,
@@ -228,14 +228,14 @@ const reportesController = {
         take: parseInt(limite),
       });
 
-      const ids = resultados.map(r => r.inventario_id);
+      const ids = resultados.map(r => r.inventario_id).filter(Boolean);
       const inventarios = await prisma.inventario.findMany({
         where: { id: { in: ids } },
         include: { categoria: true }
       });
       const mapa = Object.fromEntries(inventarios.map(i => [i.id, i]));
 
-      const data = resultados.map(r => ({
+      const data = resultados.filter(r => r.inventario_id).map(r => ({
         ...mapa[r.inventario_id],
         total_prestamos: r._count.id,
         total_prestado: r._sum.cantidad,
@@ -264,7 +264,18 @@ const reportesController = {
         },
         orderBy: { fecha_prestamo: 'desc' }
       });
-      res.json(prestamos);
+      const data = prestamos.map(p => ({
+        id: p.id,
+        codigo: p.inventario?.codigo,
+        nombre: p.inventario?.nombre,
+        estado: p.estado,
+        persona: p.persona,
+        instructor: p.instructor,
+        usuario: p.usuario,
+        fecha_prestamo: p.fecha_prestamo,
+        fecha_devolucion: p.fecha_devolucion,
+      }));
+      res.json(data);
     } catch (error) {
       res.status(500).json({ status: 'error', mensaje: 'Error al obtener préstamos vencidos' });
     }
@@ -314,13 +325,13 @@ const reportesController = {
           orderBy: { _count: { id: 'desc' } },
           take: 20,
         });
-        const ids = resultados.map(r => r.inventario_id);
+        const ids = resultados.map(r => r.inventario_id).filter(Boolean);
         const inventarios = await prisma.inventario.findMany({
           where: { id: { in: ids } },
           include: { categoria: true }
         });
         const mapa = Object.fromEntries(inventarios.map(i => [i.id, i]));
-        const filas = resultados.map(r => ({
+        const filas = resultados.filter(r => r.inventario_id).map(r => ({
           Código: mapa[r.inventario_id]?.codigo || '—',
           Nombre: mapa[r.inventario_id]?.nombre || '—',
           Categoría: mapa[r.inventario_id]?.categoria?.nombre || '—',
@@ -362,13 +373,13 @@ const reportesController = {
           orderBy: { _count: { id: 'asc' } },
           take: 20,
         });
-        const ids = resultados.map(r => r.inventario_id);
+        const ids = resultados.map(r => r.inventario_id).filter(Boolean);
         const inventarios = await prisma.inventario.findMany({
           where: { id: { in: ids } },
           include: { categoria: true }
         });
         const mapa = Object.fromEntries(inventarios.map(i => [i.id, i]));
-        const filas = resultados.map(r => ({
+        const filas = resultados.filter(r => r.inventario_id).map(r => ({
           Código: mapa[r.inventario_id]?.codigo || '—',
           Nombre: mapa[r.inventario_id]?.nombre || '—',
           Categoría: mapa[r.inventario_id]?.categoria?.nombre || '—',

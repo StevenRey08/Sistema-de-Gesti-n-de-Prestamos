@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '../auth/AuthProvider';
-import { useNotification } from '../ui/NotificationContext';
+
 import api from '../../lib/api';
 
 const TITLES: Record<string, { title: string; subtitle: string }> = {
@@ -53,7 +53,6 @@ export default function Topbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, signOut } = useAuth();
-  const { notify } = useNotification();
   const [vencidos, setVencidos] = useState<any[]>([]);
   const [showAlerts, setShowAlerts] = useState(false);
   const prevCount = useRef(0);
@@ -63,9 +62,6 @@ export default function Topbar() {
       try {
         const data = await api.get('/prestamos/vencidos') as any;
         const lista = Array.isArray(data) ? data : [];
-        if (lista.length > prevCount.current && prevCount.current > 0) {
-          notify('warning', `Alerta: ${lista.length - prevCount.current} préstamo(s) vencido(s) detectado(s)`);
-        }
         prevCount.current = lista.length;
         setVencidos(lista);
       } catch {
@@ -77,7 +73,7 @@ export default function Topbar() {
     window.addEventListener('refresh-alertas', handler);
     const interval = setInterval(cargarVencidos, 30000);
     return () => { window.removeEventListener('refresh-alertas', handler); clearInterval(interval); };
-  }, [notify]);
+  }, []);
 
   useEffect(() => {
     if (!showAlerts) return;

@@ -217,7 +217,7 @@ export default function PersonasPage() {
             {puedeEliminar && (
               <button onClick={handleEliminarTodosEstudiantes} disabled={eliminandoTodo}
                 className="rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-[10px] font-medium text-red-600 transition hover:bg-red-100 disabled:opacity-50">
-                {eliminandoTodo ? 'Dando de baja...' : 'Dar de baja todos'}
+                {eliminandoTodo ? 'Eliminando...' : 'Eliminacion Global'}
               </button>
             )}
           </div>
@@ -320,7 +320,6 @@ export default function PersonasPage() {
             <table className="w-full text-sm">
               <thead className="sticky top-0 z-10 bg-[var(--surface-2)]">
                 <tr>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">DNI</th>
                   <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">Nombre</th>
                   <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">Tipo</th>
                   <th className="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">Acción</th>
@@ -328,21 +327,11 @@ export default function PersonasPage() {
               </thead>
               <tbody>
                 {cargandoDoc ? (
-                  <tr><td colSpan={4} className="py-8 text-center text-[var(--text-muted)]">Cargando...</td></tr>
+                  <tr><td colSpan={3} className="py-8 text-center text-[var(--text-muted)]">Cargando...</td></tr>
                 ) : docentes.length === 0 ? (
-                  <tr><td colSpan={4} className="py-8 text-center text-[var(--text-muted)]">Sin docentes o personal registrados.</td></tr>
+                  <tr><td colSpan={3} className="py-8 text-center text-[var(--text-muted)]">Sin docentes o personal registrados.</td></tr>
                 ) : docentes.map(p => (
                   <tr key={p.id} className="border-t border-[var(--border)] hover:bg-[var(--surface-2)]">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs text-[var(--text-main)]">{p.matricula || '—'}</span>
-                        {(p.prestamosActivos ?? 0) > 0 && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[9px] font-semibold text-amber-700 border border-amber-200">
-                            {p.prestamosActivos} préstamo(s)
-                          </span>
-                        )}
-                      </div>
-                    </td>
                     <td className="px-4 py-3 font-medium text-[var(--text-main)]">{p.nombres} {p.apellidos}</td>
                     <td className="px-4 py-3">
                       <span className="status-badge status-info text-[10px]">{p.tipo}</span>

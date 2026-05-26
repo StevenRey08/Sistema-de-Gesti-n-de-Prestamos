@@ -9,8 +9,8 @@ import { usePermiso } from '../../lib/permissions';
 import { notifyErrorPayload } from '../../lib/errors';
 
 const ORDEN_ESTADO: Record<string, number> = {
-  VENCIDO: 0,
-  ACTIVO: 1,
+  PENDIENTE: 0,
+  VENCIDO: 1,
   PERDIDO: 2,
   DEVUELTO: 3,
 };
@@ -23,6 +23,13 @@ function fmt(fecha: string | null) {
 function fmtCorta(fecha: string | null) {
   if (!fecha) return '—';
   return new Date(fecha).toLocaleString('es-DO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function mostrarEstado(p: Prestamo): string {
+  if (p.estado === 'PENDIENTE' && p.fecha_devolucion && new Date(p.fecha_devolucion) < new Date(Date.now() - 60000)) {
+    return 'VENCIDO';
+  }
+  return p.estado;
 }
 
 interface ItemDevolucion {
@@ -58,18 +65,25 @@ export default function PrestamosPage() {
   const [pdfUrl, setPdfUrl] = useState('');
   const [searchText, setSearchText] = useState('');
 
-  const cargar = useCallback(async () => {
-    setCargando(true);
+  const cargar = useCallback(async (silent = false) => {
+    if (!silent) setCargando(true);
     try {
       const data = await prestamosApi.getAll() as Prestamo[];
       setPrestamos(data);
     } catch (e: unknown) {
-      const { message, details } = notifyErrorPayload(e, 'Error al cargar préstamos');
-      notify('error', message, details);
-    } finally { setCargando(false); }
+      if (!silent) {
+        const { message, details } = notifyErrorPayload(e, 'Error al cargar préstamos');
+        notify('error', message, details);
+      }
+    } finally { if (!silent) setCargando(false); }
   }, [notify]);
 
   useEffect(() => { cargar(); }, [cargar]);
+
+  useEffect(() => {
+    const interval = setInterval(() => cargar(true), 30000);
+    return () => clearInterval(interval);
+  }, [cargar]);
 
   async function handleGuardar(form: PrestamoPayload) {
     if (editando) await prestamosApi.update(editando.id, form);
@@ -202,15 +216,15 @@ export default function PrestamosPage() {
       return estudiante.includes(s) || instructor.includes(s) || articulos.some(n => n.includes(s));
     })
     .sort((a, b) => {
-      const estadoOrd = (ORDEN_ESTADO[a.estado] ?? 99) - (ORDEN_ESTADO[b.estado] ?? 99);
+      const estadoOrd = (ORDEN_ESTADO[mostrarEstado(a)] ?? 99) - (ORDEN_ESTADO[mostrarEstado(b)] ?? 99);
       if (estadoOrd !== 0) return estadoOrd;
       if (!a.fecha_devolucion) return 1;
       if (!b.fecha_devolucion) return -1;
       return new Date(a.fecha_devolucion).getTime() - new Date(b.fecha_devolucion).getTime();
     });
 
-  const activos = prestamos.filter((p: Prestamo) => p.estado === 'PENDIENTE').length;
-  const vencidos = prestamos.filter((p: Prestamo) => p.estado === 'VENCIDO').length;
+  const activos = prestamos.filter((p: Prestamo) => mostrarEstado(p) === 'PENDIENTE').length;
+  const vencidos = prestamos.filter((p: Prestamo) => mostrarEstado(p) === 'VENCIDO').length;
 
   return (
     <div className="page-shell">
@@ -219,7 +233,7 @@ export default function PrestamosPage() {
           <h1 className="page-title">Préstamos</h1>
           <p className="page-subtitle">
             {prestamos.length} total —
-            <span className="ml-1 font-semibold text-[var(--warning)]">{activos} activos</span>
+            <span className="ml-1 font-semibold text-[var(--warning)]">{activos} pendientes</span>
             {vencidos > 0 && <span className="ml-2 font-semibold text-red-500">{vencidos} vencidos</span>}
           </p>
         </div>
@@ -397,6 +411,7 @@ export default function PrestamosPage() {
                 <th className="px-4 py-3 text-left">Destinatario</th>
                 <th className="px-4 py-3 text-left">Instructor</th>
                 <th className="px-4 py-3 text-left">Cant.</th>
+                <th className="px-4 py-3 text-left">Estado</th>
                 <th className="px-4 py-3 text-left">Registrado por</th>
                 <th className="px-4 py-3 text-left">Préstamo</th>
                 <th className="px-4 py-3 text-left">Devolución</th>
@@ -411,8 +426,8 @@ export default function PrestamosPage() {
                 return (
                   <tr key={p.id} className={
                     p.id === destacarId ? 'ring-2 ring-red-500 bg-red-50' :
-                    p.estado === 'VENCIDO' ? 'bg-red-50' :
-                    p.estado === 'PERDIDO' ? 'bg-gray-100' : ''
+                    mostrarEstado(p) === 'VENCIDO' ? 'bg-red-50' :
+                    mostrarEstado(p) === 'PERDIDO' ? 'bg-gray-100' : ''
                   }>
                     <td className="px-4 py-3">
                       {articulos.map((a, i) => (
@@ -430,6 +445,17 @@ export default function PrestamosPage() {
                     <td className="px-4 py-3 font-bold text-[var(--accent-strong)]">
                       {articulos.reduce((s, a) => s + a.cantidad, 0)}
                     </td>
+                    <td className="px-4 py-3">
+                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase ${
+                        (() => { const e = mostrarEstado(p); return e === 'PENDIENTE' ? 'bg-[var(--surface-2)] text-yellow-500' :
+                        e === 'VENCIDO' ? 'bg-[var(--surface-2)] text-red-800' :
+                        e === 'PERDIDO' ? 'bg-red-100 text-red-600' :
+                        e === 'DEVUELTO' ? 'bg-[var(--surface-2)] text-sky-500' :
+                        'bg-[var(--surface-3)] text-[var(--text-muted)]' })()
+                      }`}>
+                        {mostrarEstado(p)}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 text-[var(--text-muted)]">
                       {p.usuario ? `${p.usuario.nombre} ${p.usuario.apellido}` : '—'}
                     </td>
@@ -446,8 +472,8 @@ export default function PrestamosPage() {
                         <button onClick={() => abrirDevolucion(p)}
                           className="text-green-500 hover:text-green-400 text-xs font-medium">DEVOLVER</button>
                       )}
-<button onClick={() => abrirPdf(p.id)}
-                         className="text-orange-400 hover:text-orange-300 text-xs font-medium">Factura</button>
+                      {mostrarEstado(p) === 'PENDIENTE' && <button onClick={() => abrirPdf(p.id)}
+                         className="text-orange-400 hover:text-orange-300 text-xs font-medium">Factura</button>}
                     </td>
                   </tr>
                 );

@@ -43,6 +43,7 @@ async function main() {
         { nombre: 'ROLES',       descripcion: 'Gestión de roles del sistema' },
         { nombre: 'PERMISOS',    descripcion: 'Asignación de permisos por rol' },
         { nombre: 'PEDIDOS',     descripcion: 'Gestión de pedidos de abastecimiento' },
+        { nombre: 'REPORTES',    descripcion: 'Visualización de reportes y estadísticas' },
     ];
     for (const m of modulosData) {
         await prisma.modulo.upsert({

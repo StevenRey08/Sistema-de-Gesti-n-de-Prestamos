@@ -7,7 +7,7 @@ async function marcarVencidos() {
         await prisma.prestamo.updateMany({
             where: {
                 estado: 'PENDIENTE',
-                fecha_devolucion: { lt: new Date() },
+                fecha_devolucion: { lt: new Date(Date.now() - 60000) },
             },
             data: { estado: 'VENCIDO' }
         });
